@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
-import { supabase } from '@/lib/database/supabase'
 import { useAuth } from '@/lib/auth/context'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -116,55 +115,37 @@ export default function KitchenPage() {
     const router = useRouter()
 
     const fetchOrders = async () => {
-        const { data, error } = await supabase
-            .from('orders')
-            .select(`
-                *,
-                user:users(role, name, phone),
-                items:order_items(
-                    *,
-                    menu_item:menu_items(name)
+        try {
+            const res = await fetch('/api/orders?status=pending,preparing,ready&all=true')
+            const json = await res.json()
+            if (json.success && json.data) {
+                // Sort ascending by created_at
+                const sorted = json.data.sort((a: any, b: any) =>
+                    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
                 )
-            `)
-            .in('status', ['pending', 'preparing', 'ready'])
-            .order('created_at', { ascending: true })
-
-        if (data) setOrders(data)
+                setOrders(sorted)
+            }
+        } catch (e) { console.error('fetchOrders error:', e) }
         setLoading(false)
     }
 
     const fetchCompletedOrders = async () => {
-        const { data } = await supabase
-            .from('orders')
-            .select(`
-                *,
-                user:users(role, name, phone),
-                items:order_items(
-                    *,
-                    menu_item:menu_items(name)
-                )
-            `)
-            .eq('status', 'completed')
-            .order('created_at', { ascending: false })
-            .limit(20)
-
-        if (data) setCompletedOrders(data)
+        try {
+            const res = await fetch('/api/orders?status=completed&all=true&limit=20')
+            const json = await res.json()
+            if (json.success && json.data) setCompletedOrders(json.data)
+        } catch (e) { console.error('fetchCompletedOrders error:', e) }
     }
 
     const fetchSingleOrder = async (orderId: string) => {
-        const { data } = await supabase
-            .from('orders')
-            .select(`
-                    *,
-                    user:users(role, name, phone),
-                    items:order_items(
-                        *,
-                        menu_item:menu_items(name)
-                    )
-                `)
-            .eq('id', orderId)
-            .single()
-        return data
+        try {
+            const res = await fetch(`/api/orders?orderId=${orderId}`)
+            const json = await res.json()
+            return json.success && json.data?.[0] ? json.data[0] : null
+        } catch (e) {
+            console.error('fetchSingleOrder error:', e)
+            return null
+        }
     }
 
     // Auth Guard - Allow staff, kitchen_manager, and admin
@@ -189,122 +170,95 @@ export default function KitchenPage() {
             })
         }
 
-        const channel = supabase
-            .channel('kitchen-orders')
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'orders' },
-                async (payload) => {
-                    if (payload.eventType === 'INSERT') {
-                        playSound()
-                        if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-                            new Notification('New Order Received!', {
-                                body: `New order from ${payload.new.table_name}`,
-                                icon: '/favicon.ico'
-                            })
-                        }
-                        const newOrder = await fetchSingleOrder(payload.new.id)
-                        if (newOrder && ['pending', 'preparing', 'ready'].includes(newOrder.status)) {
-                            setOrders(prev => {
-                                if (prev.some(o => o.id === newOrder.id)) return prev
-                                return [newOrder, ...prev]
-                            })
-                        }
-                    } else if (payload.eventType === 'UPDATE') {
-                        const updated = await fetchSingleOrder(payload.new.id)
-                        if (updated) {
-                            if (['completed', 'cancelled'].includes(updated.status)) {
-                                setOrders(prev => prev.filter(o => o.id !== updated.id))
-                                setCompletedOrders(prev => [updated, ...prev.slice(0, 19)])
-                            } else {
-                                setOrders(prev => {
-                                    const exists = prev.find(o => o.id === updated.id)
-                                    if (exists) {
-                                        return prev.map(o => o.id === updated.id ? updated : o)
-                                    } else if (['pending', 'preparing', 'ready'].includes(updated.status)) {
-                                        return [updated, ...prev]
-                                    }
-                                    return prev
-                                })
+        // Poll for order updates every 5 seconds (replaces realtime)
+        let prevOrderIds: string[] = []
+        const pollInterval = setInterval(async () => {
+            try {
+                const res = await fetch('/api/orders?status=pending,preparing,ready&all=true')
+                const json = await res.json()
+                if (json.success && json.data) {
+                    const newIds = json.data.map((o: any) => o.id)
+                    // Detect new orders for notification
+                    if (prevOrderIds.length > 0) {
+                        const brandNew = newIds.filter((id: string) => !prevOrderIds.includes(id))
+                        if (brandNew.length > 0) {
+                            playSound()
+                            if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+                                new Notification('New Order Received!', { body: `${brandNew.length} new order(s)`, icon: '/favicon.ico' })
                             }
                         }
-                    } else if (payload.eventType === 'DELETE') {
-                        setOrders(prev => prev.filter(o => o.id !== payload.old.id))
                     }
+                    prevOrderIds = newIds
+                    const sorted = json.data.sort((a: any, b: any) =>
+                        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+                    )
+                    setOrders(sorted)
                 }
-            )
-            .subscribe((status) => {
-                setStatus(status)
-            })
+            } catch (e) { console.error('Poll orders error:', e) }
+        }, 5000)
+        setStatus('SUBSCRIBED')
+
+        // Also poll completed orders
+        const completedInterval = setInterval(() => fetchCompletedOrders(), 15000)
 
         return () => {
-            supabase.removeChannel(channel)
+            clearInterval(pollInterval)
+            clearInterval(completedInterval)
         }
     }, [])
 
     // Fetch menu items and categories
     useEffect(() => {
         async function fetchMenuData() {
-            const [itemsRes, categoriesRes] = await Promise.all([
-                supabase
-                    .from('menu_items')
-                    .select('*')
-                    .eq('available', true)
-                    .order('name'),
-                supabase
-                    .from('categories')
-                    .select('*')
-                    .order('sort_order')
-            ])
-            setMenuItems(itemsRes.data || [])
-            setCategories(categoriesRes.data || [])
+            try {
+                const res = await fetch('/api/menu')
+                const json = await res.json()
+                if (json.success) {
+                    setMenuItems(json.data?.menuItems || [])
+                    setCategories(json.data?.categories || [])
+                }
+            } catch (e) { console.error('fetchMenuData error:', e) }
         }
         fetchMenuData()
     }, [])
 
-    // Fetch and subscribe to bill requests
+    // Fetch and poll bill requests
     useEffect(() => {
         async function fetchBillRequests() {
-            const { data } = await supabase
-                .from('guest_sessions')
-                .select('*')
-                .eq('status', 'active')
-                .eq('bill_requested', true)
-                .order('bill_requested_at', { ascending: true })
-            setBillRequests(data || [])
+            try {
+                const res = await fetch('/api/kitchen/bill-requests')
+                const json = await res.json()
+                if (json.success) setBillRequests(json.data || [])
+            } catch (e) { console.error('fetchBillRequests error:', e) }
         }
 
         fetchBillRequests()
 
-        // Subscribe to guest_sessions changes for bill requests
-        const billChannel = supabase
-            .channel('bill-requests')
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'guest_sessions' },
-                async (payload) => {
-                    if (payload.eventType === 'UPDATE' && payload.new.bill_requested) {
-                        // New bill request
-                        setBillRequests(prev => {
-                            const exists = prev.find(r => r.id === payload.new.id)
-                            if (!exists) {
-                                // Play notification sound
-                                const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3')
-                                audio.play().catch(console.error)
-                                return [...prev, payload.new]
-                            }
-                            return prev.map(r => r.id === payload.new.id ? payload.new : r)
-                        })
-                    } else if (payload.eventType === 'UPDATE' && payload.new.status === 'ended') {
-                        // Session ended, remove from bill requests
-                        setBillRequests(prev => prev.filter(r => r.id !== payload.new.id))
+        // Poll for bill request changes every 5 seconds
+        let prevIds: string[] = []
+        const billPollInterval = setInterval(async () => {
+            try {
+                const res = await fetch('/api/kitchen/bill-requests')
+                const json = await res.json()
+                if (json.success) {
+                    const newData = json.data || []
+                    const newIds = newData.map((r: any) => r.id)
+                    // Play sound for new bill requests
+                    if (prevIds.length > 0) {
+                        const brandNew = newIds.filter((id: string) => !prevIds.includes(id))
+                        if (brandNew.length > 0) {
+                            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3')
+                            audio.play().catch(console.error)
+                        }
                     }
+                    prevIds = newIds
+                    setBillRequests(newData)
                 }
-            )
-            .subscribe()
+            } catch (e) { console.error('Poll bill requests error:', e) }
+        }, 5000)
 
         return () => {
-            supabase.removeChannel(billChannel)
+            clearInterval(billPollInterval)
         }
     }, [])
 
@@ -417,12 +371,11 @@ export default function KitchenPage() {
     // Fetch kitchen/admin staff for attendee dropdown
     useEffect(() => {
         async function fetchStaff() {
-            const { data } = await supabase
-                .from('users')
-                .select('id, name')
-                .in('role', ['KITCHEN', 'ADMIN'])
-                .order('name')
-            setKitchenStaff(data || [])
+            try {
+                const res = await fetch('/api/kitchen/staff')
+                const json = await res.json()
+                if (json.success) setKitchenStaff(json.data || [])
+            } catch (e) { console.error('fetchStaff error:', e) }
         }
         fetchStaff()
     }, [])
@@ -431,16 +384,22 @@ export default function KitchenPage() {
     async function cancelOrder(orderId: string) {
         const ok = await showConfirm('Cancel Order', 'Are you sure you want to cancel this order? This cannot be undone.')
         if (!ok) return
-        const { error } = await supabase
-            .from('orders')
-            .update({ status: 'cancelled' })
-            .eq('id', orderId)
-        if (error) {
+        try {
+            const res = await fetch('/api/orders/status', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId, status: 'cancelled' })
+            })
+            const json = await res.json()
+            if (!json.success) {
+                showError('Cancel Failed', 'Failed to cancel order')
+            } else {
+                setOrders(prev => prev.filter(o => o.id !== orderId))
+                stopCookingTimer(orderId)
+                showSuccess('Order Cancelled', 'The order has been cancelled.')
+            }
+        } catch (e) {
             showError('Cancel Failed', 'Failed to cancel order')
-        } else {
-            setOrders(prev => prev.filter(o => o.id !== orderId))
-            stopCookingTimer(orderId)
-            showSuccess('Order Cancelled', 'The order has been cancelled.')
         }
     }
 
@@ -564,58 +523,66 @@ export default function KitchenPage() {
     }, [orders, filter])
 
     async function updateStatus(orderId: string, newStatus: string) {
-        const { error } = await supabase
-            .from('orders')
-            .update({ status: newStatus })
-            .eq('id', orderId)
-
-        if (error) {
+        try {
+            const res = await fetch('/api/orders/status', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId, status: newStatus })
+            })
+            const json = await res.json()
+            if (!json.success) {
+                showError('Update Failed', 'Failed to update order status')
+            } else {
+                setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus as any } : o))
+                if (newStatus === 'preparing') startCookingTimer(orderId)
+                if (newStatus === 'ready' || newStatus === 'completed' || newStatus === 'cancelled') stopCookingTimer(orderId)
+            }
+        } catch (e) {
             showError('Update Failed', 'Failed to update order status')
-        } else {
-            setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus as any } : o))
-            // Start timer when cooking begins
-            if (newStatus === 'preparing') {
-                startCookingTimer(orderId)
-            }
-            // Stop timer when order is handed over or completed
-            if (newStatus === 'ready' || newStatus === 'completed' || newStatus === 'cancelled') {
-                stopCookingTimer(orderId)
-            }
         }
     }
 
     async function updateDiscount(orderId: string, amount: number) {
-        const { error } = await supabase
-            .from('orders')
-            .update({ discount_amount: amount })
-            .eq('id', orderId)
-
-        if (error) {
+        try {
+            const res = await fetch('/api/orders/discount', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId, discountAmount: amount })
+            })
+            const json = await res.json()
+            if (!json.success) {
+                showError('Discount Failed', 'Failed to apply discount')
+            } else {
+                setOrders(prev => prev.map(o => o.id === orderId ? { ...o, discount_amount: amount } : o))
+            }
+        } catch (e) {
             showError('Discount Failed', 'Failed to apply discount')
-        } else {
-            setOrders(prev => prev.map(o => o.id === orderId ? { ...o, discount_amount: amount } : o))
         }
     }
 
     async function updateItemQuantity(orderItemId: string, orderId: string, newQuantity: number) {
         if (newQuantity < 1) return
-        const { error } = await supabase
-            .from('order_items')
-            .update({ quantity: newQuantity })
-            .eq('id', orderItemId)
-        if (error) showError('Update Failed', error.message)
-        else await fetchOrders()
+        try {
+            const res = await fetch('/api/orders/items', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: orderItemId, quantity: newQuantity })
+            })
+            const json = await res.json()
+            if (!json.success) showError('Update Failed', json.error || 'Failed to update quantity')
+            else await fetchOrders()
+        } catch (e) { showError('Update Failed', 'Failed to update quantity') }
     }
 
     async function deleteOrderItem(orderItemId: string, orderId: string) {
         const ok = await showConfirm('Delete Item', 'Remove this item from the order?')
         if (!ok) return
-        const { error } = await supabase
-            .from('order_items')
-            .delete()
-            .eq('id', orderItemId)
-        if (error) showError('Delete Failed', error.message)
-        else await fetchOrders()
+        try {
+            const res = await fetch(`/api/orders/items?id=${orderItemId}`, { method: 'DELETE' })
+            const json = await res.json()
+            if (!json.success) showError('Delete Failed', json.error || 'Failed to delete item')
+            else await fetchOrders()
+        } catch (e) { showError('Delete Failed', 'Failed to delete item') }
     }
 
     async function handleGenerateBill(orderId: string, paymentMethod: string = 'cash') {
@@ -697,19 +664,15 @@ export default function KitchenPage() {
         setReprintingBill(orderId)
         try {
             // Fetch the bill associated with this order
-            const { data: bills, error } = await supabase
-                .from('bills')
-                .select('*, bill_items(*)')
-                .eq('order_id', orderId)
-                .order('created_at', { ascending: false })
-                .limit(1)
+            const res = await fetch(`/api/bills/lookup?orderId=${orderId}`)
+            const json = await res.json()
 
-            if (error || !bills || bills.length === 0) {
+            if (!json.success || !json.data) {
                 showError('Bill Not Found', 'Could not find a bill for this order.')
                 return
             }
 
-            const bill = bills[0]
+            const bill = json.data
             const order = [...orders, ...completedOrders].find(o => o.id === orderId)
 
             // Show bill preview modal for reprinting
@@ -740,9 +703,16 @@ export default function KitchenPage() {
     async function addItemToOrder(orderId: string, menuItemId: string) {
         const menuItem = menuItems.find(m => m.id === menuItemId)
         if (!menuItem) return
-        const { error } = await supabase.from('order_items').insert({ order_id: orderId, menu_item_id: menuItemId, quantity: 1, price: menuItem.price })
-        if (error) showError('Add Failed', error.message)
-        else await fetchOrders()
+        try {
+            const res = await fetch('/api/orders/items', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId, menuItemId, quantity: 1, price: menuItem.price })
+            })
+            const json = await res.json()
+            if (!json.success) showError('Add Failed', json.error || 'Failed to add item')
+            else await fetchOrders()
+        } catch (e) { showError('Add Failed', 'Failed to add item') }
     }
 
     const getOrderTypeBadge = (order: Order) => {

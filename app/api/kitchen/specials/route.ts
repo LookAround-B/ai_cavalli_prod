@@ -1,13 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-// Service-role client that bypasses RLS
-function getAdminClient() {
-    return createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
-}
+import prisma from '@/lib/database/prisma'
 
 // POST - add a special or create menu item + add as special
 export async function POST(request: NextRequest) {
@@ -19,21 +11,35 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'menu_item_id and period are required' }, { status: 400 })
         }
 
-        const admin = getAdminClient()
-        const targetDate = date || new Date().toISOString().split('T')[0]
+        const targetDate = date ? new Date(date) : new Date()
 
-        const { data, error } = await admin
-            .from('daily_specials')
-            .insert({ menu_item_id, period, date: targetDate })
-            .select('*, menu_item:menu_items(*)')
-            .single()
+        const data = await prisma.dailySpecial.create({
+            data: {
+                menuItemId: menu_item_id,
+                period,
+                date: targetDate,
+            },
+            include: { menuItem: true }
+        })
 
-        if (error) {
-            console.error('Insert special error:', error)
-            return NextResponse.json({ error: error.message }, { status: 500 })
-        }
-
-        return NextResponse.json({ data })
+        // Map to snake_case response
+        return NextResponse.json({
+            data: {
+                ...data,
+                menu_item_id: data.menuItemId,
+                menu_item: data.menuItem ? {
+                    id: data.menuItem.id,
+                    name: data.menuItem.name,
+                    description: data.menuItem.description,
+                    price: Number(data.menuItem.price),
+                    image_url: data.menuItem.imageUrl,
+                    available: data.menuItem.available,
+                    category_id: data.menuItem.categoryId,
+                    created_at: data.menuItem.createdAt,
+                } : null,
+                created_at: data.createdAt,
+            }
+        })
     } catch (err: any) {
         console.error('POST /api/kitchen/specials error:', err)
         return NextResponse.json({ error: err.message || 'Server error' }, { status: 500 })
@@ -50,17 +56,7 @@ export async function DELETE(request: NextRequest) {
             return NextResponse.json({ error: 'id is required' }, { status: 400 })
         }
 
-        const admin = getAdminClient()
-
-        const { error } = await admin
-            .from('daily_specials')
-            .delete()
-            .eq('id', id)
-
-        if (error) {
-            console.error('Delete special error:', error)
-            return NextResponse.json({ error: error.message }, { status: 500 })
-        }
+        await prisma.dailySpecial.delete({ where: { id } })
 
         return NextResponse.json({ success: true })
     } catch (err: any) {

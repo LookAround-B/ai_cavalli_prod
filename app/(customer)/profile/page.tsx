@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/lib/auth/context'
 import { Button } from '@/components/ui/button'
-import { supabase } from '@/lib/database/supabase'
 import { User, Package, LogOut, MessageSquare, ShieldCheck, Utensils, Receipt, CreditCard, Clock, CheckCircle2, XCircle, ChevronDown } from 'lucide-react'
 import Link from 'next/link'
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -29,28 +28,22 @@ export default function ProfilePage() {
         setUserDetails(user)
 
         async function fetchUserDetails() {
-            const { data } = await supabase
-                .from('users')
-                .select('*')
-                .eq('id', user!.id)
-                .single()
-            if (data) setUserDetails(data)
+            try {
+                const sessionToken = localStorage.getItem('session_token') || ''
+                const res = await fetch('/api/users/me', {
+                    headers: { 'Authorization': `Bearer ${sessionToken}` }
+                })
+                const json = await res.json()
+                if (json.success && json.data) setUserDetails(json.data)
+            } catch (e) { console.error('fetchUserDetails error:', e) }
         }
 
         async function fetchOrders() {
-            const { data } = await supabase
-                .from('orders')
-                .select(`
-                    *,
-                    items:order_items(
-                        id, quantity, price,
-                        menu_item:menu_items(name)
-                    )
-                `)
-                .eq('user_id', user!.id)
-                .order('created_at', { ascending: false })
-
-            if (data) setOrders(data)
+            try {
+                const res = await fetch(`/api/orders?userId=${user!.id}`)
+                const json = await res.json()
+                if (json.success && json.data) setOrders(json.data)
+            } catch (e) { console.error('fetchOrders error:', e) }
             setLoadingOrders(false)
         }
 
@@ -86,24 +79,11 @@ export default function ProfilePage() {
         fetchOrders()
         fetchActiveSession()
 
-        const channel = supabase
-            .channel(`user-profile-orders-${user.id}`)
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'orders',
-                    filter: `user_id=eq.${user.id}`
-                },
-                (payload) => {
-                    fetchOrders()
-                }
-            )
-            .subscribe()
+        // Poll for order updates every 5 seconds (replaces realtime)
+        const pollInterval = setInterval(() => fetchOrders(), 5000)
 
         return () => {
-            supabase.removeChannel(channel)
+            clearInterval(pollInterval)
         }
     }, [user])
 

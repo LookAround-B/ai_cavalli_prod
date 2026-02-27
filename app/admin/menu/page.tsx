@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
-import { supabase } from '@/lib/database/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Loading } from '@/components/ui/Loading'
@@ -67,18 +66,19 @@ export default function AdminMenuPage() {
 
     async function fetchData() {
         setDataLoading(true)
-        const [catRes, itemRes] = await Promise.all([
-            supabase.from('categories').select('*').order('sort_order'),
-            supabase.from('menu_items').select('*, category:categories(name)').order('created_at', { ascending: false })
-        ])
-
-        if (catRes.data) {
-            setCategories(catRes.data)
-            if (!categoryId && catRes.data.length > 0) {
-                setCategoryId(catRes.data[0].id)
+        try {
+            const res = await fetch('/api/menu/items')
+            const json = await res.json()
+            if (json.success) {
+                if (json.data?.categories) {
+                    setCategories(json.data.categories)
+                    if (!categoryId && json.data.categories.length > 0) {
+                        setCategoryId(json.data.categories[0].id)
+                    }
+                }
+                if (json.data?.items) setItems(json.data.items)
             }
-        }
-        if (itemRes.data) setItems(itemRes.data)
+        } catch (e) { console.error('fetchData error:', e) }
         setDataLoading(false)
     }
 
@@ -124,45 +124,71 @@ export default function AdminMenuPage() {
             return
         }
 
-        const payload = {
+        const payload: any = {
             name,
             description: desc,
             price: parseFloat(price),
-            category_id: finalCategoryId,
-            image_url: imageUrl,
+            categoryId: finalCategoryId,
+            imageUrl: imageUrl,
             available: available
         }
 
-        let error
-        if (editingId) {
-            const result = await supabase.from('menu_items').update(payload).eq('id', editingId)
-            error = result.error
-        } else {
-            const result = await supabase.from('menu_items').insert(payload)
-            error = result.error
+        let error: string | null = null
+        try {
+            if (editingId) {
+                payload.id = editingId
+                const res = await fetch('/api/menu/items', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
+                const json = await res.json()
+                if (!json.success) error = json.error
+            } else {
+                const res = await fetch('/api/menu/items', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
+                const json = await res.json()
+                if (!json.success) error = json.error
+            }
+        } catch (e: any) {
+            error = e.message
         }
 
         if (!error) {
             await fetchData()
             resetForm()
         } else {
-            showError(`Error saving item: ${error.message}`, `"please try again."`)
+            showError(`Error saving item: ${error}`, `"please try again."`)
         }
         setLoading(false)
     }
 
     async function handleDelete(id: string) {
         if (!confirm('Are you sure you want to delete this item?')) return
-        await supabase.from('menu_items').delete().eq('id', id)
+        try {
+            await fetch(`/api/menu/items?id=${id}`, { method: 'DELETE' })
+        } catch (e) { console.error('handleDelete error:', e) }
         fetchData()
     }
 
     async function handleToggleAvailable(id: string, available: boolean) {
-        const { error } = await supabase.from('menu_items').update({ available }).eq('id', id)
-        if (error) {
-            showError('Error updating availability', error.message)
-        } else {
-            setItems(prev => prev.map(item => item.id === id ? { ...item, available } : item))
+        try {
+            const res = await fetch('/api/menu/items', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, available })
+            })
+            const json = await res.json()
+            if (!json.success) {
+                showError('Error updating availability', json.error || 'Unknown error')
+            } else {
+                setItems(prev => prev.map(item => item.id === id ? { ...item, available } : item))
+            }
+        } catch (e: any) {
+            showError('Error updating availability', e.message)
         }
     }
 

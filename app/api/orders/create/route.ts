@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import prisma from "@/lib/database/prisma";
 import { validateSessionToken } from "@/lib/auth/utils";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,28 +19,17 @@ export async function POST(request: NextRequest) {
 
     if (!userId || (!hasRegularStaffMeal && (!items || items.length === 0))) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Missing required fields: userId and at least one item",
-        },
-        { status: 400 },
+        { success: false, error: "Missing required fields: userId and at least one item" },
+        { status: 400 }
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // AUTH GUARD: Multiple auth strategies for different user types
+    // AUTH GUARD: Multiple auth strategies
     const authHeader = request.headers.get("Authorization");
     let isAuthorized = false;
 
-    // Strategy 1: Custom session token (PIN-based auth for RIDER/STAFF/KITCHEN/ADMIN)
-    // Also auto-extends expired sessions when the token still matches (sliding window)
-    if (
-      !isAuthorized &&
-      authHeader &&
-      authHeader !== "Bearer null" &&
-      authHeader !== "Bearer undefined"
-    ) {
+    // Strategy 1: Custom session token
+    if (!isAuthorized && authHeader && authHeader !== "Bearer null" && authHeader !== "Bearer undefined") {
       const token = authHeader.replace("Bearer ", "");
       if (userId && token) {
         try {
@@ -51,21 +37,17 @@ export async function POST(request: NextRequest) {
           if (tokenValid) {
             isAuthorized = true;
           } else {
-            // Token didn't validate — could be expired. Check if the token still matches
-            // and auto-extend the session (sliding window auth)
-            const { data: userRec } = await supabase
-              .from("users")
-              .select("id, session_token, session_expires_at")
-              .eq("id", userId)
-              .single();
-
-            if (userRec && userRec.session_token === token) {
-              // Token matches but expired — auto-extend by 24 hours
-              const newExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-              await supabase
-                .from("users")
-                .update({ session_expires_at: newExpiry })
-                .eq("id", userId);
+            // Sliding window: check if token matches but expired
+            const userRec = await prisma.user.findUnique({
+              where: { id: userId },
+              select: { id: true, sessionToken: true, sessionExpiresAt: true },
+            });
+            if (userRec && userRec.sessionToken === token) {
+              const newExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+              await prisma.user.update({
+                where: { id: userId },
+                data: { sessionExpiresAt: newExpiry },
+              });
               isAuthorized = true;
               console.log(`Session auto-extended for user ${userId}`);
             }
@@ -76,105 +58,71 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Strategy 2: Guest session check (for OUTSIDER with sessionId)
+    // Strategy 2: Guest session check
     if (!isAuthorized && sessionId && userId) {
-      const { data: session } = await supabase
-        .from("guest_sessions")
-        .select("id, user_id, status")
-        .eq("id", sessionId)
-        .eq("user_id", userId)
-        .eq("status", "active")
-        .maybeSingle();
-
+      const session = await prisma.guestSession.findFirst({
+        where: { id: sessionId, userId, status: "active" },
+        select: { id: true },
+      });
       if (session) isAuthorized = true;
     }
 
-    // Strategy 3: Any active guest session for this user
+    // Strategy 3: Any active guest session
     if (!isAuthorized && userId) {
-      const { data: activeSession } = await supabase
-        .from("guest_sessions")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("status", "active")
-        .maybeSingle();
-
+      const activeSession = await prisma.guestSession.findFirst({
+        where: { userId, status: "active" },
+        select: { id: true },
+      });
       if (activeSession) isAuthorized = true;
     }
 
-    // Strategy 4: Verify user exists in DB — if user record exists, allow order
-    // (hardened by strategies 1-3 checking tokens first)
+    // Strategy 4: User exists in DB
     if (!isAuthorized && userId) {
-      const { data: userRecord } = await supabase
-        .from("users")
-        .select("id")
-        .eq("id", userId)
-        .single();
-
-      if (userRecord) {
-        isAuthorized = true;
-      }
+      const userRecord = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true },
+      });
+      if (userRecord) isAuthorized = true;
     }
 
     if (!isAuthorized) {
-      console.warn(
-        `Order creation blocked: Unauthorized attempt for userId ${userId}`,
-      );
+      console.warn(`Order creation blocked: Unauthorized attempt for userId ${userId}`);
       return NextResponse.json(
-        {
-          success: false,
-          error: "Unauthorized: User mismatch or invalid session",
-        },
-        { status: 403 },
+        { success: false, error: "Unauthorized: User mismatch or invalid session" },
+        { status: 403 }
       );
     }
 
-    // 1. Fetch user profile and normalize role
-    const { data: userData } = await supabase
-      .from("users")
-      .select("name, email, role")
-      .eq("id", userId)
-      .single();
+    // 1. Fetch user profile
+    const userData = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, email: true, role: true },
+    });
 
     if (!userData) {
-      return NextResponse.json(
-        { success: false, error: "User not found" },
-        { status: 404 },
-      );
+      return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
     }
 
-    const rawRole = (userData?.role || "").toUpperCase();
-    const normalizedRole = rawRole === "KITCHEN_MANAGER"
-      ? "KITCHEN"
-      : rawRole === "GUEST"
-        ? "OUTSIDER"
-        : rawRole;
+    const rawRole = (userData.role || "").toUpperCase();
+    const normalizedRole = rawRole === "KITCHEN_MANAGER" ? "KITCHEN"
+      : rawRole === "GUEST" ? "OUTSIDER" : rawRole;
 
     if (hasRegularStaffMeal && normalizedRole !== "STAFF") {
       return NextResponse.json(
         { success: false, error: "Regular Staff Meal is available to STAFF only" },
-        { status: 403 },
+        { status: 403 }
       );
     }
 
-    // 2. Fetch current prices for all DB-backed items
+    // 2. Fetch current prices for all items
     const itemIds = Array.isArray(items) ? items.map((item: any) => item.itemId) : [];
     let menuItems: any[] = [];
 
     if (itemIds.length > 0) {
-      const { data: fetchedItems, error: menuError } = await supabase
-        .from("menu_items")
-        .select("id, name, price, available")
-        .in("id", itemIds);
-
-      if (menuError || !fetchedItems) {
-        console.error("Menu items fetch error:", menuError);
-        return NextResponse.json(
-          { success: false, error: "Failed to validate menu items" },
-          { status: 500 },
-        );
-      }
-
-      menuItems = fetchedItems;
+      menuItems = await prisma.menuItem.findMany({
+        where: { id: { in: itemIds } },
+        select: { id: true, name: true, price: true, available: true },
+      });
     }
 
     // 3. Validate availability and calculate total
@@ -186,104 +134,74 @@ export async function POST(request: NextRequest) {
       if (!menuItem) {
         return NextResponse.json(
           { success: false, error: `Item ${item.itemId} not found` },
-          { status: 400 },
+          { status: 400 }
         );
       }
       if (!menuItem.available) {
         return NextResponse.json(
-          {
-            success: false,
-            error: `Item ${item.itemId} is currently unavailable`,
-          },
-          { status: 400 },
+          { success: false, error: `Item ${item.itemId} is currently unavailable` },
+          { status: 400 }
         );
       }
 
-      const itemTotal = menuItem.price * item.quantity;
+      const itemTotal = Number(menuItem.price) * item.quantity;
       serverTotal += itemTotal;
 
       validatedOrderItems.push({
-        menu_item_id: item.itemId,
+        menuItemId: item.itemId,
         quantity: item.quantity,
-        price: menuItem.price, // Use DB price, not client price
+        price: Number(menuItem.price),
       });
     }
 
-    // 4. Create the order
-    const { data: order, error: orderError } = await supabase
-      .from("orders")
-      .insert({
-        user_id: userId,
-        // Populate guest_info for legacy visibility in DB dashboard
-        guest_info:
-          normalizedRole === "OUTSIDER"
-            ? { name: userData.name, email: userData.email }
-            : null,
-        table_name: tableName,
-        location_type: locationType,
-        num_guests: numGuests,
+    // 4. Create order with items in a transaction
+    const order = await prisma.order.create({
+      data: {
+        userId,
+        guestInfo: normalizedRole === "OUTSIDER"
+          ? { name: userData.name, email: userData.email }
+          : undefined,
+        tableName: tableName || "N/A",
+        locationType,
+        numGuests,
         total: serverTotal,
-        notes: notes,
-        session_id: sessionId,
+        notes,
+        sessionId: sessionId || undefined,
         status: "pending",
-      })
-      .select()
-      .single();
-
-    if (orderError) {
-      console.error("Order creation error:", orderError);
-      return NextResponse.json(
-        { success: false, error: "Failed to create order" },
-        { status: 500 },
-      );
-    }
-
-    // 5. Create order items
-    const orderItemsToInsert = validatedOrderItems.map((item) => ({
-      ...item,
-      order_id: order.id,
-    }));
-
-    if (orderItemsToInsert.length > 0) {
-      const { error: itemsError } = await supabase
-        .from("order_items")
-        .insert(orderItemsToInsert);
-
-      if (itemsError) {
-        console.error("Order items insertion error:", itemsError);
-        return NextResponse.json(
-          { success: false, error: "Failed to insert order items" },
-          { status: 500 },
-        );
-      }
-    }
+        orderItems: {
+          create: validatedOrderItems.map((item) => ({
+            menuItemId: item.menuItemId,
+            quantity: item.quantity,
+            price: item.price,
+          })),
+        },
+      },
+    });
 
     // 5. Send Email Summary (Asynchronous)
     if (userData?.email) {
-      // Import dynamically to avoid top-level issues if needed, but standard import is fine
-      const { sendEmail } = require("@/lib/utils/email");
+      try {
+        const { sendEmail } = require("@/lib/utils/email");
+        const itemsListHtml = (items || [])
+          .map((item: any) => {
+            const menuItem = menuItems.find((m) => m.id === item.itemId);
+            return `<li>${menuItem?.name || "Item"} x ${item.quantity} - ₹${(Number(menuItem?.price) || 0) * item.quantity}</li>`;
+          })
+          .join("");
 
-      const itemsListHtml = items
-        .map((item: any) => {
-          const menuItem = menuItems.find((m) => m.id === item.itemId);
-          return `<li>${menuItem?.name || "Item"} x ${item.quantity} - ₹${(menuItem?.price || 0) * item.quantity}</li>`;
-        })
-        .join("");
-
-      sendEmail({
-        to: userData.email,
-        subject: `Order Confirmed: ${tableName} - Ai Cavalli`,
-        html: `
-                    <div style="font-family: sans-serif; padding: 20px;">
-                        <h2 style="color: #c0272d;">Grazie, ${userData.name}!</h2>
-                        <p>Your order for <strong>Table ${tableName}</strong> has been received and is being prepared.</p>
-                        <hr />
-                        <ul>${itemsListHtml}</ul>
-                        <p><strong>Total: ₹${serverTotal}</strong></p>
-                        <p style="font-size: 12px; color: #666;">This is an automated summary of your order at Ai Cavalli.</p>
-                    </div>
-                `,
-      }).catch((err: any) => console.error("Failed to send order email:", err));
+        sendEmail({
+          to: userData.email,
+          subject: `Order Confirmed: ${tableName} - Ai Cavalli`,
+          html: `
+            <div style="font-family: sans-serif; padding: 20px;">
+              <h2 style="color: #c0272d;">Grazie, ${userData.name}!</h2>
+              <p>Your order for <strong>Table ${tableName}</strong> has been received and is being prepared.</p>
+              <hr /><ul>${itemsListHtml}</ul>
+              <p><strong>Total: ₹${serverTotal}</strong></p>
+              <p style="font-size: 12px; color: #666;">This is an automated summary of your order at Ai Cavalli.</p>
+            </div>`,
+        }).catch((err: any) => console.error("Failed to send order email:", err));
+      } catch {}
     }
 
     return NextResponse.json({
@@ -296,7 +214,7 @@ export async function POST(request: NextRequest) {
     console.error("Secure order API error:", error);
     return NextResponse.json(
       { success: false, error: error.message || "Internal server error" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import prisma from "@/lib/database/prisma";
 import { validateSessionToken } from "@/lib/auth/utils";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export async function PUT(request: NextRequest) {
   try {
@@ -11,27 +8,16 @@ export async function PUT(request: NextRequest) {
 
     if (!orderId || !userId || !items || items.length === 0) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Missing required fields: orderId, userId, and at least one item",
-        },
-        { status: 400 },
+        { success: false, error: "Missing required fields: orderId, userId, and at least one item" },
+        { status: 400 }
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // AUTH GUARD: same strategies as create
+    // AUTH GUARD
     const authHeader = request.headers.get("Authorization");
     let isAuthorized = false;
 
-    // Strategy 1: Custom session token
-    if (
-      !isAuthorized &&
-      authHeader &&
-      authHeader !== "Bearer null" &&
-      authHeader !== "Bearer undefined"
-    ) {
+    if (!isAuthorized && authHeader && authHeader !== "Bearer null" && authHeader !== "Bearer undefined") {
       const token = authHeader.replace("Bearer ", "");
       if (userId && token) {
         try {
@@ -39,18 +25,15 @@ export async function PUT(request: NextRequest) {
           if (tokenValid) {
             isAuthorized = true;
           } else {
-            const { data: userRec } = await supabase
-              .from("users")
-              .select("id, session_token, session_expires_at")
-              .eq("id", userId)
-              .single();
-
-            if (userRec && userRec.session_token === token) {
-              const newExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-              await supabase
-                .from("users")
-                .update({ session_expires_at: newExpiry })
-                .eq("id", userId);
+            const userRec = await prisma.user.findUnique({
+              where: { id: userId },
+              select: { id: true, sessionToken: true, sessionExpiresAt: true },
+            });
+            if (userRec && userRec.sessionToken === token) {
+              await prisma.user.update({
+                where: { id: userId },
+                data: { sessionExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) },
+              });
               isAuthorized = true;
             }
           }
@@ -60,154 +43,91 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    // Strategy 2: Guest session check
     if (!isAuthorized && userId) {
-      const { data: activeSession } = await supabase
-        .from("guest_sessions")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("status", "active")
-        .maybeSingle();
-
+      const activeSession = await prisma.guestSession.findFirst({
+        where: { userId, status: "active" },
+        select: { id: true },
+      });
       if (activeSession) isAuthorized = true;
     }
 
-    // Strategy 3: Verify user exists in DB
     if (!isAuthorized && userId) {
-      const { data: userRecord } = await supabase
-        .from("users")
-        .select("id")
-        .eq("id", userId)
-        .single();
-
+      const userRecord = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true },
+      });
       if (userRecord) isAuthorized = true;
     }
 
     if (!isAuthorized) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 403 },
-      );
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 });
     }
 
     // Verify order exists and belongs to user
-    const { data: existingOrder, error: orderFetchError } = await supabase
-      .from("orders")
-      .select("id, user_id, status, created_at")
-      .eq("id", orderId)
-      .eq("user_id", userId)
-      .single();
+    const existingOrder = await prisma.order.findFirst({
+      where: { id: orderId, userId },
+      select: { id: true, userId: true, status: true, createdAt: true },
+    });
 
-    if (orderFetchError || !existingOrder) {
+    if (!existingOrder) {
       return NextResponse.json(
         { success: false, error: "Order not found or does not belong to you" },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
-    // Check cooldown: only allow edits within 2 minutes of order creation
-    const orderCreatedAt = new Date(existingOrder.created_at);
-    const now = new Date();
-    const timeDiffSeconds = (now.getTime() - orderCreatedAt.getTime()) / 1000;
-
+    // Check cooldown: only within 2 minutes
+    const timeDiffSeconds = (Date.now() - existingOrder.createdAt.getTime()) / 1000;
     if (timeDiffSeconds > 120) {
       return NextResponse.json(
         { success: false, error: "Edit window has expired. Orders can only be modified within 2 minutes of placement." },
-        { status: 403 },
+        { status: 403 }
       );
     }
 
-    // Fetch current prices for all items
+    // Fetch current prices
     const itemIds = items.map((item: any) => item.itemId);
-    const { data: menuItems, error: menuError } = await supabase
-      .from("menu_items")
-      .select("id, name, price, available")
-      .in("id", itemIds);
+    const menuItems = await prisma.menuItem.findMany({
+      where: { id: { in: itemIds } },
+      select: { id: true, name: true, price: true, available: true },
+    });
 
-    if (menuError || !menuItems) {
-      return NextResponse.json(
-        { success: false, error: "Failed to validate menu items" },
-        { status: 500 },
-      );
-    }
-
-    // Validate availability and calculate new total
+    // Validate and calculate
     let serverTotal = 0;
     const validatedOrderItems = [];
 
     for (const item of items) {
       const menuItem = menuItems.find((m: any) => m.id === item.itemId);
       if (!menuItem) {
-        return NextResponse.json(
-          { success: false, error: `Item ${item.itemId} not found` },
-          { status: 400 },
-        );
+        return NextResponse.json({ success: false, error: `Item ${item.itemId} not found` }, { status: 400 });
       }
       if (!menuItem.available) {
-        return NextResponse.json(
-          { success: false, error: `${menuItem.name} is currently unavailable` },
-          { status: 400 },
-        );
+        return NextResponse.json({ success: false, error: `${menuItem.name} is currently unavailable` }, { status: 400 });
       }
 
-      const itemTotal = menuItem.price * item.quantity;
+      const itemTotal = Number(menuItem.price) * item.quantity;
       serverTotal += itemTotal;
-
       validatedOrderItems.push({
-        order_id: orderId,
-        menu_item_id: item.itemId,
+        orderId,
+        menuItemId: item.itemId,
         quantity: item.quantity,
-        price: menuItem.price,
+        price: Number(menuItem.price),
       });
     }
 
-    // Delete existing order items
-    const { error: deleteError } = await supabase
-      .from("order_items")
-      .delete()
-      .eq("order_id", orderId);
-
-    if (deleteError) {
-      console.error("Failed to delete existing order items:", deleteError);
-      return NextResponse.json(
-        { success: false, error: "Failed to update order items" },
-        { status: 500 },
-      );
-    }
-
-    // Insert new order items
-    const { error: insertError } = await supabase
-      .from("order_items")
-      .insert(validatedOrderItems);
-
-    if (insertError) {
-      console.error("Failed to insert updated order items:", insertError);
-      return NextResponse.json(
-        { success: false, error: "Failed to update order items" },
-        { status: 500 },
-      );
-    }
-
-    // Update order total and notes
-    const updateFields: any = { total: serverTotal };
-    if (notes !== undefined) updateFields.notes = notes;
-
-    const { error: updateError } = await supabase
-      .from("orders")
-      .update(updateFields)
-      .eq("id", orderId);
-
-    if (updateError) {
-      console.error("Failed to update order total:", updateError);
-      return NextResponse.json(
-        { success: false, error: "Failed to update order total" },
-        { status: 500 },
-      );
-    }
+    // Transaction: delete old items, insert new, update total
+    await prisma.$transaction([
+      prisma.orderItem.deleteMany({ where: { orderId } }),
+      prisma.orderItem.createMany({ data: validatedOrderItems }),
+      prisma.order.update({
+        where: { id: orderId },
+        data: { total: serverTotal, ...(notes !== undefined ? { notes } : {}) },
+      }),
+    ]);
 
     return NextResponse.json({
       success: true,
-      orderId: orderId,
+      orderId,
       total: serverTotal,
       message: "Order updated successfully",
     });
@@ -215,7 +135,7 @@ export async function PUT(request: NextRequest) {
     console.error("Order update API error:", error);
     return NextResponse.json(
       { success: false, error: error.message || "Internal server error" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

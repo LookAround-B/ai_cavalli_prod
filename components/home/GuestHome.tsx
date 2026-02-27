@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/database/supabase'
 import { AnnouncementCard } from '@/components/ui/AnnouncementCard'
 import { Loading } from '@/components/ui/Loading'
 import { ChevronDown, Receipt, Clock, ArrowRight } from 'lucide-react'
@@ -25,26 +24,17 @@ export default function GuestHome() {
 
     useEffect(() => {
         async function fetchNews() {
-            const { data } = await supabase
-                .from('announcements')
-                .select('*')
-                .eq('active', true)
-                .order('created_at', { ascending: false })
-
-            if (data) setAnnouncements(data)
+            try {
+                const res = await fetch('/api/announcements')
+                const json = await res.json()
+                if (json.success && json.data) setAnnouncements(json.data)
+            } catch (e) { console.error('fetchNews error:', e) }
             setLoadingAnnouncements(false)
         }
 
         async function fetchActiveSession() {
             try {
-                const { data: { session: currentSession } } = await supabase.auth.getSession()
-                const token = currentSession?.access_token
-
-                const response = await fetch(`/api/sessions/active?phone=${user?.phone}`, {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                })
+                const response = await fetch(`/api/sessions/active?phone=${user?.phone}&userId=${user?.id}`)
                 const data = await response.json()
                 if (data.success) setActiveSession(data.session)
             } catch (e) {
@@ -55,7 +45,7 @@ export default function GuestHome() {
         }
 
         fetchNews()
-        if (user?.email) fetchActiveSession()
+        if (user?.email || user?.phone) fetchActiveSession()
     }, [user?.id, user?.email])
 
     if (loadingSession) {

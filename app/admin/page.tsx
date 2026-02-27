@@ -37,7 +37,6 @@ import {
     LineChart,
     Line
 } from 'recharts'
-import { supabase } from '@/lib/database/supabase'
 import { Button } from '@/components/ui/button'
 import { Loading } from '@/components/ui/Loading'
 import Link from 'next/link'
@@ -105,21 +104,10 @@ export default function AdminDashboard() {
 
     async function fetchData() {
         setLoading(true)
-        const { data: orders } = await supabase
-            .from('orders')
-            .select(`
-                *,
-                user:users(role),
-                items:order_items(
-                    *,
-                    menu_item:menu_items(
-                        category:categories(name)
-                    )
-                )
-            `)
-            .gte('created_at', `${startDate}T00:00:00`)
-            .lte('created_at', `${endDate}T23:59:59`)
-            .order('created_at', { ascending: false })
+        try {
+            const res = await fetch(`/api/orders?all=true&startDate=${startDate}&endDate=${endDate}`)
+            const json = await res.json()
+            const orders: any[] = json.success ? json.data : null
 
         if (orders) {
             const totalRevenue = orders.reduce((sum, o) => sum + (o.total || 0), 0)
@@ -198,26 +186,18 @@ export default function AdminDashboard() {
             const hourlyChart = Object.entries(hourly).map(([hour, orders]) => ({ hour, orders }))
             setHourlyData(hourlyChart.length > 0 ? hourlyChart : [{ hour: 'Now', orders: 0 }])
         }
+        } catch (e) { console.error('fetchData error:', e) }
         setLoading(false)
     }
 
     function downloadCSV() {
-        supabase.from('orders')
-            .select(`
-                *,
-                user:users(*),
-                items:order_items(
-                    *,
-                    menu_item:menu_items(name)
-                )
-            `)
-            .gte('created_at', `${exportStartDate}T00:00:00`)
-            .lte('created_at', `${exportEndDate}T23:59:59`)
-            .order('created_at', { ascending: false })
-            .then(({ data }) => {
+        fetch(`/api/orders?all=true&startDate=${exportStartDate}&endDate=${exportEndDate}`)
+            .then(res => res.json())
+            .then(json => {
+                const data = json.success ? json.data : null
                 if (!data) return
                 const headers = ['Customer Name', 'Parent Name', 'Phone Number', 'Role', 'Guests', 'Items Ordered', 'Money Spent (₹)', 'Timestamp']
-                const rows = data.map(o => {
+                const rows = data.map((o: any) => {
                     const role = o.user?.role || (o.guest_info ? 'guest' : 'unknown')
                     const name = o.user?.name || o.guest_info?.name || 'Guest'
                     const parentName = o.user?.role === 'RIDER' ? (o.user?.parent_name || 'N/A') : ''
@@ -228,7 +208,7 @@ export default function AdminDashboard() {
                     const timestamp = new Date(o.created_at).toLocaleString()
                     return [`"${name}"`, `"${parentName}"`, `"${phone}"`, role === 'RIDER' ? 'RIDER' : role.toUpperCase(), guests, `"${itemSummary}"`, finalTotal, `"${timestamp}"`]
                 })
-                const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+                const csvContent = [headers.join(','), ...rows.map((r: any) => r.join(','))].join('\n')
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
                 const url = window.URL.createObjectURL(blob)
                 const a = document.createElement('a')
@@ -237,6 +217,7 @@ export default function AdminDashboard() {
                 a.click()
                 window.URL.revokeObjectURL(url)
             })
+            .catch(e => console.error('downloadCSV error:', e))
     }
 
     if (loading) return <Loading />

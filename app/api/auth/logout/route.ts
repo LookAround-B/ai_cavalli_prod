@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { clearSessionToken, logAuthAction, getAdminClient } from '@/lib/auth/utils'
+import { clearSessionToken, logAuthAction } from '@/lib/auth/utils'
 
 /**
  * Logout endpoint - clears session token from DB
- * Works with custom session tokens (no Supabase Auth dependency)
+ * Uses Prisma ORM (no Supabase dependency)
  */
 export async function POST(request: NextRequest) {
     try {
-        // Get user ID from request body or session token
         const body = await request.json().catch(() => ({}))
         const userId = body.userId
 
@@ -23,7 +22,6 @@ export async function POST(request: NextRequest) {
     }
 }
 
-/** Also support GET for simple redirects */
 export async function GET() {
     return NextResponse.json({ success: true, message: 'Logged out' })
 }

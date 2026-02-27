@@ -1,65 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import prisma from '@/lib/database/prisma'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
+/**
+ * End Session API
+ * Uses Prisma ORM — authenticates via session token lookup (no Supabase Auth)
+ */
 export async function POST(request: NextRequest) {
     try {
         const { sessionId, paymentMethod = 'upi' } = await request.json()
 
-        const supabase = createClient(supabaseUrl, supabaseKey)
-
-        // AUTH GUARD: Verify requester
+        // AUTH GUARD: Verify requester via session token
         const authHeader = request.headers.get('Authorization')
         if (!authHeader) {
             return NextResponse.json({ success: false, error: 'Authorization header missing' }, { status: 401 })
         }
 
         const token = authHeader.replace('Bearer ', '')
-        const { data: { user: requester }, error: authError } = await supabase.auth.getUser(token)
+        const requester = await prisma.user.findFirst({
+            where: { sessionToken: token },
+            select: { id: true, role: true }
+        })
 
-        if (authError || !requester) {
+        if (!requester) {
             return NextResponse.json({ success: false, error: 'Invalid or expired session' }, { status: 401 })
         }
 
-        // Fetch requester's role for staff bypass
-        const { data: profile } = await supabase.from('users').select('role').eq('id', requester.id).single()
-        const isStaff = profile && ['staff', 'admin', 'kitchen_manager'].includes(profile.role)
+        const isStaff = ['STAFF', 'ADMIN', 'KITCHEN'].includes((requester.role || '').toUpperCase())
 
         // Get session with all orders
-        const { data: session, error: sessionError } = await supabase
-            .from('guest_sessions')
-            .select(`
-        *,
-        orders (
-          id,
-          total,
-          discount_amount,
-          created_at,
-          status,
-          order_items (
-            id,
-            quantity,
-            price,
-            menu_items (name)
-          )
-        )
-      `)
-            .eq('id', sessionId)
-            .single()
+        const session = await prisma.guestSession.findUnique({
+            where: { id: sessionId },
+            include: {
+                orders: {
+                    include: {
+                        orderItems: {
+                            include: { menuItem: { select: { name: true } } }
+                        }
+                    }
+                }
+            }
+        })
 
-        if (sessionError || !session) {
-            console.error('Session fetch error:', sessionError)
+        if (!session) {
             return NextResponse.json(
                 { success: false, error: 'Session not found' },
                 { status: 404 }
             )
         }
 
-        // VERIFY OWNERSHIP: Only owner or staff can end it
-        if (!isStaff && session.user_id !== requester.id) {
-            console.warn(`Unauthorized session end attempt by user ${requester.id} for session ${sessionId}`)
+        // VERIFY OWNERSHIP
+        if (!isStaff && session.userId !== requester.id) {
             return NextResponse.json({ success: false, error: 'Unauthorized to end this session' }, { status: 403 })
         }
 
@@ -70,9 +60,7 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Calculate totals from orders
         const orders = session.orders || []
-
         if (orders.length === 0) {
             return NextResponse.json(
                 { success: false, error: 'No orders in this session' },
@@ -80,68 +68,56 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        const totalAmount = orders.reduce((sum: number, order: any) => {
-            return sum + parseFloat(order.total || 0)
-        }, 0)
+        const totalAmount = orders.reduce((sum, order) => sum + Number(order.total || 0), 0)
 
         // Fetch user email if linked
-        let userEmail = null;
-        if (session.user_id) {
-            const { data: userData } = await supabase
-                .from('users')
-                .select('email')
-                .eq('id', session.user_id)
-                .single();
-            userEmail = userData?.email;
+        let userEmail: string | null = null
+        let emailResult = { success: false, error: 'No email found for user' }
+        if (session.userId) {
+            const userData = await prisma.user.findUnique({
+                where: { id: session.userId },
+                select: { email: true }
+            })
+            userEmail = userData?.email ?? null
         }
 
         // Send Email Bill if email available
-        let emailResult = { success: false, error: 'No email found for user' };
         if (userEmail) {
-            const { sendOrderBillEmail } = require('@/lib/utils/email');
+            try {
+                const { sendOrderBillEmail } = require('@/lib/utils/email')
 
-            // Collect all items from all orders
-            const allItems: any[] = [];
-            orders.forEach((order: any) => {
-                if (order.order_items) {
-                    order.order_items.forEach((item: any) => {
+                const allItems: any[] = []
+                orders.forEach((order) => {
+                    order.orderItems.forEach((item) => {
                         allItems.push({
-                            name: item.menu_items?.name || 'Item',
+                            name: item.menuItem?.name || 'Item',
                             quantity: item.quantity,
-                            price: item.price
-                        });
-                    });
-                }
-            });
+                            price: Number(item.price)
+                        })
+                    })
+                })
 
-            emailResult = await sendOrderBillEmail(userEmail, {
-                sessionId: session.id,
-                items: allItems,
-                totalAmount: totalAmount
-            });
+                emailResult = await sendOrderBillEmail(userEmail, {
+                    sessionId: session.id,
+                    items: allItems,
+                    totalAmount
+                })
+            } catch (e) {
+                emailResult = { success: false, error: 'Email sending failed' }
+            }
         }
 
         // Update session status
-        const { error: updateError } = await supabase
-            .from('guest_sessions')
-            .update({
+        await prisma.guestSession.update({
+            where: { id: sessionId },
+            data: {
                 status: 'ended',
-                ended_at: new Date().toISOString(),
-                total_amount: totalAmount,
-                payment_method: paymentMethod,
-                whatsapp_sent: false, // Legacy field
-                // Add note to metadata or just leave as is since we don't have email_sent column yet
-                notes: emailResult.success ? `Bill sent to email: ${userEmail}` : `Email failed: ${emailResult.error}`
-            })
-            .eq('id', sessionId)
-
-        if (updateError) {
-            console.error('Session update error:', updateError)
-            return NextResponse.json(
-                { success: false, error: 'Failed to update session' },
-                { status: 500 }
-            )
-        }
+                endedAt: new Date(),
+                totalAmount,
+                paymentMethod,
+                whatsappSent: false,
+            }
+        })
 
         return NextResponse.json({
             success: true,
@@ -156,7 +132,6 @@ export async function POST(request: NextRequest) {
                 ? 'Session ended! Bill sent to your email successfully.'
                 : `Session ended. ${emailResult.error}`
         })
-
     } catch (error) {
         console.error('End session error:', error)
         return NextResponse.json(

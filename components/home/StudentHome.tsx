@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/database/supabase'
 import { AnnouncementCard } from '@/components/ui/AnnouncementCard'
 import { ChevronDown } from 'lucide-react'
 
@@ -18,13 +17,11 @@ export default function StudentHome() {
 
     useEffect(() => {
         async function fetchNews() {
-            const { data } = await supabase
-                .from('announcements')
-                .select('*')
-                .eq('active', true)
-                .order('created_at', { ascending: false })
-
-            if (data) setAnnouncements(data)
+            try {
+                const res = await fetch('/api/announcements')
+                const json = await res.json()
+                if (json.success && json.data) setAnnouncements(json.data)
+            } catch (e) { console.error('fetchNews error:', e) }
             setLoadingAnnouncements(false)
         }
 

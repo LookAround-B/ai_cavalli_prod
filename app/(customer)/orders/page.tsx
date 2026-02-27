@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { supabase } from '@/lib/database/supabase'
 import { useAuth } from '@/lib/auth/context'
 
 import { useSearchParams, useRouter } from 'next/navigation'
@@ -44,21 +43,13 @@ export default function OrdersPage() {
         }
 
         async function fetchOrders() {
-            let query = supabase.from('orders').select(`
-                *,
-                items:order_items(
-                    id, menu_item_id, quantity, price,
-                    menu_item:menu_items(id, name)
-                )
-            `)
-
-            if (user) {
-                query = query.eq('user_id', user.id)
-            } else if (orderIdParam) {
-                query = query.eq('id', orderIdParam)
-            }
-
-            const { data } = await query.order('created_at', { ascending: false })
+            try {
+                let url = '/api/orders?'
+                if (user) url += `userId=${user.id}`
+                else if (orderIdParam) url += `orderId=${orderIdParam}`
+                const res = await fetch(url)
+                const json = await res.json()
+                const data = json.success ? json.data : null
 
             if (data) {
                 setOrders(data)
@@ -88,6 +79,7 @@ export default function OrdersPage() {
                     fetchKitchenBill(data.map((o: any) => o.id))
                 }
             }
+            } catch (e) { console.error('fetchOrders error:', e) }
             setLoading(false)
         }
 
@@ -124,28 +116,11 @@ export default function OrdersPage() {
         fetchOrders()
         fetchActiveSession()
 
-        // Real-time listener
-        const filter = user ? `user_id=eq.${user.id}` : (orderIdParam ? `id=eq.${orderIdParam}` : '')
-        if (!filter) return
-
-        const channel = supabase
-            .channel(`orders-tracking-${user?.id || orderIdParam}`)
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'orders',
-                    filter: filter
-                },
-                (payload) => {
-                    fetchOrders()
-                }
-            )
-            .subscribe()
+        // Poll for order updates every 5 seconds (replaces realtime)
+        const pollInterval = setInterval(() => fetchOrders(), 5000)
 
         return () => {
-            supabase.removeChannel(channel)
+            clearInterval(pollInterval)
         }
     }, [user, orderIdParam])
 
@@ -221,7 +196,7 @@ export default function OrdersPage() {
         router.push('/menu')
     }
 
-    // Separate effect for real-time guest session tracking (billed by kitchen/admin)
+    // Separate effect for polling guest session status (billed by kitchen/admin)
     useEffect(() => {
         if (
             !user ||
@@ -232,87 +207,59 @@ export default function OrdersPage() {
             autoLogoutTriggered
         ) return
 
-        const sessionChannel = supabase
-            .channel(`session-tracking-${activeSession.id}`)
-            .on(
-                'postgres_changes',
-                {
-                    event: 'UPDATE',
-                    schema: 'public',
-                    table: 'guest_sessions',
-                    filter: `id=eq.${activeSession.id}`
-                },
-                (payload: any) => {
-                    if (payload.new?.status === 'ended' && !autoLogoutTriggered) {
-                        setAutoLogoutTriggered(true)
-                        // Fetch the generated bill and show it so guest can print/save
-                        const orderIds = orders.map((o: any) => o.id)
-                        if (orderIds.length > 0) {
-                            fetchKitchenBill(orderIds)
-                        } else {
-                            showSuccess('Session Ended', 'Your visit has ended. Logging you out...')
-                            clearCart()
-                            setTimeout(() => logout(), 2500)
-                        }
+        const sessionPollInterval = setInterval(async () => {
+            try {
+                const params = new URLSearchParams()
+                if (user.phone) params.set('phone', user.phone)
+                params.set('userId', user.id)
+                const res = await fetch(`/api/sessions/active?${params.toString()}`)
+                const data = await res.json()
+                if (data.success && data.session?.status === 'ended' && !autoLogoutTriggered) {
+                    setAutoLogoutTriggered(true)
+                    const orderIds = orders.map((o: any) => o.id)
+                    if (orderIds.length > 0) {
+                        fetchKitchenBill(orderIds)
+                    } else {
+                        showSuccess('Session Ended', 'Your visit has ended. Logging you out...')
+                        clearCart()
+                        setTimeout(() => logout(), 2500)
                     }
                 }
-            )
-            .subscribe()
+            } catch (e) { console.error('Session poll error:', e) }
+        }, 5000)
 
         return () => {
-            supabase.removeChannel(sessionChannel)
+            clearInterval(sessionPollInterval)
         }
     }, [user, activeSession, autoLogoutTriggered])
 
     // Fetch a bill generated by kitchen/admin and show it in the preview modal
     const fetchKitchenBill = async (orderIds: string[]) => {
         try {
-            let bills: any[] | null = null
+            let bill: any = null
 
-            // Strategy 1: Find bill by session_id (most reliable for session-based billing)
+            // Strategy 1: Find bill by session_id
             if (activeSession && !activeSession._virtual && activeSession.id) {
-                const { data: billsBySession } = await supabase
-                    .from('bills')
-                    .select(`
-                        *,
-                        bill_items(*)
-                    `)
-                    .eq('session_id', activeSession.id)
-                    .order('created_at', { ascending: false })
-                    .limit(1)
-                bills = billsBySession
+                const res = await fetch(`/api/bills/lookup?sessionId=${activeSession.id}`)
+                const json = await res.json()
+                if (json.success && json.data) bill = json.data
             }
 
             // Strategy 2: Find bill by order_id
-            if (!bills || bills.length === 0) {
-                const { data: billsByOrder } = await supabase
-                    .from('bills')
-                    .select(`
-                        *,
-                        bill_items(*)
-                    `)
-                    .in('order_id', orderIds)
-                    .order('created_at', { ascending: false })
-                    .limit(1)
-                bills = billsByOrder
+            if (!bill) {
+                const res = await fetch(`/api/bills/lookup?orderIds=${orderIds.join(',')}`)
+                const json = await res.json()
+                if (json.success && json.data) bill = json.data
             }
 
-            // Strategy 3: Find most recent bill for this user by guest_name/table
-            if ((!bills || bills.length === 0) && user) {
-                const { data: billsByUser } = await supabase
-                    .from('bills')
-                    .select(`
-                        *,
-                        bill_items(*)
-                    `)
-                    .eq('guest_name', user.name || '')
-                    .order('created_at', { ascending: false })
-                    .limit(1)
-                bills = billsByUser
+            // Strategy 3: Find most recent bill by guest_name
+            if (!bill && user) {
+                const res = await fetch(`/api/bills/lookup?guestName=${encodeURIComponent(user.name || '')}`)
+                const json = await res.json()
+                if (json.success && json.data) bill = json.data
             }
 
-            if (bills && bills.length > 0) {
-                const bill = bills[0]
+            if (bill) {
                 setBillPreview({
                     id: bill.id,
                     billNumber: bill.bill_number,

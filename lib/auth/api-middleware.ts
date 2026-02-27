@@ -1,15 +1,13 @@
 /**
  * API Route Protection Utilities
  * Middleware for checking authorization in API endpoints
+ * Uses Prisma ORM (no Supabase dependency)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import prisma from '@/lib/database/prisma'
 import type { UserRole } from '@/lib/types/auth'
 import { RBAC, hasPermission as checkPermission } from '@/lib/types/auth'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 interface ApiResponse<T = any> {
     success: boolean
@@ -28,28 +26,35 @@ export async function getAuthUser(request: NextRequest) {
         }
 
         const token = authHeader.replace('Bearer ', '')
-        const admin = createClient(supabaseUrl, serviceRoleKey)
 
         // Look up user by session token
-        const { data: profile, error: profileError } = await admin
-            .from('users')
-            .select('id, email, phone, name, role, parent_name, position, created_at, session_token, session_expires_at')
-            .eq('session_token', token)
-            .maybeSingle()
+        const profile = await prisma.user.findFirst({
+            where: { sessionToken: token },
+            select: {
+                id: true,
+                email: true,
+                phone: true,
+                name: true,
+                role: true,
+                parentName: true,
+                position: true,
+                createdAt: true,
+                sessionToken: true,
+                sessionExpiresAt: true,
+            },
+        })
 
-        if (profileError || !profile) {
+        if (!profile) {
             return { user: null, error: 'Invalid session token' }
         }
 
         // Check expiry — auto-extend if expired (sliding window session)
-        if (profile.session_expires_at && new Date(profile.session_expires_at) < new Date()) {
-            // Token matched (query found the user by session_token) but it's expired
-            // Auto-extend by 24 hours instead of rejecting
-            const newExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-            await admin
-                .from('users')
-                .update({ session_expires_at: newExpiry })
-                .eq('id', profile.id)
+        if (profile.sessionExpiresAt && profile.sessionExpiresAt < new Date()) {
+            const newExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000)
+            await prisma.user.update({
+                where: { id: profile.id },
+                data: { sessionExpiresAt: newExpiry },
+            })
             console.log(`Session auto-extended for user ${profile.id} via api-middleware`)
         }
 
@@ -59,7 +64,20 @@ export async function getAuthUser(request: NextRequest) {
             : rawRole === 'GUEST' ? 'OUTSIDER'
             : rawRole
 
-        return { user: { ...profile, role: normalizedRole }, error: undefined }
+        const user = {
+            id: profile.id,
+            email: profile.email,
+            phone: profile.phone,
+            name: profile.name,
+            role: normalizedRole,
+            parent_name: profile.parentName,
+            position: profile.position,
+            created_at: profile.createdAt.toISOString(),
+            session_token: profile.sessionToken,
+            session_expires_at: profile.sessionExpiresAt?.toISOString(),
+        }
+
+        return { user, error: undefined }
     } catch (error) {
         console.error('Auth user fetch error:', error)
         return { user: null, error: 'Authentication failed' }
@@ -83,7 +101,7 @@ export async function requireRoles(
         return { authorized: false, user: null, error, response }
     }
 
-    if (!allowedRoles.includes(user.role)) {
+    if (!allowedRoles.includes(user.role as UserRole)) {
         const response = NextResponse.json(
             { success: false, error: 'Forbidden: Insufficient permissions' },
             { status: 403 }
@@ -111,7 +129,7 @@ export async function requirePermission(
         return { authorized: false, user: null, error, response }
     }
 
-    if (!checkPermission(user.role, permission)) {
+    if (!checkPermission(user.role as UserRole, permission)) {
         const response = NextResponse.json(
             { success: false, error: 'Forbidden: Missing required permission' },
             { status: 403 }
@@ -131,21 +149,13 @@ export function canAccessResource(
     currentUserId: string,
     allowOwnerAccess = true
 ): boolean {
-    // Admin can access everything
-    if (userRole === 'ADMIN') {
-        return true
-    }
-
-    // Owner can access their own resources
-    if (allowOwnerAccess && currentUserId === resourceOwnerId) {
-        return true
-    }
-
+    if (userRole === 'ADMIN') return true
+    if (allowOwnerAccess && currentUserId === resourceOwnerId) return true
     return false
 }
 
 /**
- * Audit log helper
+ * Audit log helper (console only — no audit table in production DB)
  */
 export async function logAudit(
     userId: string,
@@ -153,18 +163,8 @@ export async function logAudit(
     details?: Record<string, any>,
     status: 'success' | 'failed' = 'success'
 ) {
-    try {
-        const admin = createClient(supabaseUrl, serviceRoleKey)
-        await admin.from('auth_audit_log').insert([
-            {
-                user_id: userId,
-                action,
-                details: details || {},
-                success: status === 'success'
-            }
-        ])
-    } catch (error) {
-        console.error('Audit log error:', error)
+    if (status === 'failed') {
+        console.warn(`[AUDIT] ${action} FAILED userId=${userId}`, details)
     }
 }
 

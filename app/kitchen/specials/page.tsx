@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/database/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Trash2, Plus, Sparkles } from "lucide-react";
@@ -59,31 +58,24 @@ export default function KitchenSpecialsPage() {
   }, []);
 
   async function fetchData() {
-    const today = new Date().toISOString().split("T")[0];
-
-    // Fetch all menu items + categories
-    const [menuRes, catRes, specialRes] = await Promise.all([
-      supabase.from("menu_items").select("*").eq("available", true),
-      supabase.from("categories").select("*").order("sort_order"),
-      supabase
-        .from("daily_specials")
-        .select("*, menu_item:menu_items(*)")
-        .eq("date", today),
-    ]);
-
-    if (menuRes.data) setItems(menuRes.data);
-    if (catRes.data) {
-      setCategories(catRes.data);
-      const specialsCat = catRes.data.find(
-        (c: Category) => c.name === "Today's Specials",
-      );
-      if (specialsCat) {
-        setNewCategoryId(specialsCat.id);
-      } else if (catRes.data.length > 0) {
-        setNewCategoryId(catRes.data[0].id);
+    try {
+      const res = await fetch('/api/menu');
+      const json = await res.json();
+      if (json.success) {
+        const menuItems = json.data?.menuItems || [];
+        const cats = json.data?.categories || [];
+        const dailySpecials = json.data?.specials || [];
+        setItems(menuItems);
+        setCategories(cats);
+        const specialsCat = cats.find((c: Category) => c.name === "Today's Specials");
+        if (specialsCat) {
+          setNewCategoryId(specialsCat.id);
+        } else if (cats.length > 0) {
+          setNewCategoryId(cats[0].id);
+        }
+        setSpecials(dailySpecials);
       }
-    }
-    if (specialRes.data) setSpecials(specialRes.data);
+    } catch (e) { console.error('fetchData error:', e); }
     setLoading(false);
   }
 
@@ -92,22 +84,30 @@ export default function KitchenSpecialsPage() {
     if (!newName || !newPrice) return;
     setLoading(true);
 
-    // 1. Create Menu Item
-    const { data: item, error: itemError } = await supabase
-      .from("menu_items")
-      .insert({
-        name: newName,
-        description: newDescription,
-        price: parseFloat(newPrice),
-        image_url: newImageUrl,
-        category_id: newCategoryId,
-        available: true,
-      })
-      .select()
-      .single();
-
-    if (itemError) {
-      showError("Error creating menu item: " + itemError.message, `"please try again."`);
+    // 1. Create Menu Item via API
+    let item: any;
+    try {
+      const createRes = await fetch('/api/menu/items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newName,
+          description: newDescription,
+          price: parseFloat(newPrice),
+          imageUrl: newImageUrl,
+          categoryId: newCategoryId,
+          available: true,
+        }),
+      });
+      const createJson = await createRes.json();
+      if (!createJson.success) {
+        showError("Error creating menu item: " + (createJson.error || 'Unknown error'), `"please try again."`);
+        setLoading(false);
+        return;
+      }
+      item = createJson.data;
+    } catch (err: any) {
+      showError("Error creating menu item: " + err.message, `"please try again."`);
       setLoading(false);
       return;
     }

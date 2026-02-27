@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAdminClient } from '@/lib/auth/utils'
+import prisma from '@/lib/database/prisma'
 
 /**
  * Session refresh endpoint
  * Validates session token against DB and returns fresh user data
+ * Uses Prisma ORM (no Supabase dependency)
  */
 export async function POST(request: NextRequest) {
     try {
@@ -14,25 +15,36 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: false, error: 'No session token' }, { status: 401 })
         }
 
-        const admin = getAdminClient()
-        const { data: user, error } = await admin
-            .from('users')
-            .select('id, email, phone, name, role, parent_name, position, created_at, session_token, session_expires_at')
-            .eq('session_token', token)
-            .maybeSingle()
+        const user = await prisma.user.findFirst({
+            where: { sessionToken: token },
+            select: {
+                id: true,
+                email: true,
+                phone: true,
+                name: true,
+                role: true,
+                parentName: true,
+                position: true,
+                createdAt: true,
+                sessionToken: true,
+                sessionExpiresAt: true,
+            },
+        })
 
-        if (error || !user) {
+        if (!user) {
             return NextResponse.json({ success: false, error: 'Invalid session' }, { status: 401 })
         }
 
         // Check expiration
-        if (user.session_expires_at && new Date(user.session_expires_at) < new Date()) {
-            await admin.from('users').update({ session_token: null, session_expires_at: null }).eq('id', user.id)
+        if (user.sessionExpiresAt && user.sessionExpiresAt < new Date()) {
+            await prisma.user.update({
+                where: { id: user.id },
+                data: { sessionToken: null, sessionExpiresAt: null },
+            })
             return NextResponse.json({ success: false, error: 'Session expired' }, { status: 401 })
         }
 
-        // Return safe user data (role uppercased for consistency)
-        // Normalize role (handle old DB values)
+        // Normalize role
         const rawRole = (user.role || '').toUpperCase()
         const normalizedRole = rawRole === 'KITCHEN_MANAGER' ? 'KITCHEN'
             : rawRole === 'GUEST' ? 'OUTSIDER'
@@ -44,9 +56,9 @@ export async function POST(request: NextRequest) {
             phone: user.phone,
             name: user.name,
             role: normalizedRole,
-            parent_name: user.parent_name,
+            parent_name: user.parentName,
             position: user.position,
-            created_at: user.created_at
+            created_at: user.createdAt.toISOString()
         }
 
         return NextResponse.json({

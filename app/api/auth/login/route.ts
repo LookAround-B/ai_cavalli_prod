@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import prisma from '@/lib/database/prisma'
 import {
     getUserByPhone,
     verifyPin,
@@ -8,7 +9,6 @@ import {
     isUserLocked,
     logAuthAction,
     generateSessionToken,
-    getAdminClient
 } from '@/lib/auth/utils'
 import { sanitizePhone } from '@/lib/utils/phone'
 
@@ -16,7 +16,7 @@ import { sanitizePhone } from '@/lib/utils/phone'
  * Unified Login Endpoint
  * - PIN login: login_type = 'rider' | 'kitchen' | 'staff'
  * - Guest login: login_type = 'guest'
- * No Supabase Auth dependency — uses direct DB + bcryptjs
+ * Uses Prisma ORM (no Supabase dependency)
  */
 export async function POST(request: NextRequest) {
     try {
@@ -51,19 +51,14 @@ export async function POST(request: NextRequest) {
             const user = await getUserByPhone(sanitizedPhone)
             if (!user) {
                 await recordFailedLogin(sanitizedPhone, 'User not found')
-                // console.error('LOGIN DEBUG: No user found for phone:', sanitizedPhone)
                 return NextResponse.json({ success: false, error: 'Invalid phone or PIN' }, { status: 401 })
             }
 
-            // Normalize role for comparison (handle both old and new DB values)
             const rawRole = (user.role || '').toUpperCase()
             const userRole = rawRole === 'KITCHEN_MANAGER' ? 'KITCHEN'
                 : rawRole === 'GUEST' ? 'OUTSIDER'
                 : rawRole
-            
-            // console.log('LOGIN DEBUG: Found user:', { id: user.id, phone: user.phone, role: user.role, rawRole, userRole, hasPin: !!user.pin, hasPinHash: !!user.pin_hash })
 
-            // Only RIDER/STAFF/KITCHEN/ADMIN can use PIN login
             if (!['RIDER', 'STAFF', 'KITCHEN', 'ADMIN'].includes(userRole)) {
                 return NextResponse.json(
                     { success: false, error: 'Use guest check-in for this account' },
@@ -71,21 +66,17 @@ export async function POST(request: NextRequest) {
                 )
             }
 
-            // Verify PIN (supports bcrypt hash, pgcrypto hash, and plaintext fallback)
             const pinValid = await verifyPin(pin, user)
-            // console.log('LOGIN DEBUG: PIN verification result:', pinValid, 'inputPin:', pin, 'storedPin:', user.pin?.substring(0, 2) + '***', 'storedPinHash:', user.pin_hash?.substring(0, 10))
             if (!pinValid) {
                 await recordFailedLogin(sanitizedPhone, 'Invalid PIN')
                 return NextResponse.json({ success: false, error: 'Invalid phone or PIN' }, { status: 401 })
             }
 
-            // Success — clear failed attempts, generate session
             await clearFailedLoginAttempts(user.id)
             const sessionToken = generateSessionToken()
             await updateSessionToken(user.id, sessionToken, 24)
             await logAuthAction(user.id, 'login', { method: 'pin', role: userRole })
 
-            // Return safe user object (no pin/pin_hash)
             const safeUser = {
                 id: user.id,
                 email: user.email,
@@ -110,17 +101,10 @@ export async function POST(request: NextRequest) {
             if (!name?.trim()) {
                 return NextResponse.json({ success: false, error: 'Name is required' }, { status: 400 })
             }
-            // Table name is now optional — default to 'Walk-in'
             const finalTableName = table_name?.trim() || 'Walk-in'
 
-            const admin = getAdminClient()
-
             // Check if phone belongs to staff
-            const { data: staffUser } = await admin
-                .from('users')
-                .select('*')
-                .eq('phone', sanitizedPhone)
-                .maybeSingle()
+            const staffUser = await prisma.user.findUnique({ where: { phone: sanitizedPhone } })
 
             if (staffUser) {
                 const staffRole = (staffUser.role || '').toUpperCase()
@@ -138,90 +122,64 @@ export async function POST(request: NextRequest) {
                 : null
 
             if (!guestUser) {
-                // Look for existing OUTSIDER
-                const { data: existingGuest } = await admin
-                    .from('users')
-                    .select('*')
-                    .eq('phone', sanitizedPhone)
-                    .maybeSingle()
-
+                const existingGuest = await prisma.user.findUnique({ where: { phone: sanitizedPhone } })
                 if (existingGuest) {
                     guestUser = existingGuest
-                    // Update name if different
                     if (existingGuest.name !== name.trim()) {
-                        await admin.from('users').update({ name: name.trim() }).eq('id', existingGuest.id)
+                        await prisma.user.update({
+                            where: { id: existingGuest.id },
+                            data: { name: name.trim() },
+                        })
                     }
                 }
             }
 
             if (!guestUser) {
-                // Create new guest user
                 const guestEmail = `guest_${sanitizedPhone}@aicavalli.local`
-                const { data: newUser, error: createError } = await admin
-                    .from('users')
-                    .insert({
+                guestUser = await prisma.user.create({
+                    data: {
                         email: guestEmail,
                         phone: sanitizedPhone,
                         name: name.trim(),
-                        role: 'OUTSIDER'
-                    })
-                    .select()
-                    .single()
-
-                if (createError || !newUser) {
-                    // console.error('Guest creation failed:', createError)
-                    return NextResponse.json({ success: false, error: 'Registration failed. Try again.' }, { status: 500 })
-                }
-                guestUser = newUser
+                        role: 'OUTSIDER',
+                    },
+                })
             }
 
             // Create or update guest session
-            let session = null
+            let session: any = null
             try {
-                const { data: existingSession } = await admin
-                    .from('guest_sessions')
-                    .select('*')
-                    .eq('guest_phone', sanitizedPhone)
-                    .eq('status', 'active')
-                    .maybeSingle()
+                const existingSession = await prisma.guestSession.findFirst({
+                    where: { guestPhone: sanitizedPhone, status: 'active' },
+                })
 
                 if (existingSession) {
-                    const { data: updatedSession } = await admin
-                        .from('guest_sessions')
-                        .update({
-                            table_name: finalTableName,
-                            num_guests: parseInt(num_guests || '1'),
-                            guest_name: name.trim(),
-                            user_id: guestUser.id
-                        })
-                        .eq('id', existingSession.id)
-                        .select()
-                        .single()
-                    session = updatedSession || existingSession
+                    session = await prisma.guestSession.update({
+                        where: { id: existingSession.id },
+                        data: {
+                            tableName: finalTableName,
+                            numGuests: parseInt(num_guests || '1'),
+                            guestName: name.trim(),
+                            userId: guestUser.id,
+                        },
+                    })
                 } else {
-                    const { data: newSession } = await admin
-                        .from('guest_sessions')
-                        .insert({
-                            user_id: guestUser.id,
-                            guest_name: name.trim(),
-                            guest_phone: sanitizedPhone,
-                            table_name: finalTableName,
-                            num_guests: parseInt(num_guests || '1'),
+                    session = await prisma.guestSession.create({
+                        data: {
+                            userId: guestUser.id,
+                            guestName: name.trim(),
+                            guestPhone: sanitizedPhone,
+                            tableName: finalTableName,
+                            numGuests: parseInt(num_guests || '1'),
                             status: 'active',
-                            total_amount: 0
-                        })
-                        .select()
-                        .single()
-                    session = newSession
+                            totalAmount: 0,
+                        },
+                    })
                 }
             } catch (e) {
-                // console.error('Guest session error (non-fatal):', e)
+                // Non-fatal session error
             }
 
-            // Generate session token
-            if (!guestUser) {
-                return NextResponse.json({ success: false, error: 'Failed to create guest account' }, { status: 500 })
-            }
             const sessionToken = generateSessionToken()
             await updateSessionToken(guestUser.id, sessionToken, 24)
             await logAuthAction(guestUser.id, 'guest_login', { table_name: finalTableName, num_guests })
@@ -232,7 +190,7 @@ export async function POST(request: NextRequest) {
                 phone: guestUser.phone || sanitizedPhone,
                 name: name.trim(),
                 role: 'OUTSIDER',
-                created_at: guestUser.created_at
+                created_at: guestUser.createdAt
             }
 
             return NextResponse.json({
@@ -249,7 +207,6 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ success: false, error: 'Invalid login_type' }, { status: 400 })
     } catch (error) {
-        // console.error('Login error:', error)
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
     }
 }

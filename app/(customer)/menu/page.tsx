@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
-import { supabase } from '@/lib/database/supabase'
 import { SearchInput } from '@/components/ui/SearchInput'
 import { CategoryBadge } from '@/components/ui/CategoryBadge'
 import { MenuItemCard, MenuItem } from '@/components/ui/MenuItemCard'
@@ -42,29 +41,21 @@ export default function MenuPage() {
     useEffect(() => {
         async function fetchData() {
             setLoading(true)
-
-            const today = new Date().toISOString().split('T')[0]
-
-            const [catRes, itemRes, specialRes] = await Promise.all([
-                supabase.from('categories').select('*').order('sort_order'),
-                supabase.from('menu_items').select('*').eq('available', true),
-                supabase.from('daily_specials')
-                    .select('*, menu_item:menu_items(*)')
-                    .eq('date', today)
-            ])
-
-            if (catRes.data) {
-                setCategories(catRes.data)
-            }
-            if (itemRes.data) setItems(itemRes.data)
-            if (specialRes.data) {
-                const specialItems = specialRes.data.map((s: any) => ({
-                    ...s.menu_item,
-                    special_period: s.period
-                }))
-                setSpecials(specialItems)
-            }
-
+            try {
+                const res = await fetch('/api/menu')
+                const json = await res.json()
+                if (json.success) {
+                    if (json.data?.categories) setCategories(json.data.categories)
+                    if (json.data?.menuItems) setItems(json.data.menuItems)
+                    if (json.data?.specials) {
+                        const specialItems = json.data.specials.map((s: any) => ({
+                            ...s.menu_item,
+                            special_period: s.period
+                        }))
+                        setSpecials(specialItems)
+                    }
+                }
+            } catch (e) { console.error('fetchData error:', e) }
             setLoading(false)
         }
         fetchData()

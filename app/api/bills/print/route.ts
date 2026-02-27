@@ -1,15 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import prisma from '@/lib/database/prisma'
 import { requireRoles } from '@/lib/auth/api-middleware'
 import type { UserRole } from '@/lib/types/auth'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-function normalizeRole(role: string): UserRole {
-    const raw = (role || '').toUpperCase()
-    return (raw === 'KITCHEN_MANAGER' ? 'KITCHEN' : raw === 'GUEST' ? 'OUTSIDER' : raw) as UserRole
-}
 
 const BILL_ROLES: UserRole[] = ['STAFF', 'KITCHEN', 'ADMIN']
 
@@ -24,25 +16,21 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        const supabase = createClient(supabaseUrl, supabaseServiceKey)
-
-        // AUTH GUARD: Try session token auth first, fall back to userId verification
+        // AUTH GUARD
         const { authorized } = await requireRoles(request, BILL_ROLES)
         if (!authorized) {
-            // Fallback: verify userId from request body has an appropriate role
             if (!userId) {
                 return NextResponse.json(
                     { success: false, error: 'Unauthorized: No valid session or userId' },
                     { status: 401 }
                 )
             }
-            const { data: userRecord } = await supabase
-                .from('users')
-                .select('id, role')
-                .eq('id', userId)
-                .single()
-
-            if (!userRecord || !BILL_ROLES.includes(normalizeRole(userRecord.role) as UserRole)) {
+            const userRecord = await prisma.user.findUnique({
+                where: { id: userId },
+                select: { id: true, role: true }
+            })
+            const normalizedRole = (userRecord?.role || '').toUpperCase() as UserRole
+            if (!userRecord || !BILL_ROLES.includes(normalizedRole)) {
                 return NextResponse.json(
                     { success: false, error: 'Forbidden: Insufficient permissions' },
                     { status: 403 }
@@ -51,23 +39,23 @@ export async function POST(request: NextRequest) {
         }
 
         // Fetch bill with items and order details
-        const { data: bill, error: billError } = await supabase
-            .from('bills')
-            .select(`
-        *,
-        bill_items (*),
-        orders (
-          table_name,
-          guest_info,
-          notes,
-          created_at,
-          users (name, phone, role)
-        )
-      `)
-            .eq('id', billId)
-            .single()
+        const bill = await prisma.bill.findUnique({
+            where: { id: billId },
+            include: {
+                billItems: true,
+                order: {
+                    select: {
+                        tableName: true,
+                        guestInfo: true,
+                        notes: true,
+                        createdAt: true,
+                        user: { select: { name: true, phone: true, role: true } }
+                    }
+                }
+            }
+        })
 
-        if (billError || !bill) {
+        if (!bill) {
             return NextResponse.json(
                 { success: false, error: 'Bill not found' },
                 { status: 404 }
@@ -77,21 +65,11 @@ export async function POST(request: NextRequest) {
         // Format bill data for thermal printer
         const billData = formatBillForPrinting(bill)
 
-        // In a production environment with actual printer:
-        // const printResult = await printToThermalPrinter(billData)
-
-        // For now, we'll simulate printing and return the formatted data
-        // This allows the frontend to display a preview or send to browser print
-
         // Update printed_at timestamp
-        const { error: updateError } = await supabase
-            .from('bills')
-            .update({ printed_at: new Date().toISOString() })
-            .eq('id', billId)
-
-        if (updateError) {
-            console.error('Failed to update printed_at:', updateError)
-        }
+        await prisma.bill.update({
+            where: { id: billId },
+            data: { printedAt: new Date() }
+        })
 
         return NextResponse.json({
             success: true,
@@ -99,7 +77,6 @@ export async function POST(request: NextRequest) {
             printData: billData,
             printedAt: new Date().toISOString()
         })
-
     } catch (error) {
         console.error('Print error:', error)
         return NextResponse.json(
@@ -110,28 +87,25 @@ export async function POST(request: NextRequest) {
 }
 
 function formatBillForPrinting(bill: any) {
-    const order = bill.orders
-    const items = bill.bill_items || []
+    const order = bill.order
+    const items = bill.billItems || []
 
-    // Format date and time
-    const billDate = new Date(bill.created_at)
+    const billDate = new Date(bill.createdAt)
     const dateStr = billDate.toLocaleDateString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
+        day: '2-digit', month: 'short', year: 'numeric'
     })
     const timeStr = billDate.toLocaleTimeString('en-IN', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
+        hour: '2-digit', minute: '2-digit', hour12: true
     })
 
-    // Build bill text
-    // Build bold HTML receipt for browser print (much better thermal output than plain text)
+    const itemsTotal = Number(bill.itemsTotal)
+    const discountAmount = Number(bill.discountAmount || 0)
+    const finalTotal = Number(bill.finalTotal)
+
     const itemsHTML = items.map((item: any) => {
-        const name = item.item_name || 'Item'
+        const name = item.itemName || 'Item'
         const qty = item.quantity
-        const amount = `₹${item.subtotal.toFixed(2)}`
+        const amount = `₹${Number(item.subtotal).toFixed(2)}`
         return `<tr>
             <td style="text-align:left;padding:6px 0;"><b>${name}</b></td>
             <td style="text-align:center;padding:6px 0;"><b>${qty}</b></td>
@@ -169,9 +143,9 @@ function formatBillForPrinting(bill: any) {
     </style></head><body>
         <div class="c"><div class="name"><b>AI CAVALLI</b></div><div class="sub"><b>RESTAURANT & CAFE</b></div></div>
         <hr>
-        <div class="r"><b>Bill No:</b><b>${bill.bill_number}</b></div>
+        <div class="r"><b>Bill No:</b><b>${bill.billNumber}</b></div>
         <div class="r"><b>Date:</b><b>${dateStr} ${timeStr}</b></div>
-        <div class="r"><b>Table:</b><b>${order?.table_name || 'N/A'}</b></div>
+        <div class="r"><b>Table:</b><b>${order?.tableName || 'N/A'}</b></div>
         <hr>
         <table><thead><tr>
             <th class="th" style="text-align:left;"><b>Item</b></th>
@@ -179,50 +153,50 @@ function formatBillForPrinting(bill: any) {
             <th class="th" style="text-align:right;"><b>Amt</b></th>
         </tr></thead><tbody>${itemsHTML}</tbody></table>
         <hr>
-        <div class="tr"><b>Subtotal:</b><b>₹${bill.items_total.toFixed(2)}</b></div>
-        ${bill.discount_amount > 0 ? `<div class="tr"><b>Discount:</b><b>-₹${bill.discount_amount.toFixed(2)}</b></div>` : ''}
+        <div class="tr"><b>Subtotal:</b><b>₹${itemsTotal.toFixed(2)}</b></div>
+        ${discountAmount > 0 ? `<div class="tr"><b>Discount:</b><b>-₹${discountAmount.toFixed(2)}</b></div>` : ''}
         <hr>
-        <div class="gt"><b>TOTAL:</b><b>₹${bill.final_total.toFixed(2)}</b></div>
-        ${bill.payment_method ? `<div class="tr"><b>Payment:</b><b>${bill.payment_method.toUpperCase()}</b></div>` : ''}
+        <div class="gt"><b>TOTAL:</b><b>₹${finalTotal.toFixed(2)}</b></div>
+        ${bill.paymentMethod ? `<div class="tr"><b>Payment:</b><b>${bill.paymentMethod.toUpperCase()}</b></div>` : ''}
         <hr>
         <div class="ft"><b>Thank You! Visit Again!</b></div>
         <div class="c" style="margin-top:4px;font-size:13px;font-weight:900;"><b>Powered by AI Cavalli</b></div>
     </body></html>`
 
-    // Also keep plain text for raw printer fallback
+    // Plain text for raw printer fallback
     const lines = [
         '================================',
         '       AI CAVALLI RESTAURANT    ',
         '================================',
-        `Bill No: ${bill.bill_number}`,
+        `Bill No: ${bill.billNumber}`,
         `Date: ${dateStr} ${timeStr}`,
-        `Table: ${order?.table_name || 'N/A'}`,
+        `Table: ${order?.tableName || 'N/A'}`,
         '--------------------------------',
         'ITEM              QTY    AMOUNT',
         '--------------------------------'
     ]
 
     items.forEach((item: any) => {
-        const name = item.item_name.substring(0, 18).padEnd(18)
+        const name = (item.itemName || 'Item').substring(0, 18).padEnd(18)
         const qty = item.quantity.toString().padStart(3)
-        const amount = `Rs.${item.subtotal.toFixed(2)}`.padStart(9)
+        const amount = `Rs.${Number(item.subtotal).toFixed(2)}`.padStart(9)
         lines.push(`${name}${qty}${amount}`)
     })
 
     lines.push('--------------------------------')
-    lines.push(`Subtotal:         Rs.${bill.items_total.toFixed(2)}`)
+    lines.push(`Subtotal:         Rs.${itemsTotal.toFixed(2)}`)
 
-    if (bill.discount_amount > 0) {
-        const discountPercent = ((bill.discount_amount / bill.items_total) * 100).toFixed(0)
-        lines.push(`Discount (${discountPercent}%):   -Rs.${bill.discount_amount.toFixed(2)}`)
+    if (discountAmount > 0) {
+        const discountPercent = ((discountAmount / itemsTotal) * 100).toFixed(0)
+        lines.push(`Discount (${discountPercent}%):   -Rs.${discountAmount.toFixed(2)}`)
     }
 
     lines.push('================================')
-    lines.push(`TOTAL:            Rs.${bill.final_total.toFixed(2)}`)
+    lines.push(`TOTAL:            Rs.${finalTotal.toFixed(2)}`)
     lines.push('================================')
 
-    if (bill.payment_method) {
-        lines.push(`Payment: ${bill.payment_method.toUpperCase()}`)
+    if (bill.paymentMethod) {
+        lines.push(`Payment: ${bill.paymentMethod.toUpperCase()}`)
     }
 
     lines.push('')
@@ -232,14 +206,14 @@ function formatBillForPrinting(bill: any) {
     lines.push('')
 
     return {
-        billNumber: bill.bill_number,
+        billNumber: bill.billNumber,
         text: lines.join('\n'),
         html: htmlReceipt,
-        lines: lines,
+        lines,
         metadata: {
             billId: bill.id,
-            orderId: bill.order_id,
-            total: bill.final_total,
+            orderId: bill.orderId,
+            total: finalTotal,
             itemCount: items.length
         }
     }
