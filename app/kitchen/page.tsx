@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/database/supabase'
 import { useAuth } from '@/lib/auth/context'
 import { useRouter } from 'next/navigation'
@@ -30,7 +30,13 @@ import {
     BellRing,
     Plus,
     Package,
-    AlertCircle
+    AlertCircle,
+    Timer,
+    AlertTriangle,
+    StopCircle,
+    ChevronDown,
+    Phone,
+    MapPin
 } from 'lucide-react'
 import { Loading } from '@/components/ui/Loading'
 import { MenuItemSelector } from '@/components/kitchen/MenuItemSelector'
@@ -84,6 +90,27 @@ export default function KitchenPage() {
     const [showMenuSelector, setShowMenuSelector] = useState(false)
     const [selectedOrderForMenu, setSelectedOrderForMenu] = useState<string | null>(null)
     const [billPreview, setBillPreview] = useState<BillData | null>(null)
+    // Cooking timer state: maps orderId -> timestamp when cooking started
+    const [cookingTimers, setCookingTimers] = useState<Record<string, number>>({})
+    // Elapsed seconds for each cooking order (for re-rendering the timer display)
+    const [timerElapsed, setTimerElapsed] = useState<Record<string, number>>({})
+    // Track which orders have already triggered the overdue alarm
+    const overdueAlerted = useRef<Set<string>>(new Set())
+    const alarmAudioRef = useRef<HTMLAudioElement | null>(null)
+    // Attendee assignment per order (orderId -> attendee name)
+    const [orderAttendees, setOrderAttendees] = useState<Record<string, string>>({})
+    const [attendeeDropdownOpen, setAttendeeDropdownOpen] = useState<string | null>(null)
+    const [kitchenStaff, setKitchenStaff] = useState<{id: string, name: string}[]>([])
+    // Create order from kitchen portal
+    const [showCreateOrder, setShowCreateOrder] = useState(false)
+    const [newOrderName, setNewOrderName] = useState('')
+    const [newOrderPhone, setNewOrderPhone] = useState('')
+    const [newOrderTable, setNewOrderTable] = useState('')
+    const [newOrderGuests, setNewOrderGuests] = useState(1)
+    const [newOrderLocation, setNewOrderLocation] = useState<'indoor' | 'outdoor'>('indoor')
+    const [newOrderItems, setNewOrderItems] = useState<{menuItemId: string, quantity: number}[]>([])
+    const [creatingOrder, setCreatingOrder] = useState(false)
+    const [showNewOrderMenu, setShowNewOrderMenu] = useState(false)
 
     const { user, logout, isLoading: authLoading } = useAuth()
     const router = useRouter()
@@ -281,6 +308,202 @@ export default function KitchenPage() {
         }
     }, [])
 
+    // ----- Cooking Timer: tick every second & alarm when overdue -----
+    const COOKING_TIME_LIMIT = 30 * 60 // 30 minutes in seconds
+
+    useEffect(() => {
+        // Preload alarm sound
+        alarmAudioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2870/2870-preview.mp3')
+        alarmAudioRef.current.loop = true
+        alarmAudioRef.current.load()
+    }, [])
+
+    // Tick every second to update elapsed times and check for overdue orders
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const now = Date.now()
+            setCookingTimers(prev => {
+                const newElapsed: Record<string, number> = {}
+                for (const [orderId, startTime] of Object.entries(prev)) {
+                    const elapsed = Math.floor((now - startTime) / 1000)
+                    newElapsed[orderId] = elapsed
+
+                    // Check if overdue (30 min) and hasn't been alerted yet
+                    if (elapsed >= COOKING_TIME_LIMIT && !overdueAlerted.current.has(orderId)) {
+                        overdueAlerted.current.add(orderId)
+                        // Play alarm sound
+                        if (alarmAudioRef.current) {
+                            alarmAudioRef.current.currentTime = 0
+                            alarmAudioRef.current.play().catch(console.error)
+                            // Stop alarm after 10 seconds
+                            setTimeout(() => {
+                                alarmAudioRef.current?.pause()
+                                if (alarmAudioRef.current) alarmAudioRef.current.currentTime = 0
+                            }, 10000)
+                        }
+                        // Browser notification
+                        if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+                            new Notification('⏰ Order Overdue!', {
+                                body: `Order #${orderId.slice(0, 8).toUpperCase()} has exceeded 30 minutes!`,
+                                icon: '/favicon.ico',
+                                requireInteraction: true
+                            })
+                        }
+                    }
+                }
+                setTimerElapsed(newElapsed)
+                return prev
+            })
+        }, 1000)
+
+        return () => clearInterval(interval)
+    }, [])
+
+    // Clean up timers when orders are completed/cancelled/removed
+    useEffect(() => {
+        setCookingTimers(prev => {
+            const activeOrderIds = new Set(orders.filter(o => o.status === 'preparing').map(o => o.id))
+            const updated = { ...prev }
+            let changed = false
+            for (const orderId of Object.keys(updated)) {
+                if (!activeOrderIds.has(orderId)) {
+                    delete updated[orderId]
+                    overdueAlerted.current.delete(orderId)
+                    changed = true
+                }
+            }
+            // Auto-start timers for orders already in 'preparing' that don't have a timer yet
+            for (const order of orders) {
+                if (order.status === 'preparing' && !updated[order.id]) {
+                    // Use created_at as an approximation for when cooking started
+                    updated[order.id] = Date.now()
+                    changed = true
+                }
+            }
+            return changed ? updated : prev
+        })
+    }, [orders])
+
+    // Start cooking timer when status changes to preparing
+    const startCookingTimer = useCallback((orderId: string) => {
+        setCookingTimers(prev => ({ ...prev, [orderId]: Date.now() }))
+    }, [])
+
+    // Stop cooking timer (when order is handed over)
+    const stopCookingTimer = useCallback((orderId: string) => {
+        setCookingTimers(prev => {
+            const updated = { ...prev }
+            delete updated[orderId]
+            return updated
+        })
+        overdueAlerted.current.delete(orderId)
+        // Stop alarm if it's currently playing
+        if (alarmAudioRef.current) {
+            alarmAudioRef.current.pause()
+            alarmAudioRef.current.currentTime = 0
+        }
+    }, [])
+
+    // Format elapsed seconds to MM:SS
+    const formatTimer = (totalSeconds: number) => {
+        const mins = Math.floor(totalSeconds / 60)
+        const secs = totalSeconds % 60
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+    }
+
+    // Helper: is an order overdue?
+    const isOrderOverdue = (orderId: string) => (timerElapsed[orderId] || 0) >= COOKING_TIME_LIMIT
+
+    // Fetch kitchen/admin staff for attendee dropdown
+    useEffect(() => {
+        async function fetchStaff() {
+            const { data } = await supabase
+                .from('users')
+                .select('id, name')
+                .in('role', ['KITCHEN', 'ADMIN'])
+                .order('name')
+            setKitchenStaff(data || [])
+        }
+        fetchStaff()
+    }, [])
+
+    // Cancel order
+    async function cancelOrder(orderId: string) {
+        const ok = await showConfirm('Cancel Order', 'Are you sure you want to cancel this order? This cannot be undone.')
+        if (!ok) return
+        const { error } = await supabase
+            .from('orders')
+            .update({ status: 'cancelled' })
+            .eq('id', orderId)
+        if (error) {
+            showError('Cancel Failed', 'Failed to cancel order')
+        } else {
+            setOrders(prev => prev.filter(o => o.id !== orderId))
+            stopCookingTimer(orderId)
+            showSuccess('Order Cancelled', 'The order has been cancelled.')
+        }
+    }
+
+    // Create order from kitchen portal
+    async function handleCreateKitchenOrder() {
+        if (!newOrderName.trim()) {
+            showError('Missing Info', 'Please enter the customer name.')
+            return
+        }
+        if (!newOrderPhone.trim()) {
+            showError('Missing Info', 'Please enter the phone number.')
+            return
+        }
+        if (!newOrderTable.trim()) {
+            showError('Missing Info', 'Please enter a table name.')
+            return
+        }
+        if (newOrderItems.length === 0) {
+            showError('Missing Items', 'Please add at least one item to the order.')
+            return
+        }
+
+        setCreatingOrder(true)
+        try {
+            const sessionToken = localStorage.getItem('session_token') || ''
+            const response = await fetch('/api/orders/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${sessionToken}`
+                },
+                body: JSON.stringify({
+                    userId: user?.id,
+                    phone: newOrderPhone,
+                    items: newOrderItems.map(item => ({ itemId: item.menuItemId, quantity: item.quantity })),
+                    tableName: newOrderTable,
+                    numGuests: newOrderGuests,
+                    locationType: newOrderLocation,
+                    notes: `KITCHEN_ORDER | ${newOrderName} | ${newOrderPhone}`,
+                })
+            })
+            const data = await response.json()
+            if (data.success) {
+                showSuccess('Order Created', `Order #${data.orderId?.slice(0, 8).toUpperCase()} created successfully!`)
+                // Reset form
+                setNewOrderName('')
+                setNewOrderPhone('')
+                setNewOrderTable('')
+                setNewOrderGuests(1)
+                setNewOrderLocation('indoor')
+                setNewOrderItems([])
+                setShowCreateOrder(false)
+                await fetchOrders()
+            } else {
+                showError('Create Failed', data.error || 'Failed to create order')
+            }
+        } catch (err) {
+            showError('Error', 'Failed to create order')
+        } finally {
+            setCreatingOrder(false)
+        }
+    }
+
     // Handle generate session bill
     const handleGenerateSessionBill = async (sessionId: string) => {
         setGeneratingBill(sessionId)
@@ -350,6 +573,14 @@ export default function KitchenPage() {
             showError('Update Failed', 'Failed to update order status')
         } else {
             setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus as any } : o))
+            // Start timer when cooking begins
+            if (newStatus === 'preparing') {
+                startCookingTimer(orderId)
+            }
+            // Stop timer when order is handed over or completed
+            if (newStatus === 'ready' || newStatus === 'completed' || newStatus === 'cancelled') {
+                stopCookingTimer(orderId)
+            }
         }
     }
 
@@ -567,6 +798,27 @@ export default function KitchenPage() {
 
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <Button
+                        onClick={() => setShowCreateOrder(true)}
+                        size="sm"
+                        style={{
+                            height: '44px',
+                            padding: '0 20px',
+                            borderRadius: '22px',
+                            background: 'linear-gradient(135deg, var(--primary) 0%, #8B1A1F 100%)',
+                            border: 'none',
+                            color: 'white',
+                            fontWeight: 800,
+                            fontSize: '0.85rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            boxShadow: '0 4px 12px rgba(192, 39, 45, 0.3)'
+                        }}
+                    >
+                        <Plus size={18} strokeWidth={3} />
+                        Create Order
+                    </Button>
                     <Button
                         variant="ghost"
                         size="sm"
@@ -808,6 +1060,74 @@ export default function KitchenPage() {
                                     </span>
                                 </div>
 
+                                {/* Cooking Timer Display */}
+                                {order.status === 'preparing' && cookingTimers[order.id] && (
+                                    (() => {
+                                        const elapsed = timerElapsed[order.id] || 0
+                                        const remaining = Math.max(0, COOKING_TIME_LIMIT - elapsed)
+                                        const overdue = elapsed >= COOKING_TIME_LIMIT
+                                        const warningZone = remaining <= 5 * 60 && !overdue // last 5 minutes
+                                        return (
+                                            <div style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: '10px',
+                                                padding: '10px 20px',
+                                                background: overdue
+                                                    ? 'linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)'
+                                                    : warningZone
+                                                        ? 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)'
+                                                        : 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
+                                                animation: overdue ? 'timerPulse 1s infinite' : 'none',
+                                                transition: 'background 0.5s ease'
+                                            }}>
+                                                {overdue ? (
+                                                    <AlertTriangle size={18} color="white" style={{ animation: 'timerPulse 0.5s infinite' }} />
+                                                ) : (
+                                                    <Timer size={18} color="white" />
+                                                )}
+                                                <span style={{
+                                                    fontWeight: 900,
+                                                    fontSize: overdue ? '1.1rem' : '1rem',
+                                                    color: 'white',
+                                                    letterSpacing: '0.05em',
+                                                    fontVariantNumeric: 'tabular-nums'
+                                                }}>
+                                                    {overdue
+                                                        ? `⚠ OVERDUE +${formatTimer(elapsed - COOKING_TIME_LIMIT)}`
+                                                        : `⏱ ${formatTimer(remaining)} remaining`
+                                                    }
+                                                </span>
+                                                {overdue && (
+                                                    <button
+                                                        onClick={() => {
+                                                            // Dismiss alarm for this order
+                                                            if (alarmAudioRef.current) {
+                                                                alarmAudioRef.current.pause()
+                                                                alarmAudioRef.current.currentTime = 0
+                                                            }
+                                                        }}
+                                                        style={{
+                                                            marginLeft: '8px',
+                                                            background: 'rgba(255,255,255,0.2)',
+                                                            border: '1px solid rgba(255,255,255,0.4)',
+                                                            color: 'white',
+                                                            borderRadius: '8px',
+                                                            padding: '4px 10px',
+                                                            fontWeight: 700,
+                                                            fontSize: '0.75rem',
+                                                            cursor: 'pointer'
+                                                        }}
+                                                    >
+                                                        Dismiss
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )
+                                    })()
+                                )}
+
                                 {/* Header Info */}
                                 <div style={{ padding: '20px 20px 16px', borderBottom: '2px solid #f0f0f0', minHeight: '140px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
@@ -970,16 +1290,113 @@ export default function KitchenPage() {
 
                                 {/* Action Buttons */}
                                 {!showCompleted && (
-                                    <div style={{ padding: '20px', background: 'linear-gradient(180deg, #FAFAFA 0%, #F5F5F5 100%)', borderTop: '2px solid #E5E5E5', flexShrink: 0, minHeight: '180px', display: 'flex', flexDirection: 'column' }}>
+                                    <div style={{ padding: '20px', background: 'linear-gradient(180deg, #FAFAFA 0%, #F5F5F5 100%)', borderTop: '2px solid #E5E5E5', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        
+                                        {/* Attendee Dropdown - only before cooking starts */}
+                                        {order.status === 'pending' && (
+                                            <div style={{ position: 'relative', marginBottom: '4px' }}>
+                                                <button
+                                                    onClick={() => setAttendeeDropdownOpen(attendeeDropdownOpen === order.id ? null : order.id)}
+                                                    style={{
+                                                        width: '100%',
+                                                        height: '44px',
+                                                        borderRadius: '12px',
+                                                        border: '1.5px solid #D1D5DB',
+                                                        background: 'white',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'space-between',
+                                                        padding: '0 14px',
+                                                        color: orderAttendees[order.id] ? 'var(--text)' : '#9CA3AF',
+                                                        fontWeight: 700,
+                                                        fontSize: '0.85rem',
+                                                        transition: 'all 0.2s',
+                                                        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                                                    }}
+                                                >
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <User size={16} strokeWidth={2.5} />
+                                                        {orderAttendees[order.id] || 'Attended by...'}
+                                                    </div>
+                                                    <ChevronDown size={16} style={{ transform: attendeeDropdownOpen === order.id ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+                                                </button>
+                                                {attendeeDropdownOpen === order.id && (
+                                                    <div style={{
+                                                        position: 'absolute',
+                                                        top: '48px',
+                                                        left: 0,
+                                                        right: 0,
+                                                        background: 'white',
+                                                        borderRadius: '12px',
+                                                        border: '1.5px solid #D1D5DB',
+                                                        boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                                                        zIndex: 50,
+                                                        maxHeight: '160px',
+                                                        overflowY: 'auto'
+                                                    }}>
+                                                        {kitchenStaff.map((staff) => (
+                                                            <button
+                                                                key={staff.id}
+                                                                onClick={() => {
+                                                                    setOrderAttendees(prev => ({ ...prev, [order.id]: staff.name }))
+                                                                    setAttendeeDropdownOpen(null)
+                                                                }}
+                                                                style={{
+                                                                    width: '100%',
+                                                                    padding: '10px 14px',
+                                                                    border: 'none',
+                                                                    background: orderAttendees[order.id] === staff.name ? 'rgba(var(--primary-rgb), 0.08)' : 'transparent',
+                                                                    cursor: 'pointer',
+                                                                    textAlign: 'left',
+                                                                    fontWeight: 700,
+                                                                    fontSize: '0.85rem',
+                                                                    color: orderAttendees[order.id] === staff.name ? 'var(--primary)' : 'var(--text)',
+                                                                    transition: 'background 0.15s',
+                                                                    borderBottom: '1px solid #F3F4F6'
+                                                                }}
+                                                                onMouseEnter={e => e.currentTarget.style.background = '#F9FAFB'}
+                                                                onMouseLeave={e => e.currentTarget.style.background = orderAttendees[order.id] === staff.name ? 'rgba(var(--primary-rgb), 0.08)' : 'transparent'}
+                                                            >
+                                                                {staff.name}
+                                                            </button>
+                                                        ))}
+                                                        {kitchenStaff.length === 0 && (
+                                                            <div style={{ padding: '10px 14px', color: '#9CA3AF', fontSize: '0.85rem', fontWeight: 600 }}>No staff found</div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* Show assigned attendee after cooking starts (locked) */}
+                                        {order.status !== 'pending' && orderAttendees[order.id] && (
+                                            <div style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '8px',
+                                                padding: '8px 14px',
+                                                background: 'rgba(var(--primary-rgb), 0.05)',
+                                                borderRadius: '10px',
+                                                border: '1px solid rgba(var(--primary-rgb), 0.15)',
+                                                marginBottom: '4px'
+                                            }}>
+                                                <User size={14} color="var(--primary)" />
+                                                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--primary)' }}>
+                                                    Attended by: {orderAttendees[order.id]}
+                                                </span>
+                                            </div>
+                                        )}
+
                                         {/* Primary Action Button */}
-                                        <div style={{ marginBottom: '14px', minHeight: '64px' }}>
+                                        <div style={{ minHeight: '56px' }}>
                                             {order.status === 'pending' && (
                                                 <Button 
                                                     onClick={() => updateStatus(order.id, 'preparing')} 
                                                     size="lg" 
                                                     style={{ 
                                                         width: '100%', 
-                                                        height: '64px', 
+                                                        height: '56px', 
                                                         fontWeight: 900, 
                                                         fontSize: '1.05rem',
                                                         background: 'linear-gradient(135deg, var(--primary) 0%, #8B1A1F 100%)',
@@ -998,7 +1415,7 @@ export default function KitchenPage() {
                                                     size="lg" 
                                                     style={{ 
                                                         width: '100%', 
-                                                        height: '64px', 
+                                                        height: '56px', 
                                                         fontWeight: 900, 
                                                         fontSize: '1.05rem',
                                                         background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', 
@@ -1019,7 +1436,7 @@ export default function KitchenPage() {
                                                     variant="outline" 
                                                     style={{ 
                                                         width: '100%', 
-                                                        height: '64px', 
+                                                        height: '56px', 
                                                         fontWeight: 900, 
                                                         fontSize: '1.05rem',
                                                         color: 'var(--text)', 
@@ -1035,12 +1452,11 @@ export default function KitchenPage() {
                                             )}
                                         </div>
                                         
-                                        {/* Secondary Action Buttons */}
-                                        <div style={{ display: 'flex', gap: '10px', minHeight: '52px' }}>
+                                        {/* Row 1: Discount + Edit */}
+                                        <div style={{ display: 'flex', gap: '10px' }}>
                                             <button 
                                                 onClick={async () => {
                                                     const result = await new Promise<string | null>((resolve) => {
-                                                        let val = ''
                                                         showPopup({
                                                             type: 'confirm',
                                                             title: 'Apply Discount',
@@ -1073,8 +1489,8 @@ export default function KitchenPage() {
                                                     if (result) updateDiscount(order.id, parseFloat(result))
                                                 }} 
                                                 style={{ 
-                                                    flex: '0 0 58px',
-                                                    height: '52px', 
+                                                    flex: '0 0 52px',
+                                                    height: '46px', 
                                                     borderRadius: '12px', 
                                                     border: '1.5px solid #D1D5DB', 
                                                     background: 'white', 
@@ -1089,7 +1505,7 @@ export default function KitchenPage() {
                                                 onMouseEnter={(e) => {
                                                     e.currentTarget.style.borderColor = 'var(--primary)'
                                                     e.currentTarget.style.color = 'var(--primary)'
-                                                    e.currentTarget.style.transform = 'translateY(-2px)'
+                                                    e.currentTarget.style.transform = 'translateY(-1px)'
                                                     e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)'
                                                 }}
                                                 onMouseLeave={(e) => {
@@ -1099,14 +1515,14 @@ export default function KitchenPage() {
                                                     e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)'
                                                 }}
                                             >
-                                                <Percent size={20} strokeWidth={2.5} />
+                                                <Percent size={18} strokeWidth={2.5} />
                                             </button>
                                             
                                             <button 
                                                 onClick={() => setEditingOrderId(editingOrderId === order.id ? null : order.id)} 
                                                 style={{ 
                                                     flex: 1,
-                                                    height: '52px', 
+                                                    height: '46px', 
                                                     borderRadius: '12px', 
                                                     border: `1.5px solid ${editingOrderId === order.id ? '#DC2626' : '#D1D5DB'}`, 
                                                     background: editingOrderId === order.id ? '#FEE2E2' : 'white', 
@@ -1117,14 +1533,14 @@ export default function KitchenPage() {
                                                     gap: '8px', 
                                                     color: editingOrderId === order.id ? '#DC2626' : '#374151', 
                                                     fontWeight: 700, 
-                                                    fontSize: '0.9rem',
+                                                    fontSize: '0.85rem',
                                                     transition: 'all 0.2s',
                                                     boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
                                                 }}
                                                 onMouseEnter={(e) => {
                                                     if (editingOrderId !== order.id) {
                                                         e.currentTarget.style.background = '#F9FAFB'
-                                                        e.currentTarget.style.transform = 'translateY(-2px)'
+                                                        e.currentTarget.style.transform = 'translateY(-1px)'
                                                         e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)'
                                                     }
                                                 }}
@@ -1137,19 +1553,22 @@ export default function KitchenPage() {
                                                 }}
                                             >
                                                 {editingOrderId === order.id ? (
-                                                    <><XIcon size={18} strokeWidth={2.5} /> Cancel</>
+                                                    <><XIcon size={16} strokeWidth={2.5} /> Cancel</>
                                                 ) : (
-                                                    <><Pencil size={18} strokeWidth={2.5} /> Edit</>
+                                                    <><Pencil size={16} strokeWidth={2.5} /> Edit</>
                                                 )}
                                             </button>
-                                            
+                                        </div>
+
+                                        {/* Row 2: Print Bill + Cancel Order */}
+                                        <div style={{ display: 'flex', gap: '10px' }}>
                                             {order.billed ? (
                                                 <button 
                                                     onClick={() => handleReprintBill(order.id)} 
                                                     disabled={reprintingBill === order.id} 
                                                     style={{ 
                                                         flex: 1,
-                                                        height: '52px', 
+                                                        height: '46px', 
                                                         borderRadius: '12px', 
                                                         border: '1.5px solid #10B981', 
                                                         background: 'linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%)', 
@@ -1160,12 +1579,12 @@ export default function KitchenPage() {
                                                         gap: '8px', 
                                                         color: '#059669', 
                                                         fontWeight: 700, 
-                                                        fontSize: '0.9rem',
+                                                        fontSize: '0.85rem',
                                                         transition: 'all 0.2s',
                                                         boxShadow: '0 2px 6px rgba(16, 185, 129, 0.2)'
                                                     }}
                                                     onMouseEnter={(e) => {
-                                                        e.currentTarget.style.transform = 'translateY(-2px)'
+                                                        e.currentTarget.style.transform = 'translateY(-1px)'
                                                         e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)'
                                                     }}
                                                     onMouseLeave={(e) => {
@@ -1173,7 +1592,7 @@ export default function KitchenPage() {
                                                         e.currentTarget.style.boxShadow = '0 2px 6px rgba(16, 185, 129, 0.2)'
                                                     }}
                                                 >
-                                                    <CheckCircle2 size={18} strokeWidth={2.5} /> 
+                                                    <CheckCircle2 size={16} strokeWidth={2.5} /> 
                                                     {reprintingBill === order.id ? '...' : 'Print Bill'}
                                                 </button>
                                             ) : (
@@ -1182,7 +1601,7 @@ export default function KitchenPage() {
                                                     disabled={generatingBill === order.id || printingBill !== null} 
                                                     style={{ 
                                                         flex: 1,
-                                                        height: '52px', 
+                                                        height: '46px', 
                                                         borderRadius: '12px', 
                                                         border: '1.5px solid #D1D5DB', 
                                                         background: 'white', 
@@ -1193,7 +1612,7 @@ export default function KitchenPage() {
                                                         gap: '8px', 
                                                         color: '#374151', 
                                                         fontWeight: 700, 
-                                                        fontSize: '0.9rem',
+                                                        fontSize: '0.85rem',
                                                         opacity: generatingBill === order.id ? 0.6 : 1,
                                                         transition: 'all 0.2s',
                                                         boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
@@ -1201,7 +1620,7 @@ export default function KitchenPage() {
                                                     onMouseEnter={(e) => {
                                                         if (generatingBill !== order.id && printingBill === null) {
                                                             e.currentTarget.style.background = '#F9FAFB'
-                                                            e.currentTarget.style.transform = 'translateY(-2px)'
+                                                            e.currentTarget.style.transform = 'translateY(-1px)'
                                                             e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)'
                                                         }
                                                     }}
@@ -1213,10 +1632,43 @@ export default function KitchenPage() {
                                                         }
                                                     }}
                                                 >
-                                                    <Printer size={18} strokeWidth={2.5} /> 
-                                                    {generatingBill === order.id ? '...' : 'Bill'}
+                                                    <Printer size={16} strokeWidth={2.5} /> 
+                                                    {generatingBill === order.id ? '...' : 'Print Bill'}
                                                 </button>
                                             )}
+                                            
+                                            <button 
+                                                onClick={() => cancelOrder(order.id)} 
+                                                style={{ 
+                                                    flex: '0 0 52px',
+                                                    height: '46px', 
+                                                    borderRadius: '12px', 
+                                                    border: '1.5px solid #FCA5A5', 
+                                                    background: '#FEF2F2', 
+                                                    cursor: 'pointer', 
+                                                    display: 'flex', 
+                                                    alignItems: 'center', 
+                                                    justifyContent: 'center', 
+                                                    color: '#DC2626',
+                                                    transition: 'all 0.2s',
+                                                    boxShadow: '0 1px 3px rgba(220,38,38,0.1)'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.background = '#FEE2E2'
+                                                    e.currentTarget.style.borderColor = '#DC2626'
+                                                    e.currentTarget.style.transform = 'translateY(-1px)'
+                                                    e.currentTarget.style.boxShadow = '0 4px 8px rgba(220,38,38,0.2)'
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.background = '#FEF2F2'
+                                                    e.currentTarget.style.borderColor = '#FCA5A5'
+                                                    e.currentTarget.style.transform = 'translateY(0)'
+                                                    e.currentTarget.style.boxShadow = '0 1px 3px rgba(220,38,38,0.1)'
+                                                }}
+                                                title="Cancel Order"
+                                            >
+                                                <StopCircle size={20} strokeWidth={2.5} />
+                                            </button>
                                         </div>
                                     </div>
                                 )}
@@ -1248,11 +1700,362 @@ export default function KitchenPage() {
                 />
             )}
 
+            {/* Create Order Modal */}
+            {showCreateOrder && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0,0,0,0.5)',
+                    zIndex: 1000,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '20px'
+                }}
+                onClick={(e) => { if (e.target === e.currentTarget) setShowCreateOrder(false) }}
+                >
+                    <div style={{
+                        background: 'white',
+                        borderRadius: '20px',
+                        width: '100%',
+                        maxWidth: '500px',
+                        maxHeight: '90vh',
+                        overflowY: 'auto',
+                        boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+                    }}>
+                        {/* Modal Header */}
+                        <div style={{
+                            padding: '24px 24px 16px',
+                            borderBottom: '2px solid #F3F4F6',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                        }}>
+                            <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 900, color: 'var(--text)' }}>
+                                Create Walk-in Order
+                            </h2>
+                            <button
+                                onClick={() => setShowCreateOrder(false)}
+                                style={{
+                                    width: '36px',
+                                    height: '36px',
+                                    borderRadius: '50%',
+                                    border: 'none',
+                                    background: '#F3F4F6',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: '#6B7280'
+                                }}
+                            >
+                                <XIcon size={18} />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            {/* Customer Name */}
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    Customer Name *
+                                </label>
+                                <div style={{ position: 'relative' }}>
+                                    <User size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
+                                    <input
+                                        type="text"
+                                        value={newOrderName}
+                                        onChange={(e) => setNewOrderName(e.target.value)}
+                                        placeholder="Enter customer name"
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px 12px 12px 38px',
+                                            borderRadius: '12px',
+                                            border: '2px solid #E5E7EB',
+                                            fontSize: '0.95rem',
+                                            fontWeight: 600,
+                                            outline: 'none',
+                                            transition: 'border-color 0.2s',
+                                            boxSizing: 'border-box'
+                                        }}
+                                        onFocus={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}
+                                        onBlur={(e) => e.currentTarget.style.borderColor = '#E5E7EB'}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Phone Number */}
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    Phone Number *
+                                </label>
+                                <div style={{ position: 'relative' }}>
+                                    <Phone size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
+                                    <input
+                                        type="tel"
+                                        value={newOrderPhone}
+                                        onChange={(e) => setNewOrderPhone(e.target.value)}
+                                        placeholder="Enter phone number"
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px 12px 12px 38px',
+                                            borderRadius: '12px',
+                                            border: '2px solid #E5E7EB',
+                                            fontSize: '0.95rem',
+                                            fontWeight: 600,
+                                            outline: 'none',
+                                            transition: 'border-color 0.2s',
+                                            boxSizing: 'border-box'
+                                        }}
+                                        onFocus={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}
+                                        onBlur={(e) => e.currentTarget.style.borderColor = '#E5E7EB'}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Table Name */}
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    Table Name *
+                                </label>
+                                <div style={{ position: 'relative' }}>
+                                    <MapPin size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
+                                    <input
+                                        type="text"
+                                        value={newOrderTable}
+                                        onChange={(e) => setNewOrderTable(e.target.value)}
+                                        placeholder="e.g. Table 5, Bar Counter"
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px 12px 12px 38px',
+                                            borderRadius: '12px',
+                                            border: '2px solid #E5E7EB',
+                                            fontSize: '0.95rem',
+                                            fontWeight: 600,
+                                            outline: 'none',
+                                            transition: 'border-color 0.2s',
+                                            boxSizing: 'border-box'
+                                        }}
+                                        onFocus={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}
+                                        onBlur={(e) => e.currentTarget.style.borderColor = '#E5E7EB'}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Guests + Location Row */}
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                        Guests
+                                    </label>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <button
+                                            onClick={() => setNewOrderGuests(Math.max(1, newOrderGuests - 1))}
+                                            style={{ width: '40px', height: '40px', borderRadius: '10px', border: '2px solid #E5E7EB', background: 'white', cursor: 'pointer', fontWeight: 900, fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                        >-</button>
+                                        <span style={{ minWidth: '32px', textAlign: 'center', fontWeight: 900, fontSize: '1.1rem' }}>{newOrderGuests}</span>
+                                        <button
+                                            onClick={() => setNewOrderGuests(newOrderGuests + 1)}
+                                            style={{ width: '40px', height: '40px', borderRadius: '10px', border: '2px solid #E5E7EB', background: 'white', cursor: 'pointer', fontWeight: 900, fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                        >+</button>
+                                    </div>
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                        Location
+                                    </label>
+                                    <div style={{ display: 'flex', gap: '6px' }}>
+                                        <button
+                                            onClick={() => setNewOrderLocation('indoor')}
+                                            style={{
+                                                flex: 1,
+                                                height: '40px',
+                                                borderRadius: '10px',
+                                                border: `2px solid ${newOrderLocation === 'indoor' ? '#2563EB' : '#E5E7EB'}`,
+                                                background: newOrderLocation === 'indoor' ? '#DBEAFE' : 'white',
+                                                color: newOrderLocation === 'indoor' ? '#1E40AF' : '#6B7280',
+                                                fontWeight: 700,
+                                                fontSize: '0.8rem',
+                                                cursor: 'pointer',
+                                                textTransform: 'uppercase'
+                                            }}
+                                        >Indoor</button>
+                                        <button
+                                            onClick={() => setNewOrderLocation('outdoor')}
+                                            style={{
+                                                flex: 1,
+                                                height: '40px',
+                                                borderRadius: '10px',
+                                                border: `2px solid ${newOrderLocation === 'outdoor' ? '#D97706' : '#E5E7EB'}`,
+                                                background: newOrderLocation === 'outdoor' ? '#FEF3C7' : 'white',
+                                                color: newOrderLocation === 'outdoor' ? '#92400E' : '#6B7280',
+                                                fontWeight: 700,
+                                                fontSize: '0.8rem',
+                                                cursor: 'pointer',
+                                                textTransform: 'uppercase'
+                                            }}
+                                        >Outdoor</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Order Items */}
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    Order Items *
+                                </label>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    {newOrderItems.map((item, idx) => {
+                                        const menuItem = menuItems.find(m => m.id === item.menuItemId)
+                                        return (
+                                            <div key={idx} style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                padding: '10px 14px',
+                                                background: '#FAFAF9',
+                                                borderRadius: '10px',
+                                                border: '1px solid #E7E5E4'
+                                            }}>
+                                                <span style={{ flex: 1, fontWeight: 700, fontSize: '0.9rem' }}>{menuItem?.name || 'Unknown'}</span>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <button
+                                                        onClick={() => {
+                                                            if (item.quantity <= 1) {
+                                                                setNewOrderItems(prev => prev.filter((_, i) => i !== idx))
+                                                            } else {
+                                                                setNewOrderItems(prev => prev.map((it, i) => i === idx ? { ...it, quantity: it.quantity - 1 } : it))
+                                                            }
+                                                        }}
+                                                        style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #D6D3D1', background: 'white', cursor: 'pointer', fontWeight: 800 }}
+                                                    >-</button>
+                                                    <span style={{ minWidth: '24px', textAlign: 'center', fontWeight: 900, fontSize: '0.9rem' }}>{item.quantity}</span>
+                                                    <button
+                                                        onClick={() => setNewOrderItems(prev => prev.map((it, i) => i === idx ? { ...it, quantity: it.quantity + 1 } : it))}
+                                                        style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #D6D3D1', background: 'white', cursor: 'pointer', fontWeight: 800 }}
+                                                    >+</button>
+                                                    <button
+                                                        onClick={() => setNewOrderItems(prev => prev.filter((_, i) => i !== idx))}
+                                                        style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #FCA5A5', background: '#FEF2F2', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem' }}
+                                                    >✕</button>
+                                                </div>
+                                                <span style={{ marginLeft: '10px', fontWeight: 800, color: 'var(--primary)', fontSize: '0.9rem' }}>₹{((menuItem?.price || 0) * item.quantity).toFixed(0)}</span>
+                                            </div>
+                                        )
+                                    })}
+                                    <button
+                                        onClick={() => setShowNewOrderMenu(true)}
+                                        style={{
+                                            padding: '12px',
+                                            borderRadius: '10px',
+                                            border: '2px dashed var(--primary)',
+                                            background: 'rgba(var(--primary-rgb), 0.03)',
+                                            fontWeight: 700,
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '8px',
+                                            color: 'var(--primary)',
+                                            fontSize: '0.9rem'
+                                        }}
+                                    >
+                                        <Plus size={16} strokeWidth={3} />
+                                        Add Item
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Total */}
+                            {newOrderItems.length > 0 && (
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    padding: '14px 16px',
+                                    background: '#F5F5F4',
+                                    borderRadius: '12px',
+                                    border: '1px solid #E7E5E4'
+                                }}>
+                                    <span style={{ fontWeight: 900, fontSize: '1.1rem' }}>Total</span>
+                                    <span style={{ fontWeight: 900, fontSize: '1.3rem', color: 'var(--primary)' }}>
+                                        ₹{newOrderItems.reduce((sum, item) => {
+                                            const mi = menuItems.find(m => m.id === item.menuItemId)
+                                            return sum + (mi?.price || 0) * item.quantity
+                                        }, 0).toFixed(0)}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div style={{
+                            padding: '16px 24px 24px',
+                            borderTop: '2px solid #F3F4F6',
+                            display: 'flex',
+                            gap: '12px'
+                        }}>
+                            <Button
+                                onClick={() => setShowCreateOrder(false)}
+                                variant="outline"
+                                style={{ flex: 1, height: '52px', fontWeight: 700, borderRadius: '12px' }}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleCreateKitchenOrder}
+                                disabled={creatingOrder}
+                                style={{
+                                    flex: 2,
+                                    height: '52px',
+                                    fontWeight: 900,
+                                    fontSize: '1rem',
+                                    borderRadius: '12px',
+                                    background: 'linear-gradient(135deg, var(--primary) 0%, #8B1A1F 100%)',
+                                    border: 'none',
+                                    boxShadow: '0 4px 12px rgba(192, 39, 45, 0.3)',
+                                    letterSpacing: '0.03em'
+                                }}
+                            >
+                                {creatingOrder ? 'Creating...' : 'Create Order'}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Menu Selector for New Order */}
+            {showNewOrderMenu && (
+                <MenuItemSelector
+                    items={menuItems}
+                    categories={categories}
+                    onSelect={(item) => {
+                        setNewOrderItems(prev => {
+                            const existing = prev.find(i => i.menuItemId === item.id)
+                            if (existing) {
+                                return prev.map(i => i.menuItemId === item.id ? { ...i, quantity: i.quantity + 1 } : i)
+                            }
+                            return [...prev, { menuItemId: item.id, quantity: 1 }]
+                        })
+                    }}
+                    onClose={() => setShowNewOrderMenu(false)}
+                />
+            )}
+
             <style jsx global>{`
                 @keyframes pulse {
                     0% { transform: scale(0.95); opacity: 0.5; }
                     50% { transform: scale(1); opacity: 1; }
                     100% { transform: scale(0.95); opacity: 0.5; }
+                }
+                
+                @keyframes timerPulse {
+                    0% { opacity: 1; }
+                    50% { opacity: 0.6; }
+                    100% { opacity: 1; }
                 }
                 
                 /* Custom scrollbar for order items */
