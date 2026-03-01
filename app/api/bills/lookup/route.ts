@@ -31,6 +31,41 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: 'desc' },
         take: 1
       })
+
+      // Strategy 2b: if the order belongs to a user/session, find the bill via sibling orders
+      if (bills.length === 0 && orderId) {
+        const order = await prisma.order.findUnique({
+          where: { id: orderId },
+          select: { userId: true, sessionId: true }
+        })
+        if (order) {
+          // Try by session first
+          if (order.sessionId) {
+            bills = await prisma.bill.findMany({
+              where: { sessionId: order.sessionId },
+              include: { billItems: true },
+              orderBy: { createdAt: 'desc' },
+              take: 1
+            })
+          }
+          // Try by finding bills linked to any of this user's orders
+          if (bills.length === 0 && order.userId) {
+            const userOrders = await prisma.order.findMany({
+              where: { userId: order.userId, billed: true },
+              select: { id: true },
+              orderBy: { createdAt: 'desc' }
+            })
+            if (userOrders.length > 0) {
+              bills = await prisma.bill.findMany({
+                where: { orderId: { in: userOrders.map(o => o.id) } },
+                include: { billItems: true },
+                orderBy: { createdAt: 'desc' },
+                take: 1
+              })
+            }
+          }
+        }
+      }
     }
 
     // Strategy 3: by guest name
