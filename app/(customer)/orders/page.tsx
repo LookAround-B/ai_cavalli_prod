@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useAuth } from '@/lib/auth/context'
 
 import { useSearchParams, useRouter } from 'next/navigation'
-import { ChevronLeft, Package, Clock, CheckCircle2, XCircle, ChevronDown, LogOut } from 'lucide-react'
+import { ChevronLeft, Package, Clock, CheckCircle2, XCircle, ChevronDown, LogOut, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Loading } from '@/components/ui/Loading'
@@ -22,6 +22,7 @@ export default function OrdersPage() {
 
     const [orders, setOrders] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
+    const [refreshing, setRefreshing] = useState(false)
     const [activeSession, setActiveSession] = useState<any>(null)
     const [endingSession, setEndingSession] = useState(false)
     const [billPreview, setBillPreview] = useState<BillData | null>(null)
@@ -115,14 +116,22 @@ export default function OrdersPage() {
 
         fetchOrders()
         fetchActiveSession()
-
-        // Poll for order updates every 5 seconds (replaces realtime)
-        const pollInterval = setInterval(() => fetchOrders(), 5000)
-
-        return () => {
-            clearInterval(pollInterval)
-        }
     }, [user, orderIdParam])
+
+    // Manual refresh handler
+    const handleRefresh = async () => {
+        setRefreshing(true)
+        try {
+            let url = '/api/orders?'
+            if (user) url += `userId=${user.id}`
+            else if (orderIdParam) url += `orderId=${orderIdParam}`
+            const res = await fetch(url)
+            const json = await res.json()
+            const data = json.success ? json.data : null
+            if (data) setOrders(data)
+        } catch (e) { console.error('refresh error:', e) }
+        setRefreshing(false)
+    }
 
     // Refs for stable references in timer callback
     const logoutRef = useRef(logout)
@@ -531,9 +540,35 @@ export default function OrdersPage() {
                             <ChevronLeft size={18} />
                             Back
                         </Link>
-                        <h1 style={{ margin: 0, fontSize: 'clamp(1.75rem, 5vw, 2.25rem)', fontFamily: 'var(--font-serif)', fontWeight: 800, letterSpacing: '-0.02em' }}>
-                            {orderIdParam && !user ? 'Order Status' : 'My Orders'}
-                        </h1>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <h1 style={{ margin: 0, fontSize: 'clamp(1.75rem, 5vw, 2.25rem)', fontFamily: 'var(--font-serif)', fontWeight: 800, letterSpacing: '-0.02em' }}>
+                                {orderIdParam && !user ? 'Order Status' : 'My Orders'}
+                            </h1>
+                            <button
+                                onClick={handleRefresh}
+                                disabled={refreshing}
+                                style={{
+                                    background: 'rgba(255,255,255,0.15)',
+                                    border: '1.5px solid rgba(255,255,255,0.25)',
+                                    borderRadius: '10px',
+                                    padding: '6px',
+                                    cursor: refreshing ? 'not-allowed' : 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transition: 'all 0.2s ease',
+                                }}
+                                title="Refresh orders"
+                            >
+                                <RefreshCw
+                                    size={18}
+                                    color="white"
+                                    style={{
+                                        animation: refreshing ? 'spin 1s linear infinite' : 'none',
+                                    }}
+                                />
+                            </button>
+                        </div>
                         {orders.length > 0 && (
                             <p style={{ margin: '6px 0 0', opacity: 0.85, fontSize: '0.9rem' }}>
                                 {orders.length} order{orders.length !== 1 ? 's' : ''} &middot; ₹{orders.reduce((sum: number, o: any) => sum + (o.total || 0), 0).toFixed(0)} total
@@ -1057,6 +1092,11 @@ export default function OrdersPage() {
                 @keyframes pulse {
                     0%, 100% { opacity: 1; transform: scale(1); }
                     50% { opacity: 0.5; transform: scale(1.2); }
+                }
+
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
                 }
 
                 @media (max-width: 480px) {

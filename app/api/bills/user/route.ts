@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
         const orders = await prisma.order.findMany({
             where: {
                 userId,
-                OR: [{ billed: false }, { billed: null as any }]
+                billed: false
             },
             include: {
                 orderItems: {

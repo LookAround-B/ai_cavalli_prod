@@ -78,13 +78,6 @@ export default function ProfilePage() {
         fetchUserDetails()
         fetchOrders()
         fetchActiveSession()
-
-        // Poll for order updates every 5 seconds (replaces realtime)
-        const pollInterval = setInterval(() => fetchOrders(), 5000)
-
-        return () => {
-            clearInterval(pollInterval)
-        }
     }, [user])
 
     const handleGetBill = async () => {

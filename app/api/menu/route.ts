@@ -24,27 +24,29 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      categories: categories.map(c => ({
-        id: c.id, name: c.name, sort_order: c.sortOrder
-      })),
-      items: menuItems.map(i => ({
-        id: i.id, name: i.name, description: i.description,
-        price: Number(i.price), category_id: i.categoryId,
-        image_url: i.imageUrl, available: i.available,
-        created_at: i.createdAt?.toISOString()
-      })),
-      specials: dailySpecials.map(s => ({
-        id: s.id, menu_item_id: s.menuItemId, period: s.period,
-        date: s.date.toISOString().split('T')[0],
-        menu_item: s.menuItem ? {
-          id: s.menuItem.id, name: s.menuItem.name,
-          description: s.menuItem.description,
-          price: Number(s.menuItem.price),
-          category_id: s.menuItem.categoryId,
-          image_url: s.menuItem.imageUrl,
-          available: s.menuItem.available
-        } : null
-      }))
+      data: {
+        categories: categories.map(c => ({
+          id: c.id, name: c.name, sort_order: c.sortOrder
+        })),
+        menuItems: menuItems.map(i => ({
+          id: i.id, name: i.name, description: i.description,
+          price: Number(i.price), category_id: i.categoryId,
+          image_url: i.imageUrl, available: i.available,
+          created_at: i.createdAt?.toISOString()
+        })),
+        specials: dailySpecials.map(s => ({
+          id: s.id, menu_item_id: s.menuItemId, period: s.period,
+          date: s.date.toISOString().split('T')[0],
+          menu_item: s.menuItem ? {
+            id: s.menuItem.id, name: s.menuItem.name,
+            description: s.menuItem.description,
+            price: Number(s.menuItem.price),
+            category_id: s.menuItem.categoryId,
+            image_url: s.menuItem.imageUrl,
+            available: s.menuItem.available
+          } : null
+        }))
+      }
     })
   } catch (error) {
     console.error('Menu fetch error:', error)
