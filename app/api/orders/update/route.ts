@@ -76,11 +76,11 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Check cooldown: only within 2 minutes
+    // Check cooldown: only within 5 minutes
     const timeDiffSeconds = (Date.now() - existingOrder.createdAt.getTime()) / 1000;
-    if (timeDiffSeconds > 120) {
+    if (timeDiffSeconds > 300) {
       return NextResponse.json(
-        { success: false, error: "Edit window has expired. Orders can only be modified within 2 minutes of placement." },
+        { success: false, error: "Time is up, please place a new order." },
         { status: 403 }
       );
     }

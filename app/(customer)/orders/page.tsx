@@ -33,7 +33,7 @@ export default function OrdersPage() {
 
     // Cooldown notification state
     const [showCooldown, setShowCooldown] = useState(false)
-    const [cooldownTime, setCooldownTime] = useState(120) // 2 minutes in seconds
+    const [cooldownTime, setCooldownTime] = useState(300) // 5 minutes in seconds
     const [lastOrderTime, setLastOrderTime] = useState<Date | null>(null)
 
     useEffect(() => {
@@ -61,10 +61,10 @@ export default function OrdersPage() {
                     const now = new Date()
                     const timeDiff = (now.getTime() - mostRecentOrder.getTime()) / 1000 // in seconds
                     
-                    if (timeDiff < 120) { // Less than 2 minutes ago
+                    if (timeDiff < 300) { // Less than 5 minutes ago
                         setLastOrderTime(mostRecentOrder)
                         setShowCooldown(true)
-                        setCooldownTime(Math.ceil(120 - timeDiff))
+                        setCooldownTime(Math.ceil(300 - timeDiff))
                     }
                 }
 
@@ -149,7 +149,7 @@ export default function OrdersPage() {
             // Timer expired — auto-logout immediately
             setShowCooldown(false)
             if (userRef.current?.role === 'OUTSIDER') {
-                console.log('Auto-logout triggered after 2-min cooldown')
+                console.log('Auto-logout triggered after 5-min cooldown')
                 clearCartRef.current()
                 logoutRef.current()
             }
@@ -275,8 +275,8 @@ export default function OrdersPage() {
                     items: (bill.bill_items || []).map((item: any) => ({
                         item_name: item.item_name || item.name || 'Item',
                         quantity: item.quantity,
-                        price: item.unit_price || item.price || 0,
-                        subtotal: item.subtotal || item.total_price || (item.quantity * (item.unit_price || item.price || 0))
+                        price: item.price || item.unit_price || 0,
+                        subtotal: item.subtotal || item.total_price || (item.quantity * (item.price || item.unit_price || 0))
                     })),
                     itemsTotal: bill.items_total,
                     discountAmount: bill.discount_amount || 0,
@@ -536,12 +536,12 @@ export default function OrdersPage() {
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
                     <div style={{ maxWidth: '500px', position: 'relative', zIndex: 1, flex: 1 }}>
-                        <Link href={user ? "/home" : "/menu"} style={{ color: 'rgba(255,255,255,0.8)', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', fontWeight: 600, textDecoration: 'none', marginBottom: '12px' }}>
+                        <Link href={user ? "/home" : "/menu"} style={{ color: 'rgba(255,255,255,0.95)', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.9rem', fontWeight: 700, textDecoration: 'none', marginBottom: '12px' }}>
                             <ChevronLeft size={18} />
                             Back
                         </Link>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <h1 style={{ margin: 0, fontSize: 'clamp(1.75rem, 5vw, 2.25rem)', fontFamily: 'var(--font-serif)', fontWeight: 800, letterSpacing: '-0.02em' }}>
+                            <h1 style={{ margin: 0, fontSize: 'clamp(1.75rem, 5vw, 2.25rem)', fontFamily: 'var(--font-serif)', fontWeight: 900, letterSpacing: '-0.02em', textShadow: '0 2px 4px rgba(0,0,0,0.15)' }}>
                                 {orderIdParam && !user ? 'Order Status' : 'My Orders'}
                             </h1>
                             <button
@@ -570,7 +570,7 @@ export default function OrdersPage() {
                             </button>
                         </div>
                         {orders.length > 0 && (
-                            <p style={{ margin: '6px 0 0', opacity: 0.85, fontSize: '0.9rem' }}>
+                            <p style={{ margin: '6px 0 0', opacity: 1, fontSize: '0.95rem', fontWeight: 700, textShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
                                 {orders.length} order{orders.length !== 1 ? 's' : ''} &middot; ₹{orders.reduce((sum: number, o: any) => sum + (o.total || 0), 0).toFixed(0)} total
                             </p>
                         )}

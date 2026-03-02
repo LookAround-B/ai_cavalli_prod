@@ -134,7 +134,7 @@ export default function CartPage() {
             router.push('/orders')
         } catch (err: any) {
             console.error('Order placement error:', err)
-            showError('Order Failed', err.message || 'Unknown error. Please try again.')
+            showError('', err.message || 'Unknown error. Please try again.')
         } finally {
             setLoading(false)
         }

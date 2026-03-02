@@ -35,7 +35,8 @@ import {
     StopCircle,
     ChevronDown,
     Phone,
-    MapPin
+    MapPin,
+    RefreshCw
 } from 'lucide-react'
 import { Loading } from '@/components/ui/Loading'
 import { MenuItemSelector } from '@/components/kitchen/MenuItemSelector'
@@ -110,6 +111,7 @@ export default function KitchenPage() {
     const [newOrderItems, setNewOrderItems] = useState<{menuItemId: string, quantity: number}[]>([])
     const [creatingOrder, setCreatingOrder] = useState(false)
     const [showNewOrderMenu, setShowNewOrderMenu] = useState(false)
+    const [refreshing, setRefreshing] = useState(false)
 
     const { user, logout, isLoading: authLoading } = useAuth()
     const router = useRouter()
@@ -158,53 +160,8 @@ export default function KitchenPage() {
     // Subscription & Init
     useEffect(() => {
         fetchOrders()
-
-        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3')
-        audio.load()
-
-        const playSound = () => {
-            audio.currentTime = 0
-            audio.play().catch(e => {
-                console.error('Audio play failed:', e)
-                setAudioError(true)
-            })
-        }
-
-        // Poll for order updates every 5 seconds (replaces realtime)
-        let prevOrderIds: string[] = []
-        const pollInterval = setInterval(async () => {
-            try {
-                const res = await fetch('/api/orders?status=pending,preparing,ready&all=true')
-                const json = await res.json()
-                if (json.success && json.data) {
-                    const newIds = json.data.map((o: any) => o.id)
-                    // Detect new orders for notification
-                    if (prevOrderIds.length > 0) {
-                        const brandNew = newIds.filter((id: string) => !prevOrderIds.includes(id))
-                        if (brandNew.length > 0) {
-                            playSound()
-                            if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-                                new Notification('New Order Received!', { body: `${brandNew.length} new order(s)`, icon: '/favicon.ico' })
-                            }
-                        }
-                    }
-                    prevOrderIds = newIds
-                    const sorted = json.data.sort((a: any, b: any) =>
-                        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-                    )
-                    setOrders(sorted)
-                }
-            } catch (e) { console.error('Poll orders error:', e) }
-        }, 5000)
+        fetchCompletedOrders()
         setStatus('SUBSCRIBED')
-
-        // Also poll completed orders
-        const completedInterval = setInterval(() => fetchCompletedOrders(), 15000)
-
-        return () => {
-            clearInterval(pollInterval)
-            clearInterval(completedInterval)
-        }
     }, [])
 
     // Fetch menu items and categories
@@ -222,7 +179,7 @@ export default function KitchenPage() {
         fetchMenuData()
     }, [])
 
-    // Fetch and poll bill requests
+    // Fetch and load bill requests on mount
     useEffect(() => {
         async function fetchBillRequests() {
             try {
@@ -233,33 +190,23 @@ export default function KitchenPage() {
         }
 
         fetchBillRequests()
+    }, [])
 
-        // Poll for bill request changes every 5 seconds
-        let prevIds: string[] = []
-        const billPollInterval = setInterval(async () => {
-            try {
-                const res = await fetch('/api/kitchen/bill-requests')
-                const json = await res.json()
-                if (json.success) {
-                    const newData = json.data || []
-                    const newIds = newData.map((r: any) => r.id)
-                    // Play sound for new bill requests
-                    if (prevIds.length > 0) {
-                        const brandNew = newIds.filter((id: string) => !prevIds.includes(id))
-                        if (brandNew.length > 0) {
-                            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3')
-                            audio.play().catch(console.error)
-                        }
-                    }
-                    prevIds = newIds
-                    setBillRequests(newData)
-                }
-            } catch (e) { console.error('Poll bill requests error:', e) }
-        }, 5000)
-
-        return () => {
-            clearInterval(billPollInterval)
-        }
+    // Manual refresh handler for kitchen board
+    const handleRefreshAll = useCallback(async () => {
+        setRefreshing(true)
+        try {
+            await Promise.all([
+                fetchOrders(),
+                fetchCompletedOrders(),
+                (async () => {
+                    const res = await fetch('/api/kitchen/bill-requests')
+                    const json = await res.json()
+                    if (json.success) setBillRequests(json.data || [])
+                })()
+            ])
+        } catch (e) { console.error('Refresh error:', e) }
+        setRefreshing(false)
     }, [])
 
     // ----- Cooking Timer: tick every second & alarm when overdue -----
@@ -684,8 +631,8 @@ export default function KitchenPage() {
                 items: (bill.bill_items || []).map((i: any) => ({
                     item_name: i.item_name || i.name || '',
                     quantity: i.quantity,
-                    price: i.unit_price || i.price,
-                    subtotal: i.subtotal || (i.quantity * (i.unit_price || i.price))
+                    price: i.price || i.unit_price || 0,
+                    subtotal: i.subtotal || (i.quantity * (i.price || i.unit_price || 0))
                 })),
                 itemsTotal: bill.items_total || 0,
                 discountAmount: bill.discount_amount || 0,
@@ -764,6 +711,30 @@ export default function KitchenPage() {
                             color: 'var(--text)',
                             letterSpacing: '-0.02em'
                         }}>Kitchen Board</h2>
+                        <button
+                            onClick={handleRefreshAll}
+                            disabled={refreshing}
+                            style={{
+                                background: 'rgba(var(--primary-rgb), 0.08)',
+                                border: '1.5px solid rgba(var(--primary-rgb), 0.2)',
+                                borderRadius: '10px',
+                                padding: '6px',
+                                cursor: refreshing ? 'not-allowed' : 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.2s ease',
+                            }}
+                            title="Refresh all data"
+                        >
+                            <RefreshCw
+                                size={18}
+                                color="var(--primary)"
+                                style={{
+                                    animation: refreshing ? 'spin 1s linear infinite' : 'none',
+                                }}
+                            />
+                        </button>
                     </div>
 
                 </div>

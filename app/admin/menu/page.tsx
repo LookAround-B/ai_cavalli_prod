@@ -70,13 +70,15 @@ export default function AdminMenuPage() {
             const res = await fetch('/api/menu/items')
             const json = await res.json()
             if (json.success) {
-                if (json.data?.categories) {
-                    setCategories(json.data.categories)
-                    if (!categoryId && json.data.categories.length > 0) {
-                        setCategoryId(json.data.categories[0].id)
+                const cats = json.categories || json.data?.categories || []
+                const menuItems = json.items || json.data?.items || []
+                if (cats.length > 0) {
+                    setCategories(cats)
+                    if (!categoryId && cats.length > 0) {
+                        setCategoryId(cats[0].id)
                     }
                 }
-                if (json.data?.items) setItems(json.data.items)
+                if (menuItems.length > 0) setItems(menuItems)
             }
         } catch (e) { console.error('fetchData error:', e) }
         setDataLoading(false)
@@ -128,8 +130,8 @@ export default function AdminMenuPage() {
             name,
             description: desc,
             price: parseFloat(price),
-            categoryId: finalCategoryId,
-            imageUrl: imageUrl,
+            category_id: finalCategoryId,
+            image_url: imageUrl,
             available: available
         }
 
@@ -191,8 +193,6 @@ export default function AdminMenuPage() {
             showError('Error updating availability', e.message)
         }
     }
-
-    if (dataLoading) return <Loading />
 
     return (
         <div style={{
@@ -562,7 +562,17 @@ export default function AdminMenuPage() {
                             </div>
                         </div>
 
-                        {filteredItems.length === 0 ? (
+                        {dataLoading ? (
+                            <div style={{
+                                padding: '5rem 2rem',
+                                textAlign: 'center',
+                                background: 'white',
+                                borderRadius: '24px',
+                                border: '2px dashed rgba(var(--primary-rgb), 0.2)'
+                            }}>
+                                <Loading />
+                            </div>
+                        ) : filteredItems.length === 0 ? (
                             <div style={{
                                 padding: '5rem 2rem',
                                 textAlign: 'center',

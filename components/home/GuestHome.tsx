@@ -114,15 +114,16 @@ export default function GuestHome() {
                     <p
                         className="hero-subtitle"
                         style={{
-                            letterSpacing: '0.6em',
-                            fontSize: 'clamp(0.7rem, 2vw, 0.85rem)',
-                            marginBottom: '3.5rem',
+                            letterSpacing: '0.3em',
+                            fontSize: 'clamp(0.9rem, 2.5vw, 1.1rem)',
+                            marginBottom: '2rem',
                             color: CRISP_WHITE,
-                            fontWeight: 700,
+                            fontWeight: 900,
                             opacity: 0,
                         }}
                     >
-                        Welcome, Guest • Table {activeSession?.table_name || '—'}
+                        Savour the Legacy<br />
+                        An Indo-Italian Café at EIRS — Where Tradition, Taste & Equestrian Grace Unite.
                     </p>
 
                     {!activeSession && (
@@ -323,7 +324,7 @@ export default function GuestHome() {
                             letterSpacing: '-0.01em',
                         }}
                     >
-                        Experience Prima la Tavola
+                        Ai Cavalli
                     </h3>
 
                     <div style={{ width: '80px', height: '1px', background: DEEP_BLACK, margin: '0 auto 2.5rem', opacity: 0.6 }} />
@@ -338,7 +339,7 @@ export default function GuestHome() {
                             maxWidth: '750px',
                         }}
                     >
-                        From our kitchen to your table, discover authentic Italian cuisine crafted with passion and the finest ingredients.
+                        <strong>Savour the Legacy</strong> — An Indo-Italian Café at EIRS. Where Tradition, Taste & Equestrian Grace Unite.
                     </p>
                 </div>
             </section>

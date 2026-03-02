@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
           id: i.id,
           item_name: i.itemName,
           quantity: i.quantity,
-          unit_price: Number(i.unitPrice),
+          price: Number(i.price),
           subtotal: Number(i.subtotal)
         }))
       }
