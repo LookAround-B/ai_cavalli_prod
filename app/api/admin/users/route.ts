@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
         })
 
         // Map to snake_case for frontend compat
-        const data = users.map(u => ({
+        const data = users.map((u: any) => ({
             id: u.id, phone: u.phone, email: u.email, name: u.name,
             role: u.role, parent_name: u.parentName, created_at: u.createdAt
         }))
