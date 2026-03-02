@@ -112,6 +112,17 @@ export default function KitchenPage() {
     const [creatingOrder, setCreatingOrder] = useState(false)
     const [showNewOrderMenu, setShowNewOrderMenu] = useState(false)
     const [refreshing, setRefreshing] = useState(false)
+    // Payment method per order (orderId -> selected method)
+    const [orderPaymentMethods, setOrderPaymentMethods] = useState<Record<string, string>>({})
+
+    const PAYMENT_OPTIONS = [
+        { value: 'cash', label: 'Cash' },
+        { value: 'credit', label: 'Credit' },
+        { value: 'upi', label: 'UPI' },
+        { value: 'card', label: 'Card' },
+        { value: 'staff_payment', label: 'Staff Payment' },
+        { value: 'rider_payment', label: 'Rider Payment' },
+    ]
 
     const { user, logout, isLoading: authLoading } = useAuth()
     const router = useRouter()
@@ -414,10 +425,11 @@ export default function KitchenPage() {
     const handleGenerateSessionBill = async (sessionId: string) => {
         setGeneratingBill(sessionId)
         try {
+            const selectedPayment = orderPaymentMethods[sessionId] || 'cash'
             const response = await fetch('/api/bills/session', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sessionId, paymentMethod: 'cash' })
+                body: JSON.stringify({ sessionId, paymentMethod: selectedPayment })
             })
             const data = await response.json()
             if (data.success) {
@@ -431,15 +443,15 @@ export default function KitchenPage() {
                         tableName: data.bill.sessionDetails?.tableName || data.bill.tableName || '',
                         guestName: data.bill.sessionDetails?.guestName || '',
                         items: (data.bill.items || []).map((i: any) => ({
-                            item_name: i.item_name || i.name || '',
+                            item_name: i.item_name || i.itemName || i.name || '',
                             quantity: i.quantity,
-                            price: i.price,
-                            subtotal: i.subtotal || (i.quantity * i.price)
+                            price: Number(i.price),
+                            subtotal: Number(i.subtotal) || (i.quantity * Number(i.price))
                         })),
-                        itemsTotal: data.bill.itemsTotal || data.bill.items_total || 0,
-                        discountAmount: data.bill.discountAmount || data.bill.discount_amount || 0,
-                        finalTotal: data.bill.finalTotal || data.bill.final_total || 0,
-                        paymentMethod: 'cash',
+                        itemsTotal: Number(data.bill.itemsTotal || data.bill.items_total || 0),
+                        discountAmount: Number(data.bill.discountAmount || data.bill.discount_amount || 0),
+                        finalTotal: Number(data.bill.finalTotal || data.bill.final_total || 0),
+                        paymentMethod: data.bill.paymentMethod || selectedPayment,
                         sessionDetails: data.bill.sessionDetails
                     })
                 }
@@ -558,15 +570,15 @@ export default function KitchenPage() {
                     tableName: data.bill.orderDetails?.tableName || order.table_name || '',
                     guestName: order.guest_info?.name || order.user?.name || '',
                     items: (data.bill.items || []).map((i: any) => ({
-                        item_name: i.item_name || i.name || '',
+                        item_name: i.item_name || i.itemName || i.name || '',
                         quantity: i.quantity,
-                        price: i.price,
-                        subtotal: i.subtotal || (i.quantity * i.price)
+                        price: Number(i.price),
+                        subtotal: Number(i.subtotal) || (i.quantity * Number(i.price))
                     })),
-                    itemsTotal: data.bill.itemsTotal || 0,
-                    discountAmount: data.bill.discountAmount || 0,
-                    finalTotal: data.bill.finalTotal || 0,
-                    paymentMethod,
+                    itemsTotal: Number(data.bill.itemsTotal || 0),
+                    discountAmount: Number(data.bill.discountAmount || 0),
+                    finalTotal: Number(data.bill.finalTotal || 0),
+                    paymentMethod: data.bill.paymentMethod || paymentMethod,
                 })
             } else {
                 showError('Bill Failed', data.error || 'Failed to generate bill')
@@ -626,17 +638,17 @@ export default function KitchenPage() {
             setBillPreview({
                 id: bill.id,
                 billNumber: bill.bill_number || '',
-                tableName: bill.session_details?.tableName || order?.table_name || '',
-                guestName: order?.guest_info?.name || order?.user?.name || '',
+                tableName: bill.session_details?.tableName || bill.table_name || order?.table_name || '',
+                guestName: bill.guest_name || order?.guest_info?.name || order?.user?.name || '',
                 items: (bill.bill_items || []).map((i: any) => ({
-                    item_name: i.item_name || i.name || '',
+                    item_name: i.item_name || i.itemName || i.name || '',
                     quantity: i.quantity,
-                    price: i.price || i.unit_price || 0,
-                    subtotal: i.subtotal || (i.quantity * (i.price || i.unit_price || 0))
+                    price: Number(i.price || i.unit_price || 0),
+                    subtotal: Number(i.subtotal) || (i.quantity * Number(i.price || i.unit_price || 0))
                 })),
-                itemsTotal: bill.items_total || 0,
-                discountAmount: bill.discount_amount || 0,
-                finalTotal: bill.final_total || 0,
+                itemsTotal: Number(bill.items_total || 0),
+                discountAmount: Number(bill.discount_amount || 0),
+                finalTotal: Number(bill.final_total || 0),
                 paymentMethod: bill.payment_method || 'cash',
             })
         } catch (error) {
@@ -839,7 +851,29 @@ export default function KitchenPage() {
                                 <p style={{ margin: '8px 0', fontSize: '0.8rem', color: '#666' }}>
                                     Requested {req.bill_requested_at ? new Date(req.bill_requested_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'just now'}
                                 </p>
-                                <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                                {/* Payment Method Dropdown for Session Bills */}
+                                <div style={{ margin: '8px 0' }}>
+                                    <select
+                                        value={orderPaymentMethods[req.id] || 'cash'}
+                                        onChange={(e) => setOrderPaymentMethods(prev => ({ ...prev, [req.id]: e.target.value }))}
+                                        style={{
+                                            width: '100%',
+                                            padding: '8px 10px',
+                                            borderRadius: '8px',
+                                            border: '1.5px solid #D1D5DB',
+                                            background: 'white',
+                                            fontSize: '0.85rem',
+                                            fontWeight: 700,
+                                            color: '#374151',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        {PAYMENT_OPTIONS.map(opt => (
+                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
                                     <Button
                                         onClick={() => handleGenerateSessionBill(req.id)}
                                         disabled={generatingBill === req.id}
@@ -1538,7 +1572,7 @@ export default function KitchenPage() {
                                                 </button>
                                             ) : (
                                                 <button 
-                                                    onClick={() => handleGenerateBill(order.id, 'cash')} 
+                                                    onClick={() => handleGenerateBill(order.id, orderPaymentMethods[order.id] || 'cash')} 
                                                     disabled={generatingBill === order.id || printingBill !== null} 
                                                     style={{ 
                                                         flex: 1,
@@ -1610,6 +1644,42 @@ export default function KitchenPage() {
                                             >
                                                 <StopCircle size={20} strokeWidth={2.5} />
                                             </button>
+                                        </div>
+
+                                        {/* Row 3: Payment Method Dropdown */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#6B7280', whiteSpace: 'nowrap' }}>Payment:</span>
+                                            <select
+                                                value={orderPaymentMethods[order.id] || 'cash'}
+                                                onChange={(e) => setOrderPaymentMethods(prev => ({ ...prev, [order.id]: e.target.value }))}
+                                                style={{
+                                                    flex: 1,
+                                                    height: '40px',
+                                                    borderRadius: '10px',
+                                                    border: '1.5px solid #D1D5DB',
+                                                    background: 'white',
+                                                    padding: '0 12px',
+                                                    fontSize: '0.85rem',
+                                                    fontWeight: 700,
+                                                    color: '#374151',
+                                                    cursor: 'pointer',
+                                                    outline: 'none',
+                                                    transition: 'all 0.2s',
+                                                    appearance: 'auto' as any,
+                                                }}
+                                                onFocus={(e) => {
+                                                    e.currentTarget.style.borderColor = '#C0272D'
+                                                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(192,39,45,0.1)'
+                                                }}
+                                                onBlur={(e) => {
+                                                    e.currentTarget.style.borderColor = '#D1D5DB'
+                                                    e.currentTarget.style.boxShadow = 'none'
+                                                }}
+                                            >
+                                                {PAYMENT_OPTIONS.map(opt => (
+                                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                ))}
+                                            </select>
                                         </div>
                                     </div>
                                 )}

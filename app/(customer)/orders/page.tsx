@@ -271,17 +271,17 @@ export default function OrdersPage() {
             if (bill) {
                 setBillPreview({
                     id: bill.id,
-                    billNumber: bill.bill_number,
+                    billNumber: bill.bill_number || '',
                     items: (bill.bill_items || []).map((item: any) => ({
-                        item_name: item.item_name || item.name || 'Item',
+                        item_name: item.item_name || item.itemName || item.name || 'Item',
                         quantity: item.quantity,
-                        price: item.price || item.unit_price || 0,
-                        subtotal: item.subtotal || item.total_price || (item.quantity * (item.price || item.unit_price || 0))
+                        price: Number(item.price || item.unit_price || 0),
+                        subtotal: Number(item.subtotal || item.total_price) || (item.quantity * Number(item.price || item.unit_price || 0))
                     })),
-                    itemsTotal: bill.items_total,
-                    discountAmount: bill.discount_amount || 0,
-                    finalTotal: bill.final_total,
-                    paymentMethod: bill.payment_method,
+                    itemsTotal: Number(bill.items_total || 0),
+                    discountAmount: Number(bill.discount_amount || 0),
+                    finalTotal: Number(bill.final_total || 0),
+                    paymentMethod: bill.payment_method || 'cash',
                     createdAt: bill.created_at,
                     sessionDetails: bill.session_details
                 })
@@ -310,17 +310,17 @@ export default function OrdersPage() {
         const items = (order.items || []).map((item: any) => ({
             item_name: item.menu_item?.name || 'Item',
             quantity: item.quantity,
-            price: item.price,
-            subtotal: item.quantity * item.price
+            price: Number(item.price),
+            subtotal: item.quantity * Number(item.price)
         }))
         const itemsTotal = items.reduce((sum: number, i: any) => sum + i.subtotal, 0)
         setBillPreview({
             billNumber: `ORD-${order.id.slice(0, 8).toUpperCase()}`,
             items,
             itemsTotal,
-            discountAmount: 0,
-            finalTotal: order.total || itemsTotal,
-            paymentMethod: 'cash',
+            discountAmount: Number(order.discount_amount || 0),
+            finalTotal: Number(order.total || itemsTotal),
+            paymentMethod: order.payment_method || 'cash',
             createdAt: order.created_at,
             sessionDetails: {
                 guestName: user?.name || order.guest_name || 'Guest',
@@ -401,12 +401,17 @@ export default function OrdersPage() {
                 // Show the bill preview modal
                 setBillPreview({
                     id: data.bill.id,
-                    billNumber: data.bill.billNumber,
-                    items: data.bill.items || [],
-                    itemsTotal: data.bill.itemsTotal,
-                    discountAmount: data.bill.discountAmount,
-                    finalTotal: data.bill.finalTotal,
-                    paymentMethod: data.bill.paymentMethod,
+                    billNumber: data.bill.billNumber || data.bill.bill_number || '',
+                    items: (data.bill.items || []).map((i: any) => ({
+                        item_name: i.item_name || i.itemName || i.name || '',
+                        quantity: i.quantity,
+                        price: Number(i.price),
+                        subtotal: Number(i.subtotal) || (i.quantity * Number(i.price))
+                    })),
+                    itemsTotal: Number(data.bill.itemsTotal || data.bill.items_total || 0),
+                    discountAmount: Number(data.bill.discountAmount || data.bill.discount_amount || 0),
+                    finalTotal: Number(data.bill.finalTotal || data.bill.final_total || 0),
+                    paymentMethod: data.bill.paymentMethod || data.bill.payment_method || 'cash',
                     createdAt: new Date().toISOString(),
                     sessionDetails: data.bill.sessionDetails
                 })

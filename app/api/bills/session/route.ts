@@ -137,7 +137,8 @@ export async function POST(request: NextRequest) {
             const newBill = await tx.bill.create({
                 data: {
                     sessionId,
-                    orderId: orders[0].id,
+                    // Don't set orderId for session bills to avoid unique constraint conflicts
+                    // Session bills are linked via sessionId, not orderId
                     billNumber,
                     itemsTotal: totalItemsAmount,
                     discountAmount: totalDiscount,
@@ -203,10 +204,13 @@ export async function POST(request: NextRequest) {
                 }
             }
         })
-    } catch (error) {
+    } catch (error: any) {
         console.error('Session bill generation error:', error)
+        const message = error?.code === 'P2002' 
+            ? 'A bill already exists for one of the orders in this session' 
+            : (error?.message || 'Internal server error')
         return NextResponse.json(
-            { success: false, error: 'Internal server error' },
+            { success: false, error: message },
             { status: 500 }
         )
     }
