@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Plus, Minus } from 'lucide-react'
 import { Button } from './button'
 import styles from './MenuItemCard.module.css'
@@ -21,16 +22,18 @@ export function MenuItemCard({ item, onAdd }: MenuItemCardProps) {
     const { items: cartItems, updateQuantity } = useCart()
     const cartItem = cartItems.find(i => i.itemId === item.id)
     const quantity = cartItem?.quantity || 0
+    const [imgError, setImgError] = useState(false)
 
     return (
         <div className={`${styles.card} fade-in`}>
             <div className={styles.imageContainer}>
-                {item.image_url ? (
+                {item.image_url && !imgError ? (
                     <img
                         src={item.image_url}
                         alt={item.name}
                         className={styles.image}
                         loading="lazy"
+                        onError={() => setImgError(true)}
                     />
                 ) : (
                     <div className={styles.placeholderImage} />
