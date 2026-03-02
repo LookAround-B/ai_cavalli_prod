@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint"
   },
@@ -20,7 +20,8 @@
     "prisma": "^7.4.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "recharts": "^3.6.0"
+    "recharts": "^3.6.0",
+    "dotenv": "^16.4.7"
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
