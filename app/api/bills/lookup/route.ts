@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Strategy 2: by order IDs
+    // Strategy 2: by order IDs (direct lookup only)
     if (bills.length === 0 && (orderId || orderIds)) {
       const ids = orderId ? [orderId] : (orderIds?.split(',') || [])
       bills = await prisma.bill.findMany({
@@ -32,46 +32,31 @@ export async function GET(request: NextRequest) {
         take: 1
       })
 
-      // Strategy 2b: if the order belongs to a user/session, find the bill via sibling orders
+      // Strategy 2b: if the order belongs to a session, find the session's bill
       if (bills.length === 0 && orderId) {
         const order = await prisma.order.findUnique({
           where: { id: orderId },
-          select: { userId: true, sessionId: true }
+          select: { sessionId: true }
         })
-        if (order) {
-          // Try by session first
-          if (order.sessionId) {
-            bills = await prisma.bill.findMany({
-              where: { sessionId: order.sessionId },
-              include: { billItems: true },
-              orderBy: { createdAt: 'desc' },
-              take: 1
-            })
-          }
-          // Try by finding bills linked to any of this user's orders
-          if (bills.length === 0 && order.userId) {
-            const userOrders = await prisma.order.findMany({
-              where: { userId: order.userId, billed: true },
-              select: { id: true },
-              orderBy: { createdAt: 'desc' }
-            })
-            if (userOrders.length > 0) {
-              bills = await prisma.bill.findMany({
-                where: { orderId: { in: userOrders.map(o => o.id) } },
-                include: { billItems: true },
-                orderBy: { createdAt: 'desc' },
-                take: 1
-              })
-            }
-          }
+        if (order?.sessionId) {
+          bills = await prisma.bill.findMany({
+            where: { sessionId: order.sessionId },
+            include: { billItems: true },
+            orderBy: { createdAt: 'desc' },
+            take: 1
+          })
         }
       }
     }
 
-    // Strategy 3: by guest name
+    // Strategy 3: by guest name (most recent only, within 24 hours)
     if (bills.length === 0 && guestName) {
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
       bills = await prisma.bill.findMany({
-        where: { guestName },
+        where: { 
+          guestName,
+          createdAt: { gte: oneDayAgo }
+        },
         include: { billItems: true },
         orderBy: { createdAt: 'desc' },
         take: 1
@@ -91,11 +76,11 @@ export async function GET(request: NextRequest) {
         order_id: bill.orderId,
         session_id: bill.sessionId,
         guest_name: bill.guestName,
+        table_name: bill.tableName,
         items_total: Number(bill.itemsTotal),
         discount_amount: Number(bill.discountAmount),
         final_total: Number(bill.finalTotal),
         payment_method: bill.paymentMethod,
-        session_details: bill.sessionDetails,
         created_at: bill.createdAt.toISOString(),
         bill_items: bill.billItems.map((i: any) => ({
           id: i.id,

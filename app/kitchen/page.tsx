@@ -91,7 +91,27 @@ export default function KitchenPage() {
     const [selectedOrderForMenu, setSelectedOrderForMenu] = useState<string | null>(null)
     const [billPreview, setBillPreview] = useState<BillData | null>(null)
     // Cooking timer state: maps orderId -> timestamp when cooking started
-    const [cookingTimers, setCookingTimers] = useState<Record<string, number>>({})
+    // Persisted in localStorage so timers survive page reload
+    const [cookingTimers, setCookingTimers] = useState<Record<string, number>>(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                const saved = localStorage.getItem('kitchen_cooking_timers')
+                if (saved) {
+                    const parsed = JSON.parse(saved)
+                    // Discard any timer older than 1 hour (stale from previous days)
+                    const oneHourAgo = Date.now() - 60 * 60 * 1000
+                    const cleaned: Record<string, number> = {}
+                    for (const [id, ts] of Object.entries(parsed)) {
+                        if (typeof ts === 'number' && ts > oneHourAgo) {
+                            cleaned[id] = ts
+                        }
+                    }
+                    return cleaned
+                }
+            } catch {}
+        }
+        return {}
+    })
     // Elapsed seconds for each cooking order (for re-rendering the timer display)
     const [timerElapsed, setTimerElapsed] = useState<Record<string, number>>({})
     // Track which orders have already triggered the overdue alarm
@@ -173,6 +193,18 @@ export default function KitchenPage() {
         fetchOrders()
         fetchCompletedOrders()
         setStatus('SUBSCRIBED')
+
+        // Auto-poll for new orders every 15 seconds
+        const pollInterval = setInterval(() => {
+            fetchOrders()
+            // Refresh bill requests too
+            fetch('/api/kitchen/bill-requests')
+                .then(r => r.json())
+                .then(json => { if (json.success) setBillRequests(json.data || []) })
+                .catch(() => {})
+        }, 15000)
+
+        return () => clearInterval(pollInterval)
     }, [])
 
     // Fetch menu items and categories
@@ -220,6 +252,13 @@ export default function KitchenPage() {
         setRefreshing(false)
     }, [])
 
+    // ----- Persist cooking timers to localStorage -----
+    useEffect(() => {
+        try {
+            localStorage.setItem('kitchen_cooking_timers', JSON.stringify(cookingTimers))
+        } catch {}
+    }, [cookingTimers])
+
     // ----- Cooking Timer: tick every second & alarm when overdue -----
     const COOKING_TIME_LIMIT = 30 * 60 // 30 minutes in seconds
 
@@ -243,10 +282,10 @@ export default function KitchenPage() {
                     // Check if overdue (30 min) and hasn't been alerted yet
                     if (elapsed >= COOKING_TIME_LIMIT && !overdueAlerted.current.has(orderId)) {
                         overdueAlerted.current.add(orderId)
-                        // Play alarm sound
+                        // Play alarm sound (silently catch if user hasn't interacted yet)
                         if (alarmAudioRef.current) {
                             alarmAudioRef.current.currentTime = 0
-                            alarmAudioRef.current.play().catch(console.error)
+                            alarmAudioRef.current.play().catch(() => {})
                             // Stop alarm after 10 seconds
                             setTimeout(() => {
                                 alarmAudioRef.current?.pause()
@@ -285,9 +324,9 @@ export default function KitchenPage() {
                 }
             }
             // Auto-start timers for orders already in 'preparing' that don't have a timer yet
+            // Use Date.now() — we don't know when cooking actually started after a reload
             for (const order of orders) {
                 if (order.status === 'preparing' && !updated[order.id]) {
-                    // Use created_at as an approximation for when cooking started
                     updated[order.id] = Date.now()
                     changed = true
                 }
@@ -452,6 +491,7 @@ export default function KitchenPage() {
                         discountAmount: Number(data.bill.discountAmount || data.bill.discount_amount || 0),
                         finalTotal: Number(data.bill.finalTotal || data.bill.final_total || 0),
                         paymentMethod: data.bill.paymentMethod || selectedPayment,
+                        createdAt: data.bill.createdAt || new Date().toISOString(),
                         sessionDetails: data.bill.sessionDetails
                     })
                 }
@@ -579,6 +619,7 @@ export default function KitchenPage() {
                     discountAmount: Number(data.bill.discountAmount || 0),
                     finalTotal: Number(data.bill.finalTotal || 0),
                     paymentMethod: data.bill.paymentMethod || paymentMethod,
+                    createdAt: data.bill.createdAt || data.bill.orderDetails?.createdAt,
                 })
             } else {
                 showError('Bill Failed', data.error || 'Failed to generate bill')
@@ -638,18 +679,19 @@ export default function KitchenPage() {
             setBillPreview({
                 id: bill.id,
                 billNumber: bill.bill_number || '',
-                tableName: bill.session_details?.tableName || bill.table_name || order?.table_name || '',
+                tableName: bill.table_name || order?.table_name || '',
                 guestName: bill.guest_name || order?.guest_info?.name || order?.user?.name || '',
                 items: (bill.bill_items || []).map((i: any) => ({
                     item_name: i.item_name || i.itemName || i.name || '',
                     quantity: i.quantity,
-                    price: Number(i.price || i.unit_price || 0),
-                    subtotal: Number(i.subtotal) || (i.quantity * Number(i.price || i.unit_price || 0))
+                    price: Number(i.price || 0),
+                    subtotal: Number(i.subtotal) || (i.quantity * Number(i.price || 0))
                 })),
                 itemsTotal: Number(bill.items_total || 0),
                 discountAmount: Number(bill.discount_amount || 0),
                 finalTotal: Number(bill.final_total || 0),
                 paymentMethod: bill.payment_method || 'cash',
+                createdAt: bill.created_at,
             })
         } catch (error) {
             console.error(error)

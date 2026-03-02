@@ -159,17 +159,17 @@ export default function GuestHome() {
             <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '100px 24px' }} id="session">
                 {activeSession ? (
                     <div
-                        className="hover-lift"
+                        className="hover-lift session-card"
                         style={{
                             marginBottom: '80px',
                             background: `linear-gradient(135deg, ${GUEST_GREEN} 0%, #059669 100%)`,
                             borderRadius: '24px',
-                            padding: '40px',
+                            padding: 'clamp(20px, 4vw, 40px)',
                             color: 'white',
                             boxShadow: '0 20px 40px rgba(16, 185, 129, 0.2)',
                             display: 'flex',
                             flexDirection: 'column',
-                            gap: '24px',
+                            gap: 'clamp(12px, 2.5vw, 24px)',
                             position: 'relative',
                             overflow: 'hidden',
                         }}
@@ -185,10 +185,10 @@ export default function GuestHome() {
                                     <Clock size={20} />
                                     <span style={{ fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '0.875rem' }}>Active Dining Session</span>
                                 </div>
-                                <h3 style={{ margin: 0, fontSize: '2.5rem', fontFamily: 'var(--font-serif)', fontWeight: 800 }}>
+                                <h3 style={{ margin: 0, fontSize: 'clamp(1.5rem, 5vw, 2.5rem)', fontFamily: 'var(--font-serif)', fontWeight: 800 }}>
                                     ₹{activeSession.total_amount?.toFixed(2) || '0.00'}
                                 </h3>
-                                <p style={{ margin: 0, opacity: 0.9, fontSize: '1.1rem' }}>
+                                <p style={{ margin: 0, opacity: 0.9, fontSize: 'clamp(0.85rem, 2vw, 1.1rem)' }}>
                                     {activeSession.orderCount || 0} Orders placed • {activeSession.num_guests} {activeSession.num_guests === 1 ? 'Guest' : 'Guests'}
                                 </p>
                             </div>
@@ -198,14 +198,14 @@ export default function GuestHome() {
                                     background: 'white',
                                     color: '#059669',
                                     fontWeight: 900,
-                                    padding: '1.5rem 2.5rem',
+                                    padding: 'clamp(0.75rem, 2vw, 1.5rem) clamp(1.25rem, 3vw, 2.5rem)',
                                     height: 'auto',
-                                    borderRadius: '16px',
-                                    fontSize: '1rem',
+                                    borderRadius: '12px',
+                                    fontSize: 'clamp(0.8rem, 2vw, 1rem)',
                                     whiteSpace: 'nowrap',
                                 }}
                             >
-                                VIEW STATUS <ArrowRight size={18} style={{ marginLeft: '8px' }} />
+                                VIEW STATUS <ArrowRight size={16} style={{ marginLeft: '6px' }} />
                             </Button>
                         </div>
 
@@ -429,13 +429,19 @@ export default function GuestHome() {
 
                 @media (max-width: 768px) {
                     main {
-                        padding: 60px 20px !important;
+                        padding: 60px 16px !important;
                     }
                     header {
-                        height: 75vh !important;
+                        height: 70vh !important;
                     }
                     .hero-title {
                         letter-spacing: -0.01em;
+                    }
+                    .session-card {
+                        margin-bottom: 40px !important;
+                        border-radius: 16px !important;
+                        gap: 10px !important;
+                        padding: 16px !important;
                     }
                 }
             `}</style>

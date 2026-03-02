@@ -65,7 +65,9 @@ export async function POST(request: NextRequest) {
         order.orderItems.forEach((item) => {
             itemsTotal += item.quantity * Number(item.price)
         })
-        const discountAmount = Number(order.discountAmount) || 0
+        // discount_amount in orders table is stored as a percentage (e.g. 10 = 10%)
+        const discountPercent = Number(order.discountAmount) || 0
+        const discountAmount = discountPercent > 0 ? Math.round((itemsTotal * (discountPercent / 100)) * 100) / 100 : 0
         const finalTotal = itemsTotal - discountAmount
 
         // 4. Generate bill number
@@ -101,11 +103,17 @@ export async function POST(request: NextRequest) {
             bill: {
                 id: bill.id,
                 billNumber: bill.billNumber,
-                itemsTotal: bill.itemsTotal,
-                discountAmount: bill.discountAmount,
-                finalTotal: bill.finalTotal,
+                itemsTotal: Number(bill.itemsTotal),
+                discountAmount: Number(bill.discountAmount || 0),
+                finalTotal: Number(bill.finalTotal),
                 paymentMethod: bill.paymentMethod,
-                items: bill.billItems,
+                createdAt: bill.createdAt,
+                items: bill.billItems.map(item => ({
+                    itemName: item.itemName,
+                    quantity: item.quantity,
+                    price: Number(item.price),
+                    subtotal: Number(item.subtotal),
+                })),
                 orderDetails: {
                     tableName: order.tableName,
                     guestInfo: order.guestInfo,

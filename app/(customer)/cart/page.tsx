@@ -124,7 +124,7 @@ export default function CartPage() {
             }
 
             if (!orderData.success) {
-                throw new Error(orderData.error || 'Failed to place order')
+                throw new Error(orderData.error || 'Something went wrong. Please try again.')
             }
 
             // Success!
@@ -134,7 +134,7 @@ export default function CartPage() {
             router.push('/orders')
         } catch (err: any) {
             console.error('Order placement error:', err)
-            showError('', err.message || 'Unknown error. Please try again.')
+            showError('Oops!', err.message || 'Something went wrong. Please try again.')
         } finally {
             setLoading(false)
         }

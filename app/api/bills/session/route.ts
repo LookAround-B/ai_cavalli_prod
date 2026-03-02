@@ -55,10 +55,52 @@ export async function POST(request: NextRequest) {
             if (directOrders && directOrders.length > 0) {
                 orders = directOrders
             } else {
-                return NextResponse.json(
-                    { success: false, error: 'No orders found in this session.' },
-                    { status: 400 }
-                )
+                // Fallback: find orders by userId, guest phone, or tableName
+                const fallbackWhere: any[] = []
+                if (session.userId) {
+                    fallbackWhere.push({ userId: session.userId, billed: false, createdAt: { gte: session.startedAt } })
+                }
+                if (session.guestPhone) {
+                    fallbackWhere.push({
+                        guestInfo: { path: ['phone'], equals: session.guestPhone },
+                        billed: false,
+                        createdAt: { gte: session.startedAt }
+                    })
+                }
+                // Also try matching by table name + time window for walk-in orders
+                if (session.tableName) {
+                    fallbackWhere.push({
+                        tableName: session.tableName,
+                        billed: false,
+                        createdAt: { gte: session.startedAt }
+                    })
+                }
+
+                if (fallbackWhere.length > 0) {
+                    const fallbackOrders = await prisma.order.findMany({
+                        where: { OR: fallbackWhere },
+                        include: {
+                            orderItems: {
+                                include: { menuItem: { select: { name: true } } }
+                            }
+                        }
+                    })
+                    if (fallbackOrders.length > 0) {
+                        orders = fallbackOrders
+                        // Link these orders to the session for future lookups
+                        await prisma.order.updateMany({
+                            where: { id: { in: fallbackOrders.map(o => o.id) } },
+                            data: { sessionId }
+                        })
+                    }
+                }
+
+                if (orders.length === 0) {
+                    return NextResponse.json(
+                        { success: false, error: 'No orders found in this session.' },
+                        { status: 400 }
+                    )
+                }
             }
         }
 
@@ -86,6 +128,7 @@ export async function POST(request: NextRequest) {
                     discountAmount: Number(existingBill.discountAmount || 0),
                     finalTotal: Number(existingBill.finalTotal),
                     paymentMethod: existingBill.paymentMethod,
+                    createdAt: existingBill.createdAt,
                     items: billItems,
                     sessionDetails: {
                         guestName: session.guestName || 'Guest',
@@ -101,10 +144,8 @@ export async function POST(request: NextRequest) {
         // 3. Consolidate all items
         const consolidatedItems: { [key: string]: { name: string, quantity: number, price: number } } = {}
         let totalItemsAmount = 0
-        let totalDiscount = 0
 
         orders.forEach((order) => {
-            totalDiscount += Number(order.discountAmount || 0)
             order.orderItems.forEach((item) => {
                 const itemName = item.menuItem?.name || 'Unknown Item'
                 const price = Number(item.price)
@@ -119,6 +160,14 @@ export async function POST(request: NextRequest) {
             })
         })
 
+        // discount_amount in orders table is stored as a percentage (e.g. 10 = 10%)
+        // Sum discount percentages across orders and calculate actual amount
+        let totalDiscountPercent = 0
+        orders.forEach((order) => {
+            const dp = Number(order.discountAmount || 0)
+            if (dp > totalDiscountPercent) totalDiscountPercent = dp // use highest discount %
+        })
+        const totalDiscount = totalDiscountPercent > 0 ? Math.round((totalItemsAmount * (totalDiscountPercent / 100)) * 100) / 100 : 0
         const finalTotal = totalItemsAmount - totalDiscount
 
         // 4. Generate bill number
@@ -185,10 +234,11 @@ export async function POST(request: NextRequest) {
             bill: {
                 id: bill.id,
                 billNumber: bill.billNumber,
-                itemsTotal: totalItemsAmount,
-                discountAmount: totalDiscount,
-                finalTotal,
+                itemsTotal: Number(totalItemsAmount),
+                discountAmount: Number(totalDiscount),
+                finalTotal: Number(finalTotal),
                 paymentMethod,
+                createdAt: new Date().toISOString(),
                 items: Object.values(consolidatedItems).map(item => ({
                     item_name: item.name,
                     quantity: item.quantity,
