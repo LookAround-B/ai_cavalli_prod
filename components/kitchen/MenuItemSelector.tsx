@@ -287,7 +287,7 @@ export function MenuItemSelector({
           position: "fixed",
           inset: 0,
           backgroundColor: "rgba(0, 0, 0, 0.5)",
-          zIndex: 40,
+          zIndex: 1100,
           animation: "fadeIn 0.15s ease-out",
         }}
         onClick={onClose}
@@ -304,7 +304,7 @@ export function MenuItemSelector({
           borderRadius: "16px",
           boxShadow:
             "0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.1)",
-          zIndex: 50,
+          zIndex: 1110,
           maxWidth: "90vw",
           maxHeight: "90vh",
           width: "600px",

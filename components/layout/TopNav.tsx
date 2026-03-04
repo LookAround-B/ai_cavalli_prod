@@ -18,9 +18,12 @@ interface TopNavProps {
     accentColor?: string       // header background
     accentText?: string        // header text color
     roleLabel?: string         // shown next to user name
+    viewToggle?: {
+        currentView: 'kitchen' | 'admin'
+    }
 }
 
-export function TopNav({ title, links, accentColor = '#1A1A1A', accentText = '#FFFFFF', roleLabel }: TopNavProps) {
+export function TopNav({ title, links, accentColor = '#1A1A1A', accentText = '#FFFFFF', roleLabel, viewToggle }: TopNavProps) {
     const { user, logout } = useAuth()
     const pathname = usePathname()
     const [menuOpen, setMenuOpen] = useState(false)
@@ -47,11 +50,14 @@ export function TopNav({ title, links, accentColor = '#1A1A1A', accentText = '#F
         }
     }
 
+    const isKitchen = viewToggle?.currentView === 'kitchen'
+    const isAdmin = viewToggle?.currentView === 'admin'
+
     return (
         <header style={{
             background: accentColor,
             color: accentText,
-            padding: '0 1.5rem',
+            padding: '0 clamp(0.75rem, 2vw, 1.5rem)',
             height: '60px',
             display: 'flex',
             justifyContent: 'space-between',
@@ -60,24 +66,29 @@ export function TopNav({ title, links, accentColor = '#1A1A1A', accentText = '#F
             top: 0,
             zIndex: 100,
             boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+            gap: '0.5rem',
         }}>
             {/* Left: Title */}
             <h1 style={{
                 margin: 0,
-                fontSize: '1.2rem',
+                fontSize: 'clamp(1rem, 2.5vw, 1.2rem)',
                 fontWeight: 800,
                 letterSpacing: '-0.02em',
                 whiteSpace: 'nowrap',
                 fontFamily: 'var(--font-serif)',
+                flexShrink: 0,
             }}>
                 {title}
             </h1>
 
-            {/* Center: Nav links (hidden on very small screens) */}
+            {/* Center: Nav links */}
             <nav style={{
                 display: 'flex',
                 gap: '0.25rem',
                 alignItems: 'center',
+                overflow: 'hidden',
+                flexShrink: 1,
+                minWidth: 0,
             }}>
                 {links.map((link) => {
                     const isActive = pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href))
@@ -90,23 +101,74 @@ export function TopNav({ title, links, accentColor = '#1A1A1A', accentText = '#F
                                     ? `${accentText}88`
                                     : isActive ? accentText : `${accentText}cc`,
                                 textDecoration: 'none',
-                                fontSize: '0.85rem',
+                                fontSize: 'clamp(0.75rem, 1.5vw, 0.85rem)',
                                 fontWeight: isActive ? 700 : 500,
-                                padding: '0.4rem 0.75rem',
+                                padding: '0.4rem clamp(0.4rem, 1vw, 0.75rem)',
                                 borderRadius: '8px',
                                 background: isActive ? `${accentText}15` : 'transparent',
                                 transition: 'all 0.15s ease',
                                 whiteSpace: 'nowrap',
+                                flexShrink: 0,
                             }}
                         >
                             {link.label}
                         </Link>
                     )
                 })}
+
+                {/* View Toggle for ADMIN users */}
+                {viewToggle && (
+                    <Link
+                        href={isKitchen ? '/admin' : '/kitchen'}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            marginLeft: '0.5rem',
+                            padding: '0.3rem 0.7rem',
+                            borderRadius: '20px',
+                            border: `1.5px solid ${accentText}30`,
+                            background: `${accentText}08`,
+                            color: `${accentText}90`,
+                            textDecoration: 'none',
+                            fontSize: 'clamp(0.7rem, 1.2vw, 0.78rem)',
+                            fontWeight: 600,
+                            whiteSpace: 'nowrap',
+                            transition: 'all 0.2s ease',
+                            flexShrink: 0,
+                        }}
+                    >
+                        <span style={{
+                            display: 'inline-block',
+                            width: '32px',
+                            height: '18px',
+                            borderRadius: '12px',
+                            background: isAdmin
+                                ? 'linear-gradient(135deg, #C0272D, #8B1A1F)'
+                                : `${accentText}25`,
+                            position: 'relative',
+                            transition: 'background 0.25s ease',
+                            flexShrink: 0,
+                        }}>
+                            <span style={{
+                                position: 'absolute',
+                                top: '2px',
+                                left: isAdmin ? '16px' : '2px',
+                                width: '14px',
+                                height: '14px',
+                                borderRadius: '50%',
+                                background: 'white',
+                                transition: 'left 0.25s ease',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                            }} />
+                        </span>
+                        {isKitchen ? 'Admin' : 'Kitchen'}
+                    </Link>
+                )}
             </nav>
 
             {/* Right: User menu */}
-            <div ref={menuRef} style={{ position: 'relative' }}>
+            <div ref={menuRef} style={{ position: 'relative', flexShrink: 0 }}>
                 <button
                     onClick={() => setMenuOpen(!menuOpen)}
                     style={{

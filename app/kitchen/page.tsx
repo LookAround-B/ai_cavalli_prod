@@ -197,6 +197,7 @@ export default function KitchenPage() {
         // Auto-poll for new orders every 15 seconds
         const pollInterval = setInterval(() => {
             fetchOrders()
+            fetchCompletedOrders()
             // Refresh bill requests too
             fetch('/api/kitchen/bill-requests')
                 .then(r => r.json())
@@ -312,6 +313,11 @@ export default function KitchenPage() {
 
     // Clean up timers when orders are completed/cancelled/removed
     useEffect(() => {
+        // Skip cleanup until the initial orders fetch has completed.
+        // Without this guard, the effect runs against orders=[] on mount and
+        // deletes all localStorage-persisted timers before real data arrives.
+        if (loading) return
+
         setCookingTimers(prev => {
             const activeOrderIds = new Set(orders.filter(o => o.status === 'preparing').map(o => o.id))
             const updated = { ...prev }
@@ -333,7 +339,7 @@ export default function KitchenPage() {
             }
             return changed ? updated : prev
         })
-    }, [orders])
+    }, [orders, loading])
 
     // Start cooking timer when status changes to preparing
     const startCookingTimer = useCallback((orderId: string) => {
@@ -1061,7 +1067,7 @@ export default function KitchenPage() {
                                 height: 'fit-content'
                             }}>
                                 {/* Status Bar */}
-                                <div style={{ 
+                                <div style={{
                                     background: `linear-gradient(135deg, ${sc.color} 0%, ${sc.color}dd 100%)`,
                                     padding: '12px 20px',
                                     display: 'flex',
@@ -1181,10 +1187,10 @@ export default function KitchenPage() {
                                             <Package size={16} color="var(--primary)" strokeWidth={2.5} />
                                             <p style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--primary)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Order Items</p>
                                         </div>
-                                        <div style={{ 
-                                            background: '#FAFAF9', 
-                                            borderRadius: '12px', 
-                                            padding: '16px', 
+                                        <div style={{
+                                            background: '#FAFAF9',
+                                            borderRadius: '12px',
+                                            padding: '16px',
                                             border: '1px solid #E7E5E4',
                                             flex: '1 1 auto',
                                             minHeight: 0,
@@ -1219,12 +1225,12 @@ export default function KitchenPage() {
                                                             setSelectedOrderForMenu(order.id)
                                                             setShowMenuSelector(true)
                                                         }}
-                                                        style={{ 
-                                                            padding: '12px 16px', 
-                                                            borderRadius: '10px', 
-                                                            border: '2px dashed var(--primary)', 
-                                                            background: 'rgba(var(--primary-rgb), 0.05)', 
-                                                            fontWeight: 700, 
+                                                        style={{
+                                                            padding: '12px 16px',
+                                                            borderRadius: '10px',
+                                                            border: '2px dashed var(--primary)',
+                                                            background: 'rgba(var(--primary-rgb), 0.05)',
+                                                            fontWeight: 700,
                                                             cursor: 'pointer',
                                                             display: 'flex',
                                                             alignItems: 'center',
@@ -1308,7 +1314,7 @@ export default function KitchenPage() {
                                 {/* Action Buttons */}
                                 {!showCompleted && (
                                     <div style={{ padding: '20px', background: 'linear-gradient(180deg, #FAFAFA 0%, #F5F5F5 100%)', borderTop: '2px solid #E5E5E5', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                        
+
                                         {/* Attendee Dropdown - only before cooking starts */}
                                         {order.status === 'pending' && (
                                             <div style={{ position: 'relative', marginBottom: '4px' }}>
@@ -1408,13 +1414,13 @@ export default function KitchenPage() {
                                         {/* Primary Action Button */}
                                         <div style={{ minHeight: '56px' }}>
                                             {order.status === 'pending' && (
-                                                <Button 
-                                                    onClick={() => updateStatus(order.id, 'preparing')} 
-                                                    size="lg" 
-                                                    style={{ 
-                                                        width: '100%', 
-                                                        height: '56px', 
-                                                        fontWeight: 900, 
+                                                <Button
+                                                    onClick={() => updateStatus(order.id, 'preparing')}
+                                                    size="lg"
+                                                    style={{
+                                                        width: '100%',
+                                                        height: '56px',
+                                                        fontWeight: 900,
                                                         fontSize: '1.05rem',
                                                         background: 'linear-gradient(135deg, var(--primary) 0%, #8B1A1F 100%)',
                                                         border: 'none',
@@ -1427,16 +1433,16 @@ export default function KitchenPage() {
                                                 </Button>
                                             )}
                                             {order.status === 'preparing' && (
-                                                <Button 
-                                                    onClick={() => updateStatus(order.id, 'ready')} 
-                                                    size="lg" 
-                                                    style={{ 
-                                                        width: '100%', 
-                                                        height: '56px', 
-                                                        fontWeight: 900, 
+                                                <Button
+                                                    onClick={() => updateStatus(order.id, 'ready')}
+                                                    size="lg"
+                                                    style={{
+                                                        width: '100%',
+                                                        height: '56px',
+                                                        fontWeight: 900,
                                                         fontSize: '1.05rem',
-                                                        background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', 
-                                                        border: 'none', 
+                                                        background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                                                        border: 'none',
                                                         color: 'white',
                                                         boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
                                                         letterSpacing: '0.05em',
@@ -1447,16 +1453,16 @@ export default function KitchenPage() {
                                                 </Button>
                                             )}
                                             {order.status === 'ready' && (
-                                                <Button 
-                                                    onClick={() => updateStatus(order.id, 'completed')} 
-                                                    size="lg" 
-                                                    variant="outline" 
-                                                    style={{ 
-                                                        width: '100%', 
-                                                        height: '56px', 
-                                                        fontWeight: 900, 
+                                                <Button
+                                                    onClick={() => updateStatus(order.id, 'completed')}
+                                                    size="lg"
+                                                    variant="outline"
+                                                    style={{
+                                                        width: '100%',
+                                                        height: '56px',
+                                                        fontWeight: 900,
                                                         fontSize: '1.05rem',
-                                                        color: 'var(--text)', 
+                                                        color: 'var(--text)',
                                                         border: '2px solid #D1D5DB',
                                                         background: 'white',
                                                         boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
@@ -1468,10 +1474,10 @@ export default function KitchenPage() {
                                                 </Button>
                                             )}
                                         </div>
-                                        
-                                        {/* Row 1: Discount + Edit */}
-                                        <div style={{ display: 'flex', gap: '10px' }}>
-                                            <button 
+
+                                        {/* 2x2 Action Grid: Discount, Edit, Print Bill, Cancel */}
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                            <button
                                                 onClick={async () => {
                                                     const result = await new Promise<string | null>((resolve) => {
                                                         showPopup({
@@ -1504,18 +1510,20 @@ export default function KitchenPage() {
                                                         }, 50)
                                                     })
                                                     if (result) updateDiscount(order.id, parseFloat(result))
-                                                }} 
-                                                style={{ 
-                                                    flex: '0 0 52px',
-                                                    height: '46px', 
-                                                    borderRadius: '12px', 
-                                                    border: '1.5px solid #D1D5DB', 
-                                                    background: 'white', 
-                                                    cursor: 'pointer', 
-                                                    display: 'flex', 
-                                                    alignItems: 'center', 
-                                                    justifyContent: 'center', 
+                                                }}
+                                                style={{
+                                                    height: '46px',
+                                                    borderRadius: '12px',
+                                                    border: '1.5px solid #D1D5DB',
+                                                    background: 'white',
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    gap: '6px',
                                                     color: '#6B7280',
+                                                    fontWeight: 700,
+                                                    fontSize: '0.85rem',
                                                     transition: 'all 0.2s',
                                                     boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
                                                 }}
@@ -1532,24 +1540,23 @@ export default function KitchenPage() {
                                                     e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)'
                                                 }}
                                             >
-                                                <Percent size={18} strokeWidth={2.5} />
+                                                <Percent size={16} strokeWidth={2.5} />
                                             </button>
-                                            
-                                            <button 
-                                                onClick={() => setEditingOrderId(editingOrderId === order.id ? null : order.id)} 
-                                                style={{ 
-                                                    flex: 1,
-                                                    height: '46px', 
-                                                    borderRadius: '12px', 
-                                                    border: `1.5px solid ${editingOrderId === order.id ? '#DC2626' : '#D1D5DB'}`, 
-                                                    background: editingOrderId === order.id ? '#FEE2E2' : 'white', 
-                                                    cursor: 'pointer', 
-                                                    display: 'flex', 
-                                                    alignItems: 'center', 
-                                                    justifyContent: 'center', 
-                                                    gap: '8px', 
-                                                    color: editingOrderId === order.id ? '#DC2626' : '#374151', 
-                                                    fontWeight: 700, 
+
+                                            <button
+                                                onClick={() => setEditingOrderId(editingOrderId === order.id ? null : order.id)}
+                                                style={{
+                                                    height: '46px',
+                                                    borderRadius: '12px',
+                                                    border: `1.5px solid ${editingOrderId === order.id ? '#DC2626' : '#D1D5DB'}`,
+                                                    background: editingOrderId === order.id ? '#FEE2E2' : 'white',
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    gap: '8px',
+                                                    color: editingOrderId === order.id ? '#DC2626' : '#374151',
+                                                    fontWeight: 700,
                                                     fontSize: '0.85rem',
                                                     transition: 'all 0.2s',
                                                     boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
@@ -1575,27 +1582,23 @@ export default function KitchenPage() {
                                                     <><Pencil size={16} strokeWidth={2.5} /> Edit</>
                                                 )}
                                             </button>
-                                        </div>
 
-                                        {/* Row 2: Print Bill + Cancel Order */}
-                                        <div style={{ display: 'flex', gap: '10px' }}>
                                             {order.billed ? (
-                                                <button 
-                                                    onClick={() => handleReprintBill(order.id)} 
-                                                    disabled={reprintingBill === order.id} 
-                                                    style={{ 
-                                                        flex: 1,
-                                                        height: '46px', 
-                                                        borderRadius: '12px', 
-                                                        border: '1.5px solid #10B981', 
-                                                        background: 'linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%)', 
-                                                        cursor: 'pointer', 
-                                                        display: 'flex', 
-                                                        alignItems: 'center', 
-                                                        justifyContent: 'center', 
-                                                        gap: '8px', 
-                                                        color: '#059669', 
-                                                        fontWeight: 700, 
+                                                <button
+                                                    onClick={() => handleReprintBill(order.id)}
+                                                    disabled={reprintingBill === order.id}
+                                                    style={{
+                                                        height: '46px',
+                                                        borderRadius: '12px',
+                                                        border: '1.5px solid #10B981',
+                                                        background: 'linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%)',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        gap: '8px',
+                                                        color: '#059669',
+                                                        fontWeight: 700,
                                                         fontSize: '0.85rem',
                                                         transition: 'all 0.2s',
                                                         boxShadow: '0 2px 6px rgba(16, 185, 129, 0.2)'
@@ -1609,26 +1612,26 @@ export default function KitchenPage() {
                                                         e.currentTarget.style.boxShadow = '0 2px 6px rgba(16, 185, 129, 0.2)'
                                                     }}
                                                 >
-                                                    <CheckCircle2 size={16} strokeWidth={2.5} /> 
+                                                    <CheckCircle2 size={16} strokeWidth={2.5} />
                                                     {reprintingBill === order.id ? '...' : 'Print Bill'}
                                                 </button>
                                             ) : (
-                                                <button 
-                                                    onClick={() => handleGenerateBill(order.id, orderPaymentMethods[order.id] || 'cash')} 
-                                                    disabled={generatingBill === order.id || printingBill !== null} 
-                                                    style={{ 
+                                                <button
+                                                    onClick={() => handleGenerateBill(order.id, orderPaymentMethods[order.id] || 'cash')}
+                                                    disabled={generatingBill === order.id || printingBill !== null}
+                                                    style={{
                                                         flex: 1,
-                                                        height: '46px', 
-                                                        borderRadius: '12px', 
-                                                        border: '1.5px solid #D1D5DB', 
-                                                        background: 'white', 
-                                                        cursor: generatingBill === order.id ? 'not-allowed' : 'pointer', 
-                                                        display: 'flex', 
-                                                        alignItems: 'center', 
-                                                        justifyContent: 'center', 
-                                                        gap: '8px', 
-                                                        color: '#374151', 
-                                                        fontWeight: 700, 
+                                                        height: '46px',
+                                                        borderRadius: '12px',
+                                                        border: '1.5px solid #D1D5DB',
+                                                        background: 'white',
+                                                        cursor: generatingBill === order.id ? 'not-allowed' : 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        gap: '8px',
+                                                        color: '#374151',
+                                                        fontWeight: 700,
                                                         fontSize: '0.85rem',
                                                         opacity: generatingBill === order.id ? 0.6 : 1,
                                                         transition: 'all 0.2s',
@@ -1649,24 +1652,26 @@ export default function KitchenPage() {
                                                         }
                                                     }}
                                                 >
-                                                    <Printer size={16} strokeWidth={2.5} /> 
+                                                    <Printer size={16} strokeWidth={2.5} />
                                                     {generatingBill === order.id ? '...' : 'Print Bill'}
                                                 </button>
                                             )}
-                                            
-                                            <button 
-                                                onClick={() => cancelOrder(order.id)} 
-                                                style={{ 
-                                                    flex: '0 0 52px',
-                                                    height: '46px', 
-                                                    borderRadius: '12px', 
-                                                    border: '1.5px solid #FCA5A5', 
-                                                    background: '#FEF2F2', 
-                                                    cursor: 'pointer', 
-                                                    display: 'flex', 
-                                                    alignItems: 'center', 
-                                                    justifyContent: 'center', 
+
+                                            <button
+                                                onClick={() => cancelOrder(order.id)}
+                                                style={{
+                                                    height: '46px',
+                                                    borderRadius: '12px',
+                                                    border: '1.5px solid #FCA5A5',
+                                                    background: '#FEF2F2',
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    gap: '6px',
                                                     color: '#DC2626',
+                                                    fontWeight: 700,
+                                                    fontSize: '0.85rem',
                                                     transition: 'all 0.2s',
                                                     boxShadow: '0 1px 3px rgba(220,38,38,0.1)'
                                                 }}
@@ -1684,7 +1689,7 @@ export default function KitchenPage() {
                                                 }}
                                                 title="Cancel Order"
                                             >
-                                                <StopCircle size={20} strokeWidth={2.5} />
+                                                <StopCircle size={16} strokeWidth={2.5} />
                                             </button>
                                         </div>
 
@@ -1757,41 +1762,44 @@ export default function KitchenPage() {
             {showCreateOrder && (
                 <div style={{
                     position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'rgba(0,0,0,0.5)',
+                    inset: 0,
+                    background: 'rgba(0,0,0,0.6)',
+                    backdropFilter: 'blur(4px)',
+                    WebkitBackdropFilter: 'blur(4px)',
                     zIndex: 1000,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    padding: '20px'
+                    padding: 'clamp(12px, 3vw, 24px)',
                 }}
-                onClick={(e) => { if (e.target === e.currentTarget) setShowCreateOrder(false) }}
+                    onClick={(e) => { if (e.target === e.currentTarget) { setShowCreateOrder(false); setShowNewOrderMenu(false) } }}
                 >
                     <div style={{
                         background: 'white',
-                        borderRadius: '20px',
+                        borderRadius: 'clamp(16px, 3vw, 24px)',
                         width: '100%',
-                        maxWidth: '500px',
-                        maxHeight: '90vh',
-                        overflowY: 'auto',
-                        boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+                        maxWidth: 'min(500px, 100%)',
+                        maxHeight: 'min(90vh, 100%)',
+                        boxShadow: '0 24px 48px -12px rgba(0,0,0,0.25)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        overflow: 'hidden',
                     }}>
-                        {/* Modal Header */}
+                        {/* Modal Header — sticky */}
                         <div style={{
-                            padding: '24px 24px 16px',
+                            padding: 'clamp(16px, 3vw, 24px) clamp(16px, 3vw, 24px) clamp(12px, 2vw, 16px)',
                             borderBottom: '2px solid #F3F4F6',
                             display: 'flex',
                             justifyContent: 'space-between',
-                            alignItems: 'center'
+                            alignItems: 'center',
+                            flexShrink: 0,
+                            background: 'white',
                         }}>
-                            <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 900, color: 'var(--text)' }}>
+                            <h2 style={{ margin: 0, fontSize: 'clamp(1.15rem, 3.5vw, 1.5rem)', fontWeight: 900, color: 'var(--text)' }}>
                                 Create Walk-in Order
                             </h2>
                             <button
-                                onClick={() => setShowCreateOrder(false)}
+                                onClick={() => { setShowCreateOrder(false); setShowNewOrderMenu(false) }}
                                 style={{
                                     width: '36px',
                                     height: '36px',
@@ -1802,15 +1810,25 @@ export default function KitchenPage() {
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    color: '#6B7280'
+                                    color: '#6B7280',
+                                    flexShrink: 0,
+                                    transition: 'background 0.2s',
                                 }}
                             >
                                 <XIcon size={18} />
                             </button>
                         </div>
 
-                        {/* Modal Body */}
-                        <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        {/* Modal Body — scrollable */}
+                        <div style={{
+                            padding: 'clamp(16px, 3vw, 24px)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 'clamp(12px, 2vw, 16px)',
+                            overflowY: 'auto',
+                            flex: '1 1 auto',
+                            minHeight: 0,
+                        }}>
                             {/* Customer Name */}
                             <div>
                                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -1821,14 +1839,14 @@ export default function KitchenPage() {
                                     <input
                                         type="text"
                                         value={newOrderName}
-                                        onChange={(e) => setNewOrderName(e.target.value)}
+                                        onChange={(e) => setNewOrderName(e.target.value.replace(/[^a-zA-Z\s]/g, ''))}
                                         placeholder="Enter customer name"
                                         style={{
                                             width: '100%',
                                             padding: '12px 12px 12px 38px',
                                             borderRadius: '12px',
                                             border: '2px solid #E5E7EB',
-                                            fontSize: '0.95rem',
+                                            fontSize: 'clamp(0.875rem, 2vw, 0.95rem)',
                                             fontWeight: 600,
                                             outline: 'none',
                                             transition: 'border-color 0.2s',
@@ -1850,14 +1868,18 @@ export default function KitchenPage() {
                                     <input
                                         type="tel"
                                         value={newOrderPhone}
-                                        onChange={(e) => setNewOrderPhone(e.target.value)}
-                                        placeholder="Enter phone number"
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/\D/g, '');
+                                            if (val.length <= 10) setNewOrderPhone(val);
+                                        }}
+                                        placeholder="Enter 10-digit phone number"
+                                        maxLength={10}
                                         style={{
                                             width: '100%',
                                             padding: '12px 12px 12px 38px',
                                             borderRadius: '12px',
                                             border: '2px solid #E5E7EB',
-                                            fontSize: '0.95rem',
+                                            fontSize: 'clamp(0.875rem, 2vw, 0.95rem)',
                                             fontWeight: 600,
                                             outline: 'none',
                                             transition: 'border-color 0.2s',
@@ -1872,21 +1894,25 @@ export default function KitchenPage() {
                             {/* Table Name */}
                             <div>
                                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    Table Name *
+                                    Table Number *
                                 </label>
                                 <div style={{ position: 'relative' }}>
                                     <MapPin size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
                                     <input
                                         type="text"
+                                        inputMode="numeric"
                                         value={newOrderTable}
-                                        onChange={(e) => setNewOrderTable(e.target.value)}
-                                        placeholder="e.g. Table 5, Bar Counter"
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/\D/g, '');
+                                            setNewOrderTable(val);
+                                        }}
+                                        placeholder="Enter table number"
                                         style={{
                                             width: '100%',
                                             padding: '12px 12px 12px 38px',
                                             borderRadius: '12px',
                                             border: '2px solid #E5E7EB',
-                                            fontSize: '0.95rem',
+                                            fontSize: 'clamp(0.875rem, 2vw, 0.95rem)',
                                             fontWeight: 600,
                                             outline: 'none',
                                             transition: 'border-color 0.2s',
@@ -1899,24 +1925,24 @@ export default function KitchenPage() {
                             </div>
 
                             {/* Guests + Location Row */}
-                            <div style={{ display: 'flex', gap: '12px' }}>
-                                <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                                <div style={{ flex: '1 1 140px', minWidth: '140px' }}>
                                     <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                         Guests
                                     </label>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <button
                                             onClick={() => setNewOrderGuests(Math.max(1, newOrderGuests - 1))}
-                                            style={{ width: '40px', height: '40px', borderRadius: '10px', border: '2px solid #E5E7EB', background: 'white', cursor: 'pointer', fontWeight: 900, fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                            style={{ width: '40px', height: '40px', borderRadius: '10px', border: '2px solid #E5E7EB', background: 'white', cursor: 'pointer', fontWeight: 900, fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                                         >-</button>
                                         <span style={{ minWidth: '32px', textAlign: 'center', fontWeight: 900, fontSize: '1.1rem' }}>{newOrderGuests}</span>
                                         <button
                                             onClick={() => setNewOrderGuests(newOrderGuests + 1)}
-                                            style={{ width: '40px', height: '40px', borderRadius: '10px', border: '2px solid #E5E7EB', background: 'white', cursor: 'pointer', fontWeight: 900, fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                            style={{ width: '40px', height: '40px', borderRadius: '10px', border: '2px solid #E5E7EB', background: 'white', cursor: 'pointer', fontWeight: 900, fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                                         >+</button>
                                     </div>
                                 </div>
-                                <div style={{ flex: 1 }}>
+                                <div style={{ flex: '1 1 160px', minWidth: '160px' }}>
                                     <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                         Location
                                     </label>
@@ -1971,10 +1997,12 @@ export default function KitchenPage() {
                                                 padding: '10px 14px',
                                                 background: '#FAFAF9',
                                                 borderRadius: '10px',
-                                                border: '1px solid #E7E5E4'
+                                                border: '1px solid #E7E5E4',
+                                                gap: '8px',
+                                                flexWrap: 'wrap',
                                             }}>
-                                                <span style={{ flex: 1, fontWeight: 700, fontSize: '0.9rem' }}>{menuItem?.name || 'Unknown'}</span>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span style={{ flex: '1 1 100px', fontWeight: 700, fontSize: '0.9rem', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{menuItem?.name || 'Unknown'}</span>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                                                     <button
                                                         onClick={() => {
                                                             if (item.quantity <= 1) {
@@ -1985,7 +2013,7 @@ export default function KitchenPage() {
                                                         }}
                                                         style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #D6D3D1', background: 'white', cursor: 'pointer', fontWeight: 800 }}
                                                     >-</button>
-                                                    <span style={{ minWidth: '24px', textAlign: 'center', fontWeight: 900, fontSize: '0.9rem' }}>{item.quantity}</span>
+                                                    <span style={{ minWidth: '20px', textAlign: 'center', fontWeight: 900, fontSize: '0.9rem' }}>{item.quantity}</span>
                                                     <button
                                                         onClick={() => setNewOrderItems(prev => prev.map((it, i) => i === idx ? { ...it, quantity: it.quantity + 1 } : it))}
                                                         style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #D6D3D1', background: 'white', cursor: 'pointer', fontWeight: 800 }}
@@ -1994,8 +2022,8 @@ export default function KitchenPage() {
                                                         onClick={() => setNewOrderItems(prev => prev.filter((_, i) => i !== idx))}
                                                         style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #FCA5A5', background: '#FEF2F2', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem' }}
                                                     >✕</button>
+                                                    <span style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '0.9rem', minWidth: '48px', textAlign: 'right' }}>₹{((menuItem?.price || 0) * item.quantity).toFixed(0)}</span>
                                                 </div>
-                                                <span style={{ marginLeft: '10px', fontWeight: 800, color: 'var(--primary)', fontSize: '0.9rem' }}>₹{((menuItem?.price || 0) * item.quantity).toFixed(0)}</span>
                                             </div>
                                         )
                                     })}
@@ -2044,17 +2072,22 @@ export default function KitchenPage() {
                             )}
                         </div>
 
-                        {/* Modal Footer */}
+                        {/* Modal Footer — sticky */}
                         <div style={{
-                            padding: '16px 24px 24px',
+                            padding: 'clamp(12px, 2vw, 16px) clamp(16px, 3vw, 24px) clamp(16px, 3vw, 24px)',
                             borderTop: '2px solid #F3F4F6',
                             display: 'flex',
-                            gap: '12px'
+                            gap: '12px',
+                            flexShrink: 0,
+                            background: 'white',
                         }}>
                             <Button
-                                onClick={() => setShowCreateOrder(false)}
+                                onClick={() => {
+                                    setShowCreateOrder(false)
+                                    setShowNewOrderMenu(false)
+                                }}
                                 variant="outline"
-                                style={{ flex: 1, height: '52px', fontWeight: 700, borderRadius: '12px' }}
+                                style={{ flex: 1, height: 'clamp(44px, 6vw, 52px)', fontWeight: 700, borderRadius: '12px' }}
                             >
                                 Cancel
                             </Button>
@@ -2063,9 +2096,9 @@ export default function KitchenPage() {
                                 disabled={creatingOrder}
                                 style={{
                                     flex: 2,
-                                    height: '52px',
+                                    height: 'clamp(44px, 6vw, 52px)',
                                     fontWeight: 900,
-                                    fontSize: '1rem',
+                                    fontSize: 'clamp(0.875rem, 2vw, 1rem)',
                                     borderRadius: '12px',
                                     background: 'linear-gradient(135deg, var(--primary) 0%, #8B1A1F 100%)',
                                     border: 'none',

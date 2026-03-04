@@ -546,7 +546,8 @@ export default function OrdersPage() {
                             Back
                         </Link>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <h1 style={{ margin: 0, fontSize: 'clamp(1.75rem, 5vw, 2.25rem)', fontFamily: 'var(--font-serif)', fontWeight: 900, letterSpacing: '-0.02em', textShadow: '0 2px 4px rgba(0,0,0,0.15)' }}>
+                            <h1 style={{ margin: 0, fontSize: 'clamp(1.75rem, 5vw, 2.25rem)', fontFamily: 'var(--font-serif)', fontWeight: 900, letterSpacing: '-0.02em',
+                                color: 'black', textShadow: '0 2px 4px rgba(0,0,0,0.15)' }}>
                                 {orderIdParam && !user ? 'Order Status' : 'My Orders'}
                             </h1>
                             <button

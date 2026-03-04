@@ -37,10 +37,6 @@ export default function KitchenLayout({
     const links = [
         { label: 'Orders', href: '/kitchen' },
         { label: 'Specials', href: '/kitchen/specials' },
-        ...(user.role === 'ADMIN' ? [
-            { label: 'Menu', href: '/admin/menu' },
-            { label: 'Admin', href: '/admin', muted: true },
-        ] : []),
     ]
 
     return (
@@ -52,6 +48,7 @@ export default function KitchenLayout({
                     accentColor="#FFFFFF"
                     accentText="#1A1A1A"
                     roleLabel={getRoleLabel()}
+                    viewToggle={user.role === 'ADMIN' ? { currentView: 'kitchen' } : undefined}
                 />
                 <main style={{ padding: '2rem', background: '#f5f5f5', minHeight: 'calc(100vh - 60px)' }}>
                     {children}

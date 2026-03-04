@@ -205,7 +205,7 @@ export default function StudentHome() {
                             letterSpacing: '-0.01em',
                         }}
                     >
-                        Authentic Italian Hospitality
+                        Ai cavalli
                     </h3>
 
                     <div style={{ width: '80px', height: '1px', background: DEEP_BLACK, margin: '0 auto 2.5rem', opacity: 0.6 }} />
@@ -220,7 +220,7 @@ export default function StudentHome() {
                             maxWidth: '750px',
                         }}
                     >
-                        Experience the art of the Italian table, where every ingredient tells a story of the soil it was grown in and the hands that prepared it.
+                         Savour the legacy - Where Tradition, Taste & Equestrian Grace Unite
                     </p>
                 </div>
             </section>

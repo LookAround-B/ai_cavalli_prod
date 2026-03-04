@@ -25,7 +25,6 @@ export default function AdminLayout({
         { label: 'Menu', href: '/admin/menu' },
         { label: 'CMS', href: '/admin/cms' },
         { label: 'Users', href: '/admin/users' },
-        { label: 'Kitchen', href: '/kitchen', muted: true },
     ]
 
     return (
@@ -37,6 +36,7 @@ export default function AdminLayout({
                     accentColor="#FFFFFF"
                     accentText="#1A1A1A"
                     roleLabel="Admin"
+                    viewToggle={{ currentView: 'admin' }}
                 />
                 <main style={{ padding: '2rem', background: '#f5f5f5', minHeight: 'calc(100vh - 60px)' }}>
                     {children}
