@@ -63,12 +63,17 @@ export async function POST(request: NextRequest) {
         // 3. Calculate totals
         let itemsTotal = 0
         order.orderItems.forEach((item) => {
-            itemsTotal += item.quantity * Number(item.price)
+            const itemPrice = Number(item.price) || 0
+            itemsTotal += item.quantity * itemPrice
         })
+        
+        // itemsTotal should be rounded to 2 decimal places
+        itemsTotal = Math.round(itemsTotal * 100) / 100
+
         // discount_amount in orders table is stored as a percentage (e.g. 10 = 10%)
         const discountPercent = Number(order.discountAmount) || 0
         const discountAmount = discountPercent > 0 ? Math.round((itemsTotal * (discountPercent / 100)) * 100) / 100 : 0
-        const finalTotal = itemsTotal - discountAmount
+        const finalTotal = Math.round((itemsTotal - discountAmount) * 100) / 100
 
         // 4. Generate bill number
         const billNumber = `BILL-${Date.now().toString(36).toUpperCase()}`

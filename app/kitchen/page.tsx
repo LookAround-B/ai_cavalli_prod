@@ -108,7 +108,7 @@ export default function KitchenPage() {
                     }
                     return cleaned
                 }
-            } catch {}
+            } catch { }
         }
         return {}
     })
@@ -120,7 +120,7 @@ export default function KitchenPage() {
     // Attendee assignment per order (orderId -> attendee name)
     const [orderAttendees, setOrderAttendees] = useState<Record<string, string>>({})
     const [attendeeDropdownOpen, setAttendeeDropdownOpen] = useState<string | null>(null)
-    const [kitchenStaff, setKitchenStaff] = useState<{id: string, name: string}[]>([])
+    const [kitchenStaff, setKitchenStaff] = useState<{ id: string, name: string }[]>([])
     // Create order from kitchen portal
     const [showCreateOrder, setShowCreateOrder] = useState(false)
     const [newOrderName, setNewOrderName] = useState('')
@@ -128,7 +128,7 @@ export default function KitchenPage() {
     const [newOrderTable, setNewOrderTable] = useState('')
     const [newOrderGuests, setNewOrderGuests] = useState(1)
     const [newOrderLocation, setNewOrderLocation] = useState<'indoor' | 'outdoor'>('indoor')
-    const [newOrderItems, setNewOrderItems] = useState<{menuItemId: string, quantity: number}[]>([])
+    const [newOrderItems, setNewOrderItems] = useState<{ menuItemId: string, quantity: number }[]>([])
     const [creatingOrder, setCreatingOrder] = useState(false)
     const [showNewOrderMenu, setShowNewOrderMenu] = useState(false)
     const [refreshing, setRefreshing] = useState(false)
@@ -202,7 +202,7 @@ export default function KitchenPage() {
             fetch('/api/kitchen/bill-requests')
                 .then(r => r.json())
                 .then(json => { if (json.success) setBillRequests(json.data || []) })
-                .catch(() => {})
+                .catch(() => { })
         }, 15000)
 
         return () => clearInterval(pollInterval)
@@ -257,7 +257,7 @@ export default function KitchenPage() {
     useEffect(() => {
         try {
             localStorage.setItem('kitchen_cooking_timers', JSON.stringify(cookingTimers))
-        } catch {}
+        } catch { }
     }, [cookingTimers])
 
     // ----- Cooking Timer: tick every second & alarm when overdue -----
@@ -286,7 +286,7 @@ export default function KitchenPage() {
                         // Play alarm sound (silently catch if user hasn't interacted yet)
                         if (alarmAudioRef.current) {
                             alarmAudioRef.current.currentTime = 0
-                            alarmAudioRef.current.play().catch(() => {})
+                            alarmAudioRef.current.play().catch(() => { })
                             // Stop alarm after 10 seconds
                             setTimeout(() => {
                                 alarmAudioRef.current?.pause()
@@ -621,11 +621,11 @@ export default function KitchenPage() {
                         price: Number(i.price),
                         subtotal: Number(i.subtotal) || (i.quantity * Number(i.price))
                     })),
-                    itemsTotal: Number(data.bill.itemsTotal || 0),
-                    discountAmount: Number(data.bill.discountAmount || 0),
-                    finalTotal: Number(data.bill.finalTotal || 0),
-                    paymentMethod: data.bill.paymentMethod || paymentMethod,
-                    createdAt: data.bill.createdAt || data.bill.orderDetails?.createdAt,
+                    itemsTotal: Number(data.bill.itemsTotal || data.bill.items_total || 0),
+                    discountAmount: Number(data.bill.discountAmount || data.bill.discount_amount || 0),
+                    finalTotal: Number(data.bill.finalTotal || data.bill.final_total || 0),
+                    paymentMethod: data.bill.paymentMethod || data.bill.payment_method || paymentMethod,
+                    createdAt: data.bill.createdAt || data.bill.created_at || data.bill.orderDetails?.createdAt,
                 })
             } else {
                 showError('Bill Failed', data.error || 'Failed to generate bill')
@@ -693,11 +693,11 @@ export default function KitchenPage() {
                     price: Number(i.price || 0),
                     subtotal: Number(i.subtotal) || (i.quantity * Number(i.price || 0))
                 })),
-                itemsTotal: Number(bill.items_total || 0),
-                discountAmount: Number(bill.discount_amount || 0),
-                finalTotal: Number(bill.final_total || 0),
-                paymentMethod: bill.payment_method || 'cash',
-                createdAt: bill.created_at,
+                itemsTotal: Number(bill.items_total || bill.itemsTotal || 0),
+                discountAmount: Number(bill.discount_amount || bill.discountAmount || 0),
+                finalTotal: Number(bill.final_total || bill.finalTotal || 0),
+                paymentMethod: bill.payment_method || bill.paymentMethod || 'cash',
+                createdAt: bill.created_at || bill.createdAt,
             })
         } catch (error) {
             console.error(error)
@@ -1362,7 +1362,9 @@ export default function KitchenPage() {
                                                             <button
                                                                 key={staff.id}
                                                                 onClick={() => {
-                                                                    setOrderAttendees(prev => ({ ...prev, [order.id]: staff.name }))
+                                                                    if (['sonia', 'anand'].includes(staff.name.toLowerCase())) {
+                                                                        setOrderAttendees(prev => ({ ...prev, [order.id]: staff.name }))
+                                                                    }
                                                                     setAttendeeDropdownOpen(null)
                                                                 }}
                                                                 style={{

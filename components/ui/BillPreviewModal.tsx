@@ -18,11 +18,16 @@ export interface BillData {
   guestName?: string;
   tableName?: string;
   items: BillItem[];
-  itemsTotal: number;
   discountAmount?: number;
-  finalTotal: number;
+  discount_amount?: number;
+  itemsTotal?: number;
+  items_total?: number;
+  finalTotal?: number;
+  final_total?: number;
   paymentMethod?: string;
+  payment_method?: string;
   createdAt?: string;
+  created_at?: string;
   sessionDetails?: {
     guestName?: string;
     // tableName?: string;
@@ -48,7 +53,7 @@ export function BillPreviewModal({
   const showPrintActions = userRole !== 'OUTSIDER' && userRole !== 'RIDER';
   const receiptRef = useRef<HTMLDivElement>(null);
 
-  const now = bill.createdAt ? new Date(bill.createdAt) : new Date();
+  const now = (bill.createdAt || bill.created_at) ? new Date(bill.createdAt || bill.created_at!) : new Date();
   const dateStr = now.toLocaleDateString("en-IN", {
     day: "2-digit",
     month: "short",
@@ -59,6 +64,15 @@ export function BillPreviewModal({
     minute: "2-digit",
     hour12: true,
   });
+
+  // Normalize data for consistency
+  const itemsTotal = Number(bill.itemsTotal || bill.items_total || 0);
+  const discountAmount = Number(bill.discountAmount || bill.discount_amount || 0);
+  const finalTotal = Number(bill.finalTotal || bill.final_total || (itemsTotal - discountAmount));
+  const paymentMethod = bill.paymentMethod || bill.payment_method || "";
+
+  // Calculate percentage for display
+  const discountPercent = itemsTotal > 0 ? Math.round((discountAmount / itemsTotal) * 100) : 0;
 
   const guestName = bill.sessionDetails?.guestName || bill.guestName || "";
   // const tableName = bill.sessionDetails?.tableName || bill.tableName || "";
@@ -218,11 +232,12 @@ export function BillPreviewModal({
         </tbody>
     </table>
     <hr>
-    <div class="total-row"><b>Subtotal:</b><b>₹${(bill.itemsTotal || 0).toFixed(2)}</b></div>
-    ${bill.discountAmount && bill.discountAmount > 0 ? `<div class="total-row"><b>Discount:</b><b>-₹${(bill.discountAmount || 0).toFixed(2)}</b></div>` : ""}
     <hr>
-    <div class="grand-total"><b>TOTAL:</b><b>₹${(bill.finalTotal || 0).toFixed(2)}</b></div>
-    ${bill.paymentMethod ? `<div class="total-row"><b>Payment:</b><b>${bill.paymentMethod.toUpperCase()}</b></div>` : ""}
+    <div class="total-row"><b>Subtotal:</b><b>₹${itemsTotal.toFixed(2)}</b></div>
+    ${discountAmount > 0 ? `<div class="total-row"><b>Discount ${discountPercent > 0 ? `(${discountPercent}%)` : ""}:</b><b>-₹${discountAmount.toFixed(2)}</b></div>` : ""}
+    <hr>
+    <div class="grand-total"><b>TOTAL:</b><b>₹${finalTotal.toFixed(2)}</b></div>
+    ${paymentMethod ? `<div class="total-row"><b>Payment:</b><b>${paymentMethod.toUpperCase()}</b></div>` : ""}
     <hr>
     <div class="footer">
         <div class="thank-you"><b>Thank You! Visit Again!</b></div>
@@ -230,7 +245,7 @@ export function BillPreviewModal({
     </div>
 </body>
 </html>`;
-  }, [bill, dateStr, timeStr, guestName, numGuests, orderCount]);
+  }, [bill, dateStr, timeStr, guestName, numGuests, orderCount, itemsTotal, discountAmount, finalTotal, paymentMethod, discountPercent]);
 
   // Open browser print dialog (works for both printing and saving as PDF via browser)
   const handlePrint = useCallback(() => {
@@ -324,10 +339,10 @@ export function BillPreviewModal({
           // tableName,
           guestName,
           items: bill.items,
-          itemsTotal: bill.itemsTotal,
-          discountAmount: bill.discountAmount || 0,
-          finalTotal: bill.finalTotal,
-          paymentMethod: bill.paymentMethod || "CASH",
+          itemsTotal,
+          discountAmount,
+          finalTotal,
+          paymentMethod: paymentMethod || "CASH",
           sessionDetails: bill.sessionDetails,
         }),
       });
@@ -419,7 +434,7 @@ export function BillPreviewModal({
                 <span>{guestName}</span>
               </div>
             )}
-          
+
             {orderCount && (
               <div className={styles.infoRow}>
                 <span>Orders:</span>
@@ -457,12 +472,12 @@ export function BillPreviewModal({
             <div className={styles.totalSection}>
               <div className={styles.totalRow}>
                 <span>Subtotal:</span>
-                <span>₹{(bill.itemsTotal || 0).toFixed(2)}</span>
+                <span>₹{itemsTotal.toFixed(2)}</span>
               </div>
-              {bill.discountAmount != null && bill.discountAmount > 0 && (
+              {discountAmount > 0 && (
                 <div className={`${styles.totalRow} ${styles.discount}`}>
-                  <span>Discount:</span>
-                  <span>-₹{(bill.discountAmount || 0).toFixed(2)}</span>
+                  <span>Discount {discountPercent > 0 && `(${discountPercent}%)`}:</span>
+                  <span>-₹{discountAmount.toFixed(2)}</span>
                 </div>
               )}
             </div>
@@ -471,13 +486,13 @@ export function BillPreviewModal({
 
             <div className={styles.grandTotal}>
               <span>TOTAL:</span>
-              <span>₹{(bill.finalTotal || 0).toFixed(2)}</span>
+              <span>₹{finalTotal.toFixed(2)}</span>
             </div>
 
-            {bill.paymentMethod && (
+            {paymentMethod && (
               <div className={styles.infoRow}>
                 <span>Payment:</span>
-                <span>{bill.paymentMethod.toUpperCase()}</span>
+                <span>{paymentMethod.toUpperCase()}</span>
               </div>
             )}
 
