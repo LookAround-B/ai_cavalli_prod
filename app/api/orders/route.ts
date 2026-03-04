@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         user: { select: { role: true, name: true, phone: true, parentName: true, email: true } },
+        bill: { select: { paymentMethod: true } },
         orderItems: {
           include: {
             menuItem: {
@@ -62,6 +63,7 @@ export async function GET(request: NextRequest) {
         notes: o.notes,
         location_type: o.locationType,
         billed: o.billed,
+        bill_payment_method: o.bill?.paymentMethod || null,
         created_at: o.createdAt.toISOString(),
         user: o.user ? {
           role: o.user.role,

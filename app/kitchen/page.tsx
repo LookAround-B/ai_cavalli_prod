@@ -164,6 +164,14 @@ export default function KitchenPage() {
                     new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
                 )
                 setOrders(sorted)
+                // Initialize payment dropdown for billed orders
+                const billedPayments: Record<string, string> = {}
+                sorted.forEach((o: any) => {
+                    if (o.billed && o.bill_payment_method) billedPayments[o.id] = o.bill_payment_method
+                })
+                if (Object.keys(billedPayments).length > 0) {
+                    setOrderPaymentMethods(prev => ({ ...billedPayments, ...prev }))
+                }
             }
         } catch (e) { console.error('fetchOrders error:', e) }
         setLoading(false)
@@ -173,7 +181,17 @@ export default function KitchenPage() {
         try {
             const res = await fetch('/api/orders?status=completed&all=true&limit=30')
             const json = await res.json()
-            if (json.success && json.data) setCompletedOrders(json.data)
+            if (json.success && json.data) {
+                setCompletedOrders(json.data)
+                // Initialize payment dropdown for billed completed orders
+                const billedPayments: Record<string, string> = {}
+                json.data.forEach((o: any) => {
+                    if (o.billed && o.bill_payment_method) billedPayments[o.id] = o.bill_payment_method
+                })
+                if (Object.keys(billedPayments).length > 0) {
+                    setOrderPaymentMethods(prev => ({ ...billedPayments, ...prev }))
+                }
+            }
         } catch (e) { console.error('fetchCompletedOrders error:', e) }
     }
 
@@ -719,7 +737,21 @@ export default function KitchenPage() {
             const bill = json.data
             const order = [...orders, ...completedOrders].find(o => o.id === orderId)
 
-            // Show bill preview modal for reprinting
+            // Use the currently selected payment method from the dropdown (if changed)
+            const selectedPayment = orderPaymentMethods[orderId]
+            const currentBillPayment = bill.payment_method || bill.paymentMethod || 'cash'
+            const effectivePayment = selectedPayment || currentBillPayment
+
+            // If user picked a different payment, persist it to the DB
+            if (selectedPayment && selectedPayment !== currentBillPayment && bill.id) {
+                fetch('/api/bills/generate', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ billId: bill.id, paymentMethod: selectedPayment })
+                }).catch(err => console.error('Failed to update payment method:', err))
+            }
+
+            // Show bill preview modal for reprinting — always use the dropdown value
             setBillPreview({
                 id: bill.id,
                 billNumber: bill.bill_number || '',
@@ -734,7 +766,7 @@ export default function KitchenPage() {
                 itemsTotal: Number(bill.items_total || bill.itemsTotal || 0),
                 discountAmount: Number(bill.discount_amount || bill.discountAmount || 0),
                 finalTotal: Number(bill.final_total || bill.finalTotal || 0),
-                paymentMethod: formatPaymentMethod(bill.payment_method || bill.paymentMethod || 'cash'),
+                paymentMethod: formatPaymentMethod(effectivePayment),
                 createdAt: bill.created_at || bill.createdAt,
             })
         } catch (error) {

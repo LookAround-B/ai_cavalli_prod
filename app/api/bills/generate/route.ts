@@ -147,3 +147,28 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
     }
 }
+
+// PATCH: Update bill payment method
+export async function PATCH(request: NextRequest) {
+    try {
+        const { billId, paymentMethod } = await request.json()
+
+        if (!billId || !paymentMethod) {
+            return NextResponse.json(
+                { success: false, error: 'billId and paymentMethod are required' },
+                { status: 400 }
+            )
+        }
+
+        const bill = await prisma.bill.update({
+            where: { id: billId },
+            data: { paymentMethod },
+            select: { id: true, paymentMethod: true },
+        })
+
+        return NextResponse.json({ success: true, bill })
+    } catch (error) {
+        console.error('Bill payment update error:', error)
+        return NextResponse.json({ success: false, error: 'Failed to update payment method' }, { status: 500 })
+    }
+}
