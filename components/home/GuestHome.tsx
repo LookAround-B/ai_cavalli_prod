@@ -98,7 +98,7 @@ export default function GuestHome() {
 
                 <div style={{ position: 'relative', textAlign: 'center', padding: '0 24px', zIndex: 10 }}>
                     <h1
-                        className="hero-title shimmer-text"
+                        className="hero-title"
                         style={{
                             fontFamily: 'var(--font-serif)',
                             fontSize: 'clamp(3.5rem, 12vw, 8.5rem)',
@@ -110,6 +110,21 @@ export default function GuestHome() {
                     >
                         Ai Cavalli
                     </h1>
+                    <h3
+                        className="hero-subtitle"
+                        style={{
+                            fontFamily: 'var(--font-serif)',
+                            fontSize: 'clamp(1.35rem, 5vw, 3rem)',
+                            lineHeight: 1,
+                            marginBottom: '2rem',
+                            textTransform: 'capitalize',
+                            fontWeight: 700,
+                            color: CRISP_WHITE,
+                            opacity: 0,
+                        }}
+                    >
+                        Savour the Legacy
+                    </h3>
 
                     <p
                         className="hero-subtitle"
@@ -118,11 +133,10 @@ export default function GuestHome() {
                             fontSize: 'clamp(0.9rem, 2.5vw, 1.1rem)',
                             marginBottom: '2rem',
                             color: CRISP_WHITE,
-                            fontWeight: 900,
+                            fontWeight: 400,
                             opacity: 0,
                         }}
                     >
-                        Savour the Legacy<br />
                         An Indo-Italian Café at EIRS — Where Tradition, Taste & Equestrian Grace Unite.
                     </p>
 
@@ -318,7 +332,7 @@ export default function GuestHome() {
                         style={{
                             fontFamily: 'var(--font-serif)',
                             fontSize: 'clamp(2rem, 5vw, 3.5rem)',
-                            marginBottom: '2rem',
+                            marginBottom: '1rem',
                             color: DEEP_BLACK,
                             fontWeight: 800,
                             letterSpacing: '-0.01em',
@@ -327,7 +341,20 @@ export default function GuestHome() {
                         Ai Cavalli
                     </h3>
 
-                    <div style={{ width: '80px', height: '1px', background: DEEP_BLACK, margin: '0 auto 2.5rem', opacity: 0.6 }} />
+                    <p
+                        style={{
+                            color: CRISP_WHITE,
+                            fontSize: 'clamp(1.05rem, 2.2vw, 1.4rem)',
+                            fontWeight: 600,
+                            margin: '0 auto 2rem',
+                            fontStyle: 'italic',
+                            opacity: 0.95,
+                        }}
+                    >
+                        Savour the Legacy
+                    </p>
+
+                    <div style={{ width: '80px', height: '1px', background: CRISP_WHITE, margin: '0 auto 2.5rem', opacity: 0.6 }} />
 
                     <p
                         style={{
@@ -339,7 +366,7 @@ export default function GuestHome() {
                             maxWidth: '750px',
                         }}
                     >
-                        <strong>Savour the Legacy</strong> — An Indo-Italian Café at EIRS. Where Tradition, Taste & Equestrian Grace Unite.
+                        An Indo-Italian Café at EIRS — Where Tradition, Taste & Equestrian Grace Unite.
                     </p>
                 </div>
             </section>

@@ -215,11 +215,11 @@ export function BillPreviewModal({
     <div class="center">
     <div class="restaurant-name">Ai CAVALLI</div>
     <div style="margin-top:4px;">
-        Embassy Projects Pvt Ltd<br/>
-        Embassy Point, Infantry Road<br/>
-        Bangalore - 560001<br/>
+        Embassy International Riding School<br/>
+        Tharahunise Village<br/>
+        Bangalore - 562157<br/>
         Phone: 080-43418451/2<br/>
-        Mobile: 7353779533<br/>
+        Mobile: 7353779533 | 9845054013<br/>
         GSTIN: 29AAACE8809Q1ZW
     </div>
 </div>

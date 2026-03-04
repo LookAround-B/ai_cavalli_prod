@@ -99,7 +99,7 @@ export default function StudentHome() {
                             opacity: 0,
                         }}
                     >
-                        DAL 1994 • ECCELLENZA ITALIANA
+                        An INDO-ITALIAN CAFE AT EIRS • WHERE TRADITION, TASTE & EQUESTRIAN GRACE UNITE
                     </p>
 
                     <button
@@ -214,7 +214,7 @@ export default function StudentHome() {
                         style={{
                             color: CRISP_WHITE,
                             lineHeight: 1.8,
-                            fontSize: 'clamp(1.1rem, 2vw, 1.35rem)',
+                            fontSize: 'clamp(0.95rem, 1.6vw, 1.1rem)',
                             fontWeight: 400,
                             margin: '0 auto',
                             maxWidth: '750px',
