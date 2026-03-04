@@ -36,7 +36,12 @@ import {
     ChevronDown,
     Phone,
     MapPin,
-    RefreshCw
+    RefreshCw,
+    Banknote,
+    Smartphone,
+    CreditCard,
+    Bike,
+    Briefcase
 } from 'lucide-react'
 import { Loading } from '@/components/ui/Loading'
 import { MenuItemSelector } from '@/components/kitchen/MenuItemSelector'
@@ -134,14 +139,15 @@ export default function KitchenPage() {
     const [refreshing, setRefreshing] = useState(false)
     // Payment method per order (orderId -> selected method)
     const [orderPaymentMethods, setOrderPaymentMethods] = useState<Record<string, string>>({})
+    const [paymentDropdownOpen, setPaymentDropdownOpen] = useState<string | null>(null)
 
     const PAYMENT_OPTIONS = [
-        { value: 'cash', label: 'Cash' },
-        { value: 'credit', label: 'Credit' },
-        { value: 'upi', label: 'UPI' },
-        { value: 'card', label: 'Card' },
-        { value: 'staff_payment', label: 'Staff Payment' },
-        { value: 'rider_payment', label: 'Rider Payment' },
+        { value: 'cash', label: 'Cash', icon: <Banknote size={16} /> },
+        { value: 'credit', label: 'Credit', icon: <CreditCard size={16} /> },
+        { value: 'upi', label: 'UPI', icon: <Smartphone size={16} /> },
+        { value: 'card', label: 'Card', icon: <CreditCard size={16} /> },
+        { value: 'staff_payment', label: 'Staff Payment', icon: <Briefcase size={16} /> },
+        { value: 'rider_payment', label: 'Rider Payment', icon: <Bike size={16} /> },
     ]
 
     const { user, logout, isLoading: authLoading } = useAuth()
@@ -371,16 +377,12 @@ export default function KitchenPage() {
     // Helper: is an order overdue?
     const isOrderOverdue = (orderId: string) => (timerElapsed[orderId] || 0) >= COOKING_TIME_LIMIT
 
-    // Fetch kitchen/admin staff for attendee dropdown
+    // Set allowed staff for attendee dropdown
     useEffect(() => {
-        async function fetchStaff() {
-            try {
-                const res = await fetch('/api/kitchen/staff')
-                const json = await res.json()
-                if (json.success) setKitchenStaff(json.data || [])
-            } catch (e) { console.error('fetchStaff error:', e) }
-        }
-        fetchStaff()
+        setKitchenStaff([
+            { id: '1', name: 'Sonia' },
+            { id: '2', name: 'Anand' }
+        ])
     }, [])
 
     // Cancel order
@@ -1362,14 +1364,12 @@ export default function KitchenPage() {
                                                             <button
                                                                 key={staff.id}
                                                                 onClick={() => {
-                                                                    if (['sonia', 'anand'].includes(staff.name.toLowerCase())) {
-                                                                        setOrderAttendees(prev => ({ ...prev, [order.id]: staff.name }))
-                                                                    }
+                                                                    setOrderAttendees(prev => ({ ...prev, [order.id]: staff.name }))
                                                                     setAttendeeDropdownOpen(null)
                                                                 }}
                                                                 style={{
                                                                     width: '100%',
-                                                                    padding: '10px 14px',
+                                                                    padding: '12px 14px',
                                                                     border: 'none',
                                                                     background: orderAttendees[order.id] === staff.name ? 'rgba(var(--primary-rgb), 0.08)' : 'transparent',
                                                                     cursor: 'pointer',
@@ -1378,11 +1378,15 @@ export default function KitchenPage() {
                                                                     fontSize: '0.85rem',
                                                                     color: orderAttendees[order.id] === staff.name ? 'var(--primary)' : 'var(--text)',
                                                                     transition: 'background 0.15s',
-                                                                    borderBottom: '1px solid #F3F4F6'
+                                                                    borderBottom: '1px solid #F3F4F6',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '8px'
                                                                 }}
                                                                 onMouseEnter={e => e.currentTarget.style.background = '#F9FAFB'}
                                                                 onMouseLeave={e => e.currentTarget.style.background = orderAttendees[order.id] === staff.name ? 'rgba(var(--primary-rgb), 0.08)' : 'transparent'}
                                                             >
+                                                                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: orderAttendees[order.id] === staff.name ? 'var(--primary)' : '#D1D5DB' }} />
                                                                 {staff.name}
                                                             </button>
                                                         ))}
@@ -1490,7 +1494,8 @@ export default function KitchenPage() {
                                                             cancelText: 'Cancel',
                                                             onConfirm: () => {
                                                                 const input = document.getElementById('discount-input') as HTMLInputElement
-                                                                resolve(input?.value || null)
+                                                                const val = Math.min(Number(input?.value) || 0, 100);
+                                                                resolve(val.toString());
                                                             },
                                                             onCancel: () => resolve(null),
                                                         })
@@ -1503,7 +1508,12 @@ export default function KitchenPage() {
                                                                 inp.min = '0'
                                                                 inp.max = '100'
                                                                 inp.placeholder = 'e.g. 10'
-                                                                inp.style.cssText = 'width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:1.1rem;font-weight:700;margin-top:12px;text-align:center;outline:none;'
+                                                                inp.style.cssText = 'width:calc(100% - 28px);padding:10px 14px;border:2px solid var(--border);border-radius:12px;font-size:1.1rem;font-weight:700;margin:12px 14px 0 14px;text-align:center;outline:none;box-sizing:border-box;'
+                                                                inp.addEventListener('input', () => {
+                                                                    let val = parseFloat(inp.value);
+                                                                    if (val > 100) inp.value = '100';
+                                                                    if (val < 0) inp.value = '0';
+                                                                })
                                                                 inp.addEventListener('focus', () => inp.style.borderColor = 'var(--primary)')
                                                                 inp.addEventListener('blur', () => inp.style.borderColor = 'var(--border)')
                                                                 msgEl.after(inp)
@@ -1511,7 +1521,10 @@ export default function KitchenPage() {
                                                             }
                                                         }, 50)
                                                     })
-                                                    if (result) updateDiscount(order.id, parseFloat(result))
+                                                    if (result) {
+                                                        const numericVal = Math.min(Math.max(parseFloat(result) || 0, 0), 100);
+                                                        updateDiscount(order.id, numericVal)
+                                                    }
                                                 }}
                                                 style={{
                                                     height: '46px',
@@ -1695,40 +1708,101 @@ export default function KitchenPage() {
                                             </button>
                                         </div>
 
-                                        {/* Row 3: Payment Method Dropdown */}
+                                        {/* Row 3: Custom Payment Method Dropdown */}
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#6B7280', whiteSpace: 'nowrap' }}>Payment:</span>
-                                            <select
-                                                value={orderPaymentMethods[order.id] || 'cash'}
-                                                onChange={(e) => setOrderPaymentMethods(prev => ({ ...prev, [order.id]: e.target.value }))}
-                                                style={{
-                                                    flex: 1,
-                                                    height: '40px',
-                                                    borderRadius: '10px',
-                                                    border: '1.5px solid #D1D5DB',
-                                                    background: 'white',
-                                                    padding: '0 12px',
-                                                    fontSize: '0.85rem',
-                                                    fontWeight: 700,
-                                                    color: '#374151',
-                                                    cursor: 'pointer',
-                                                    outline: 'none',
-                                                    transition: 'all 0.2s',
-                                                    appearance: 'auto' as any,
-                                                }}
-                                                onFocus={(e) => {
-                                                    e.currentTarget.style.borderColor = '#C0272D'
-                                                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(192,39,45,0.1)'
-                                                }}
-                                                onBlur={(e) => {
-                                                    e.currentTarget.style.borderColor = '#D1D5DB'
-                                                    e.currentTarget.style.boxShadow = 'none'
-                                                }}
-                                            >
-                                                {PAYMENT_OPTIONS.map(opt => (
-                                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                                ))}
-                                            </select>
+                                            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#4B5563', whiteSpace: 'nowrap' }}>Payment:</span>
+                                            <div style={{ position: 'relative', flex: 1 }}>
+                                                <button
+                                                    onClick={() => setPaymentDropdownOpen(paymentDropdownOpen === order.id ? null : order.id)}
+                                                    style={{
+                                                        width: '100%',
+                                                        height: '40px',
+                                                        borderRadius: '10px',
+                                                        border: '1.5px solid #D1D5DB',
+                                                        background: 'white',
+                                                        padding: '0 12px',
+                                                        fontSize: '0.85rem',
+                                                        fontWeight: 700,
+                                                        color: '#374151',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'space-between',
+                                                        transition: 'all 0.2s',
+                                                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                                    }}
+                                                    onFocus={(e) => {
+                                                        e.currentTarget.style.borderColor = 'var(--primary)'
+                                                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(var(--primary-rgb), 0.1)'
+                                                    }}
+                                                    onBlur={(e) => {
+                                                        e.currentTarget.style.borderColor = '#D1D5DB'
+                                                        e.currentTarget.style.boxShadow = 'none'
+                                                    }}
+                                                >
+                                                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <span style={{ color: 'var(--primary)', display: 'flex' }}>
+                                                            {PAYMENT_OPTIONS.find(o => o.value === (orderPaymentMethods[order.id] || 'cash'))?.icon}
+                                                        </span>
+                                                        {PAYMENT_OPTIONS.find(o => o.value === (orderPaymentMethods[order.id] || 'cash'))?.label}
+                                                    </span>
+                                                    <ChevronDown size={14} style={{ transform: paymentDropdownOpen === order.id ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', color: '#9CA3AF' }} />
+                                                </button>
+
+                                                {paymentDropdownOpen === order.id && (
+                                                    <div style={{
+                                                        position: 'absolute',
+                                                        bottom: '44px', // Opens upward since it is at the bottom of the card usually
+                                                        left: 0,
+                                                        right: 0,
+                                                        background: 'white',
+                                                        borderRadius: '12px',
+                                                        border: '1.5px solid #D1D5DB',
+                                                        boxShadow: '0 -8px 24px rgba(0,0,0,0.15)',
+                                                        zIndex: 60,
+                                                        maxHeight: '220px',
+                                                        overflowY: 'auto',
+                                                        padding: '6px'
+                                                    }}>
+                                                        {PAYMENT_OPTIONS.map((opt) => (
+                                                            <button
+                                                                key={opt.value}
+                                                                onClick={() => {
+                                                                    setOrderPaymentMethods(prev => ({ ...prev, [order.id]: opt.value }))
+                                                                    setPaymentDropdownOpen(null)
+                                                                }}
+                                                                style={{
+                                                                    width: '100%',
+                                                                    padding: '10px 12px',
+                                                                    border: 'none',
+                                                                    background: (orderPaymentMethods[order.id] || 'cash') === opt.value ? 'rgba(var(--primary-rgb), 0.08)' : 'transparent',
+                                                                    borderRadius: '8px',
+                                                                    cursor: 'pointer',
+                                                                    textAlign: 'left',
+                                                                    fontWeight: 700,
+                                                                    fontSize: '0.85rem',
+                                                                    color: (orderPaymentMethods[order.id] || 'cash') === opt.value ? 'var(--primary)' : 'var(--text)',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '10px',
+                                                                    marginBottom: '2px',
+                                                                    transition: 'all 0.1s'
+                                                                }}
+                                                                onMouseEnter={e => e.currentTarget.style.background = '#F9FAFB'}
+                                                                onMouseLeave={e => e.currentTarget.style.background = (orderPaymentMethods[order.id] || 'cash') === opt.value ? 'rgba(var(--primary-rgb), 0.08)' : 'transparent'}
+                                                            >
+                                                                <span style={{
+                                                                    display: 'flex',
+                                                                    color: (orderPaymentMethods[order.id] || 'cash') === opt.value ? 'var(--primary)' : '#6B7280'
+                                                                }}>
+                                                                    {opt.icon}
+                                                                </span>
+                                                                {opt.label}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 )}

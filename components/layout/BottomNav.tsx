@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Menu, ShoppingCart, User } from 'lucide-react'
+import { Home, Menu, ShoppingCart, User, Package } from 'lucide-react'
 import clsx from 'clsx'
 import styles from './BottomNav.module.css'
 import { useCart } from '@/lib/context/CartContext'
@@ -11,6 +11,7 @@ const tabs = [
     { name: 'Home', href: '/home', icon: Home, ariaLabel: 'Go to home page' },
     { name: 'Menu', href: '/menu', icon: Menu, ariaLabel: 'View menu' },
     { name: 'Cart', href: '/cart', icon: ShoppingCart, ariaLabel: 'View shopping cart' },
+    { name: 'Orders', href: '/orders', icon: Package, ariaLabel: 'View your orders' },
     { name: 'Profile', href: '/profile', icon: User, ariaLabel: 'View profile' },
 ]
 

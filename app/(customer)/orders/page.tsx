@@ -52,34 +52,34 @@ export default function OrdersPage() {
                 const json = await res.json()
                 const data = json.success ? json.data : null
 
-            if (data) {
-                setOrders(data)
+                if (data) {
+                    setOrders(data)
 
-                // Check for recent orders and start cooldown if needed
-                if (data.length > 0) {
-                    const mostRecentOrder = new Date(data[0].created_at)
-                    const now = new Date()
-                    const timeDiff = (now.getTime() - mostRecentOrder.getTime()) / 1000 // in seconds
-                    
-                    if (timeDiff < 300) { // Less than 5 minutes ago
-                        setLastOrderTime(mostRecentOrder)
-                        setShowCooldown(true)
-                        setCooldownTime(Math.ceil(300 - timeDiff))
+                    // Check for recent orders and start cooldown if needed
+                    if (data.length > 0) {
+                        const mostRecentOrder = new Date(data[0].created_at)
+                        const now = new Date()
+                        const timeDiff = (now.getTime() - mostRecentOrder.getTime()) / 1000 // in seconds
+
+                        if (timeDiff < 300) { // Less than 5 minutes ago
+                            setLastOrderTime(mostRecentOrder)
+                            setShowCooldown(true)
+                            setCooldownTime(Math.ceil(300 - timeDiff))
+                        }
+                    }
+
+                    // Show bill preview when kitchen/admin has billed all orders
+                    if (
+                        user?.role === 'OUTSIDER' &&
+                        data.length > 0 &&
+                        data.every((o: any) => o.billed === true) &&
+                        !autoLogoutTriggered
+                    ) {
+                        setAutoLogoutTriggered(true)
+                        // Fetch the generated bill and show it so guest can print/save
+                        fetchKitchenBill(data.map((o: any) => o.id))
                     }
                 }
-
-                // Show bill preview when kitchen/admin has billed all orders
-                if (
-                    user?.role === 'OUTSIDER' &&
-                    data.length > 0 &&
-                    data.every((o: any) => o.billed === true) &&
-                    !autoLogoutTriggered
-                ) {
-                    setAutoLogoutTriggered(true)
-                    // Fetch the generated bill and show it so guest can print/save
-                    fetchKitchenBill(data.map((o: any) => o.id))
-                }
-            }
             } catch (e) { console.error('fetchOrders error:', e) }
             setLoading(false)
         }
@@ -360,7 +360,7 @@ export default function OrdersPage() {
         const isStaffRole = user?.role === 'ADMIN' || user?.role === 'KITCHEN'
         const confirmed = await showConfirm(
             isStaffRole ? "Generate Bill?" : "Before Bill Preview",
-            isStaffRole 
+            isStaffRole
                 ? "This will generate your bill. You can print or save it as PDF."
                 : "You'll be logged out after billing and will need to start a new order next time. Continue to generate your bill preview?",
             isStaffRole ? "Get Bill" : "Continue",
@@ -458,16 +458,18 @@ export default function OrdersPage() {
             {showCooldown && (
                 <div style={{
                     position: 'fixed',
-                    top: '20px',
-                    right: '20px',
+                    top: 'min(20px, 4vw)',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: 'calc(100% - 32px)',
+                    maxWidth: '450px',
                     background: '#fff3cd',
                     border: '1px solid #ffeaa7',
-                    borderRadius: '12px',
-                    padding: '16px 20px',
-                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.15)',
+                    borderRadius: '16px',
+                    padding: '12px 16px',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
                     zIndex: 1000,
-                    maxWidth: '380px',
-                    animation: 'slideInRight 0.3s ease-out',
+                    animation: 'slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
                 }}>
                     <div style={{
                         display: 'flex',
@@ -530,10 +532,11 @@ export default function OrdersPage() {
             {/* Hero Header */}
             <div style={{
                 background: 'linear-gradient(135deg, var(--primary) 0%, #8B1A1F 100%)',
-                padding: 'clamp(1.5rem, 5vw, 2.5rem) clamp(1rem, 4vw, 2rem)',
-                paddingTop: 'clamp(2rem, 6vw, 3rem)',
+                padding: 'clamp(1.25rem, 5vw, 2rem) clamp(1rem, 4vw, 1.5rem)',
+                paddingTop: 'clamp(2.5rem, 8vw, 4rem)',
                 color: 'white',
                 position: 'relative',
+                overflow: 'hidden'
             }}>
                 {/* Decorative circles */}
                 <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '140px', height: '140px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
@@ -546,8 +549,10 @@ export default function OrdersPage() {
                             Back
                         </Link>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <h1 style={{ margin: 0, fontSize: 'clamp(1.75rem, 5vw, 2.25rem)', fontFamily: 'var(--font-serif)', fontWeight: 900, letterSpacing: '-0.02em',
-                                color: 'black', textShadow: '0 2px 4px rgba(0,0,0,0.15)' }}>
+                            <h1 style={{
+                                margin: 0, fontSize: 'clamp(1.75rem, 5vw, 2.25rem)', fontFamily: 'var(--font-serif)', fontWeight: 900, letterSpacing: '-0.02em',
+                                color: 'white', textShadow: '0 2px 4px rgba(0,0,0,0.15)'
+                            }}>
                                 {orderIdParam && !user ? 'Order Status' : 'My Orders'}
                             </h1>
                             <button
@@ -1053,34 +1058,34 @@ export default function OrdersPage() {
             </div>
 
             {/* Sign Out Button for guests */}
-                {user?.role === 'OUTSIDER' && (
-                    <div style={{ marginTop: '24px', textAlign: 'center' }}>
-                        <button
-                            onClick={() => {
-                                clearCart()
-                                logout()
-                            }}
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                background: 'white',
-                                color: '#EF4444',
-                                border: '1.5px solid #FCA5A5',
-                                padding: '12px 28px',
-                                borderRadius: '14px',
-                                fontWeight: 700,
-                                fontSize: '0.9rem',
-                                cursor: 'pointer',
-                                boxShadow: '0 2px 8px rgba(239,68,68,0.12)',
-                                transition: 'all 0.2s ease',
-                            }}
-                        >
-                            <LogOut size={18} />
-                            Sign Out
-                        </button>
-                    </div>
-                )}
+            {user?.role === 'OUTSIDER' && (
+                <div style={{ marginTop: '24px', textAlign: 'center' }}>
+                    <button
+                        onClick={() => {
+                            clearCart()
+                            logout()
+                        }}
+                        style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            background: 'white',
+                            color: '#EF4444',
+                            border: '1.5px solid #FCA5A5',
+                            padding: '12px 28px',
+                            borderRadius: '14px',
+                            fontWeight: 700,
+                            fontSize: '0.9rem',
+                            cursor: 'pointer',
+                            boxShadow: '0 2px 8px rgba(239,68,68,0.12)',
+                            transition: 'all 0.2s ease',
+                        }}
+                    >
+                        <LogOut size={18} />
+                        Sign Out
+                    </button>
+                </div>
+            )}
 
             {/* Animations for notification and pulse */}
             <style>{`
