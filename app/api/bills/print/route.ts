@@ -86,6 +86,24 @@ export async function POST(request: NextRequest) {
     }
 }
 
+function formatPaymentLabel(method: string): string {
+    const labels: Record<string, string> = {
+        cash: 'Cash', credit: 'Credit', upi: 'UPI', card: 'Card',
+        staff_payment: 'Staff Payment', rider_payment: 'Rider Payment',
+    }
+    return labels[method?.toLowerCase()] || method?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || ''
+}
+
+function getGuestNameFromOrder(order: any): string {
+    // Parse kitchen-created order notes for customer name
+    if (order?.notes && typeof order.notes === 'string' && order.notes.startsWith('KITCHEN_ORDER')) {
+        const parts = order.notes.split('|').map((s: string) => s.trim())
+        if (parts.length >= 2 && parts[1]) return parts[1]
+    }
+    const guestInfo = order?.guestInfo as any
+    return guestInfo?.name || order?.user?.name || ''
+}
+
 function formatBillForPrinting(bill: any) {
     const order = bill.order
     const items = bill.billItems || []
@@ -146,6 +164,7 @@ function formatBillForPrinting(bill: any) {
         <div class="r"><b>Bill No:</b><b>${bill.billNumber}</b></div>
         <div class="r"><b>Date:</b><b>${dateStr} ${timeStr}</b></div>
         <div class="r"><b>Table:</b><b>${order?.tableName || 'N/A'}</b></div>
+        ${getGuestNameFromOrder(order) ? `<div class="r"><b>Guest:</b><b>${getGuestNameFromOrder(order)}</b></div>` : ''}
         <hr>
         <table><thead><tr>
             <th class="th" style="text-align:left;"><b>Item</b></th>
@@ -157,7 +176,7 @@ function formatBillForPrinting(bill: any) {
         ${discountAmount > 0 ? `<div class="tr"><b>Discount:</b><b>-₹${discountAmount.toFixed(2)}</b></div>` : ''}
         <hr>
         <div class="gt"><b>TOTAL:</b><b>₹${finalTotal.toFixed(2)}</b></div>
-        ${bill.paymentMethod ? `<div class="tr"><b>Payment:</b><b>${bill.paymentMethod.toUpperCase()}</b></div>` : ''}
+        ${bill.paymentMethod ? `<div class="tr"><b>Payment:</b><b>${formatPaymentLabel(bill.paymentMethod)}</b></div>` : ''}
         <hr>
         <div class="ft"><b>Thank You! Visit Again!</b></div>
         <div class="c" style="margin-top:4px;font-size:13px;font-weight:900;"><b>Powered by AI Cavalli</b></div>
@@ -196,7 +215,7 @@ function formatBillForPrinting(bill: any) {
     lines.push('================================')
 
     if (bill.paymentMethod) {
-        lines.push(`Payment: ${bill.paymentMethod.toUpperCase()}`)
+        lines.push(`Payment: ${formatPaymentLabel(bill.paymentMethod)}`)
     }
 
     lines.push('')

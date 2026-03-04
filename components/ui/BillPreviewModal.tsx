@@ -69,7 +69,21 @@ export function BillPreviewModal({
   const itemsTotal = Number(bill.itemsTotal || bill.items_total || 0);
   const discountAmount = Number(bill.discountAmount || bill.discount_amount || 0);
   const finalTotal = Number(bill.finalTotal || bill.final_total || (itemsTotal - discountAmount));
-  const paymentMethod = bill.paymentMethod || bill.payment_method || "";
+  const rawPaymentMethod = bill.paymentMethod || bill.payment_method || "";
+
+  // Format payment method for display
+  function formatPaymentLabel(method: string): string {
+    const labels: Record<string, string> = {
+      cash: 'Cash',
+      credit: 'Credit',
+      upi: 'UPI',
+      card: 'Card',
+      staff_payment: 'Staff Payment',
+      rider_payment: 'Rider Payment',
+    }
+    return labels[method.toLowerCase()] || method.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+  }
+  const paymentMethod = rawPaymentMethod ? formatPaymentLabel(rawPaymentMethod) : "";
 
   // Calculate percentage for display
   const discountPercent = itemsTotal > 0 ? Math.round((discountAmount / itemsTotal) * 100) : 0;

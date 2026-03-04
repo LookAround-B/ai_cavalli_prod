@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
                 orderItems: {
                     include: { menuItem: { select: { name: true } } },
                 },
+                user: { select: { name: true, role: true } },
             },
         })
 
@@ -78,6 +79,17 @@ export async function POST(request: NextRequest) {
         // 4. Generate bill number
         const billNumber = `BILL-${Date.now().toString(36).toUpperCase()}`
 
+        // 4b. Resolve guest name (parse kitchen order notes if applicable)
+        let resolvedGuestName = ''
+        if (order.notes && typeof order.notes === 'string' && order.notes.startsWith('KITCHEN_ORDER')) {
+            const parts = order.notes.split('|').map((s: string) => s.trim())
+            if (parts.length >= 2 && parts[1]) resolvedGuestName = parts[1]
+        }
+        if (!resolvedGuestName) {
+            const guestInfo = order.guestInfo as any
+            resolvedGuestName = guestInfo?.name || order.user?.name || ''
+        }
+
         // 5. Create bill with items in transaction
         const bill = await prisma.bill.create({
             data: {
@@ -88,6 +100,8 @@ export async function POST(request: NextRequest) {
                 finalTotal,
                 paymentMethod,
                 paymentStatus: 'pending',
+                guestName: resolvedGuestName || undefined,
+                tableName: order.tableName || undefined,
                 billItems: {
                     create: order.orderItems.map((item) => ({
                         itemName: item.menuItem?.name || 'Unknown Item',
@@ -112,6 +126,7 @@ export async function POST(request: NextRequest) {
                 discountAmount: Number(bill.discountAmount || 0),
                 finalTotal: Number(bill.finalTotal),
                 paymentMethod: bill.paymentMethod,
+                guestName: bill.guestName || resolvedGuestName,
                 createdAt: bill.createdAt,
                 items: bill.billItems.map(item => ({
                     itemName: item.itemName,

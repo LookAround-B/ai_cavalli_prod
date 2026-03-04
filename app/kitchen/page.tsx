@@ -79,9 +79,10 @@ type FilterType = 'all' | 'rider' | 'staff' | 'guest'
 export default function KitchenPage() {
     const [orders, setOrders] = useState<Order[]>([])
     const [completedOrders, setCompletedOrders] = useState<Order[]>([])
+    const [cancelledOrders, setCancelledOrders] = useState<Order[]>([])
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState<FilterType>('all')
-    const [showCompleted, setShowCompleted] = useState(false)
+    const [viewTab, setViewTab] = useState<'active' | 'completed' | 'cancelled'>('active')
     const [status, setStatus] = useState<string>('initializing')
     const [audioError, setAudioError] = useState(false)
     const [editingOrderId, setEditingOrderId] = useState<string | null>(null)
@@ -170,10 +171,18 @@ export default function KitchenPage() {
 
     const fetchCompletedOrders = async () => {
         try {
-            const res = await fetch('/api/orders?status=completed&all=true&limit=20')
+            const res = await fetch('/api/orders?status=completed&all=true&limit=30')
             const json = await res.json()
             if (json.success && json.data) setCompletedOrders(json.data)
         } catch (e) { console.error('fetchCompletedOrders error:', e) }
+    }
+
+    const fetchCancelledOrders = async () => {
+        try {
+            const res = await fetch('/api/orders?status=cancelled&all=true&limit=30')
+            const json = await res.json()
+            if (json.success && json.data) setCancelledOrders(json.data)
+        } catch (e) { console.error('fetchCancelledOrders error:', e) }
     }
 
     const fetchSingleOrder = async (orderId: string) => {
@@ -498,7 +507,7 @@ export default function KitchenPage() {
                         itemsTotal: Number(data.bill.itemsTotal || data.bill.items_total || 0),
                         discountAmount: Number(data.bill.discountAmount || data.bill.discount_amount || 0),
                         finalTotal: Number(data.bill.finalTotal || data.bill.final_total || 0),
-                        paymentMethod: data.bill.paymentMethod || selectedPayment,
+                        paymentMethod: formatPaymentMethod(data.bill.paymentMethod || selectedPayment),
                         createdAt: data.bill.createdAt || new Date().toISOString(),
                         sessionDetails: data.bill.sessionDetails
                     })
@@ -517,6 +526,33 @@ export default function KitchenPage() {
     // Dismiss bill request (mark as handled without generating bill)
     const dismissBillRequest = (sessionId: string) => {
         setBillRequests(prev => prev.filter(r => r.id !== sessionId))
+    }
+
+    // Helper: Parse kitchen order notes to get customer name
+    function getKitchenOrderName(order: Order): string | null {
+        if (order.notes && order.notes.startsWith('KITCHEN_ORDER')) {
+            const parts = order.notes.split('|').map(s => s.trim())
+            if (parts.length >= 2 && parts[1]) return parts[1]
+        }
+        return null
+    }
+
+    // Helper: Get display name for an order (respects kitchen orders)
+    function getOrderDisplayName(order: Order): string {
+        return getKitchenOrderName(order) || order.guest_info?.name || order.user?.name || 'Walk-in'
+    }
+
+    // Helper: Format payment method for display
+    function formatPaymentMethod(method: string): string {
+        const labels: Record<string, string> = {
+            cash: 'Cash',
+            credit: 'Credit',
+            upi: 'UPI',
+            card: 'Card',
+            staff_payment: 'Staff Payment',
+            rider_payment: 'Rider Payment',
+        }
+        return labels[method] || method.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
     }
 
     const filteredOrders = useMemo(() => {
@@ -573,7 +609,7 @@ export default function KitchenPage() {
             const res = await fetch('/api/orders/items', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: orderItemId, quantity: newQuantity })
+                body: JSON.stringify({ orderItemId, quantity: newQuantity })
             })
             const json = await res.json()
             if (!json.success) showError('Update Failed', json.error || 'Failed to update quantity')
@@ -616,7 +652,7 @@ export default function KitchenPage() {
                     id: data.bill.id,
                     billNumber: data.bill.billNumber || '',
                     tableName: data.bill.orderDetails?.tableName || order.table_name || '',
-                    guestName: order.guest_info?.name || order.user?.name || '',
+                    guestName: data.bill.guestName || getOrderDisplayName(order),
                     items: (data.bill.items || []).map((i: any) => ({
                         item_name: i.item_name || i.itemName || i.name || '',
                         quantity: i.quantity,
@@ -626,7 +662,7 @@ export default function KitchenPage() {
                     itemsTotal: Number(data.bill.itemsTotal || data.bill.items_total || 0),
                     discountAmount: Number(data.bill.discountAmount || data.bill.discount_amount || 0),
                     finalTotal: Number(data.bill.finalTotal || data.bill.final_total || 0),
-                    paymentMethod: data.bill.paymentMethod || data.bill.payment_method || paymentMethod,
+                    paymentMethod: formatPaymentMethod(data.bill.paymentMethod || data.bill.payment_method || paymentMethod),
                     createdAt: data.bill.createdAt || data.bill.created_at || data.bill.orderDetails?.createdAt,
                 })
             } else {
@@ -688,7 +724,7 @@ export default function KitchenPage() {
                 id: bill.id,
                 billNumber: bill.bill_number || '',
                 tableName: bill.table_name || order?.table_name || '',
-                guestName: bill.guest_name || order?.guest_info?.name || order?.user?.name || '',
+                guestName: bill.guest_name || (order ? getOrderDisplayName(order) : ''),
                 items: (bill.bill_items || []).map((i: any) => ({
                     item_name: i.item_name || i.itemName || i.name || '',
                     quantity: i.quantity,
@@ -698,7 +734,7 @@ export default function KitchenPage() {
                 itemsTotal: Number(bill.items_total || bill.itemsTotal || 0),
                 discountAmount: Number(bill.discount_amount || bill.discountAmount || 0),
                 finalTotal: Number(bill.final_total || bill.finalTotal || 0),
-                paymentMethod: bill.payment_method || bill.paymentMethod || 'cash',
+                paymentMethod: formatPaymentMethod(bill.payment_method || bill.paymentMethod || 'cash'),
                 createdAt: bill.created_at || bill.createdAt,
             })
         } catch (error) {
@@ -964,13 +1000,13 @@ export default function KitchenPage() {
                     boxShadow: 'var(--shadow-sm)'
                 }}>
                     <button
-                        onClick={() => setShowCompleted(false)}
+                        onClick={() => setViewTab('active')}
                         style={{
                             padding: '0.5rem 1.25rem',
                             borderRadius: 'var(--radius-xl)',
                             border: 'none',
-                            background: !showCompleted ? 'var(--primary)' : 'transparent',
-                            color: !showCompleted ? 'white' : 'var(--text-muted)',
+                            background: viewTab === 'active' ? 'var(--primary)' : 'transparent',
+                            color: viewTab === 'active' ? 'white' : 'var(--text-muted)',
                             fontWeight: 700,
                             cursor: 'pointer',
                             transition: 'var(--transition)',
@@ -979,19 +1015,19 @@ export default function KitchenPage() {
                             gap: '8px'
                         }}
                     >
-                        Active <span style={{ opacity: 0.8, fontSize: '0.8em', background: !showCompleted ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)', padding: '2px 6px', borderRadius: '10px' }}>{orders.length}</span>
+                        Active <span style={{ opacity: 0.8, fontSize: '0.8em', background: viewTab === 'active' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)', padding: '2px 6px', borderRadius: '10px' }}>{orders.length}</span>
                     </button>
                     <button
                         onClick={() => {
-                            setShowCompleted(true)
+                            setViewTab('completed')
                             fetchCompletedOrders()
                         }}
                         style={{
                             padding: '0.5rem 1.25rem',
                             borderRadius: 'var(--radius-xl)',
                             border: 'none',
-                            background: showCompleted ? 'var(--primary)' : 'transparent',
-                            color: showCompleted ? 'white' : 'var(--text-muted)',
+                            background: viewTab === 'completed' ? 'var(--primary)' : 'transparent',
+                            color: viewTab === 'completed' ? 'white' : 'var(--text-muted)',
                             fontWeight: 700,
                             cursor: 'pointer',
                             transition: 'var(--transition)',
@@ -1002,9 +1038,30 @@ export default function KitchenPage() {
                     >
                         History <History size={16} />
                     </button>
+                    <button
+                        onClick={() => {
+                            setViewTab('cancelled')
+                            fetchCancelledOrders()
+                        }}
+                        style={{
+                            padding: '0.5rem 1.25rem',
+                            borderRadius: 'var(--radius-xl)',
+                            border: 'none',
+                            background: viewTab === 'cancelled' ? '#DC2626' : 'transparent',
+                            color: viewTab === 'cancelled' ? 'white' : 'var(--text-muted)',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            transition: 'var(--transition)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                        }}
+                    >
+                        Cancelled <XIcon size={16} />
+                    </button>
                 </div>
 
-                {!showCompleted && (
+                {viewTab === 'active' && (
                     <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
                         {(['all', 'rider', 'staff', 'guest'] as FilterType[]).map(f => (
                             <button
@@ -1037,12 +1094,12 @@ export default function KitchenPage() {
                 gap: 'clamp(1rem, 2vw, 1.5rem)',
                 alignItems: 'stretch'
             }}>
-                {(showCompleted ? completedOrders : filteredOrders).length === 0 ? (
+                {(viewTab === 'completed' ? completedOrders : viewTab === 'cancelled' ? cancelledOrders : filteredOrders).length === 0 ? (
                     <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: 'var(--space-12)', background: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '2px dashed var(--border)' }}>
                         <p style={{ color: 'var(--text-muted)', fontSize: '1.125rem' }}>No orders found in this category.</p>
                     </div>
                 ) : (
-                    (showCompleted ? completedOrders : filteredOrders).map(order => {
+                    (viewTab === 'completed' ? completedOrders : viewTab === 'cancelled' ? cancelledOrders : filteredOrders).map(order => {
                         const badge = getOrderTypeBadge(order)
                         const TypeIcon = badge.icon
 
@@ -1050,7 +1107,8 @@ export default function KitchenPage() {
                             pending: { color: '#F59E0B', label: 'NEW ORDER', pulse: true },
                             preparing: { color: '#3B82F6', label: 'PREPARING', pulse: false },
                             ready: { color: '#10B981', label: 'READY', pulse: false },
-                            completed: { color: 'var(--text-muted)', label: 'COMPLETED', pulse: false }
+                            completed: { color: 'var(--text-muted)', label: 'COMPLETED', pulse: false },
+                            cancelled: { color: '#DC2626', label: 'CANCELLED', pulse: false }
                         }
                         const sc = statusColors[order.status] || statusColors.pending
 
@@ -1176,7 +1234,7 @@ export default function KitchenPage() {
                                     </div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px dashed #e5e5e5', minHeight: '36px' }}>
                                         <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                                            <span style={{ fontWeight: 600 }}>Order for:</span> <span style={{ fontWeight: 800, color: 'var(--text)' }}>{order.guest_info?.name || order.user?.name || 'Walk-in'}</span>
+                                            <span style={{ fontWeight: 600 }}>Order for:</span> <span style={{ fontWeight: 800, color: 'var(--text)' }}>{getOrderDisplayName(order)}</span>
                                         </div>
                                         <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.05em' }}>#{order.id.slice(0, 8).toUpperCase()}</div>
                                     </div>
@@ -1314,7 +1372,7 @@ export default function KitchenPage() {
                                 </div>
 
                                 {/* Action Buttons */}
-                                {!showCompleted && (
+                                {viewTab === 'active' && (
                                     <div style={{ padding: '20px', background: 'linear-gradient(180deg, #FAFAFA 0%, #F5F5F5 100%)', borderTop: '2px solid #E5E5E5', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
 
                                         {/* Attendee Dropdown - only before cooking starts */}
