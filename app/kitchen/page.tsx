@@ -1932,47 +1932,51 @@ export default function KitchenPage() {
                 <div style={{
                     position: 'fixed',
                     inset: 0,
-                    background: 'rgba(0,0,0,0.6)',
-                    backdropFilter: 'blur(4px)',
-                    WebkitBackdropFilter: 'blur(4px)',
+                    background: 'rgba(0,0,0,0.05)',
+                    backdropFilter: 'blur(2px)',
                     zIndex: 1000,
                     display: 'flex',
-                    alignItems: 'center',
+                    alignItems: 'flex-start',
                     justifyContent: 'center',
-                    padding: 'clamp(12px, 3vw, 24px)',
+                    padding: '40px 20px',
+                    animation: 'fadeIn 0.2s ease-out',
                 }}
                     onClick={(e) => { if (e.target === e.currentTarget) { setShowCreateOrder(false); setShowNewOrderMenu(false) } }}
                 >
                     <div style={{
                         background: 'white',
-                        borderRadius: 'clamp(16px, 3vw, 24px)',
+                        borderRadius: '24px',
                         width: '100%',
-                        maxWidth: 'min(500px, 100%)',
-                        maxHeight: 'min(90vh, 100%)',
-                        boxShadow: '0 24px 48px -12px rgba(0,0,0,0.25)',
+                        maxWidth: '850px',
+                        maxHeight: 'calc(100vh - 80px)',
+                        boxShadow: '0 30px 60px -12px rgba(0,0,0,0.25)',
                         display: 'flex',
                         flexDirection: 'column',
                         overflow: 'hidden',
+                        animation: 'slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
                     }}>
                         {/* Modal Header — sticky */}
                         <div style={{
-                            padding: 'clamp(16px, 3vw, 24px) clamp(16px, 3vw, 24px) clamp(12px, 2vw, 16px)',
-                            borderBottom: '2px solid #F3F4F6',
+                            padding: '32px 32px 24px',
+                            borderBottom: '1px solid #F3F4F6',
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center',
                             flexShrink: 0,
                             background: 'white',
                         }}>
-                            <h2 style={{ margin: 0, fontSize: 'clamp(1.15rem, 3.5vw, 1.5rem)', fontWeight: 900, color: 'var(--text)' }}>
-                                Create Walk-in Order
-                            </h2>
+                            <div>
+                                <h2 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 900, color: 'var(--text)', letterSpacing: '-0.03em' }}>
+                                    Create Walk-in Order
+                                </h2>
+                                <p style={{ margin: '4px 0 0', fontSize: '0.9rem', color: '#6B7280', fontWeight: 600 }}>Enter details below to generate a new kitchen order</p>
+                            </div>
                             <button
                                 onClick={() => { setShowCreateOrder(false); setShowNewOrderMenu(false) }}
                                 style={{
-                                    width: '36px',
-                                    height: '36px',
-                                    borderRadius: '50%',
+                                    width: '44px',
+                                    height: '44px',
+                                    borderRadius: '14px',
                                     border: 'none',
                                     background: '#F3F4F6',
                                     cursor: 'pointer',
@@ -1980,265 +1984,177 @@ export default function KitchenPage() {
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     color: '#6B7280',
-                                    flexShrink: 0,
-                                    transition: 'background 0.2s',
+                                    transition: 'all 0.2s',
                                 }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = '#E5E7EB'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = '#F3F4F6'}
                             >
-                                <XIcon size={18} />
+                                <XIcon size={22} />
                             </button>
                         </div>
 
                         {/* Modal Body — scrollable */}
                         <div style={{
-                            padding: 'clamp(16px, 3vw, 24px)',
+                            padding: '32px',
                             display: 'flex',
                             flexDirection: 'column',
-                            gap: 'clamp(12px, 2vw, 16px)',
+                            gap: '24px',
                             overflowY: 'auto',
                             flex: '1 1 auto',
-                            minHeight: 0,
+                            background: '#F9FAFB',
                         }}>
-                            {/* Customer Name */}
-                            <div>
-                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    Customer Name *
-                                </label>
-                                <div style={{ position: 'relative' }}>
-                                    <User size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
-                                    <input
-                                        type="text"
-                                        value={newOrderName}
-                                        onChange={(e) => setNewOrderName(e.target.value.replace(/[^a-zA-Z\s]/g, ''))}
-                                        placeholder="Enter customer name"
-                                        style={{
-                                            width: '100%',
-                                            padding: '12px 12px 12px 38px',
-                                            borderRadius: '12px',
-                                            border: '2px solid #E5E7EB',
-                                            fontSize: 'clamp(0.875rem, 2vw, 0.95rem)',
-                                            fontWeight: 600,
-                                            outline: 'none',
-                                            transition: 'border-color 0.2s',
-                                            boxSizing: 'border-box'
-                                        }}
-                                        onFocus={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}
-                                        onBlur={(e) => e.currentTarget.style.borderColor = '#E5E7EB'}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Phone Number */}
-                            <div>
-                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    Phone Number *
-                                </label>
-                                <div style={{ position: 'relative' }}>
-                                    <Phone size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
-                                    <input
-                                        type="tel"
-                                        value={newOrderPhone}
-                                        onChange={(e) => {
-                                            const val = e.target.value.replace(/\D/g, '');
-                                            if (val.length <= 10) setNewOrderPhone(val);
-                                        }}
-                                        placeholder="Enter 10-digit phone number"
-                                        maxLength={10}
-                                        style={{
-                                            width: '100%',
-                                            padding: '12px 12px 12px 38px',
-                                            borderRadius: '12px',
-                                            border: '2px solid #E5E7EB',
-                                            fontSize: 'clamp(0.875rem, 2vw, 0.95rem)',
-                                            fontWeight: 600,
-                                            outline: 'none',
-                                            transition: 'border-color 0.2s',
-                                            boxSizing: 'border-box'
-                                        }}
-                                        onFocus={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}
-                                        onBlur={(e) => e.currentTarget.style.borderColor = '#E5E7EB'}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Table Name */}
-                            <div>
-                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    Table Number *
-                                </label>
-                                <div style={{ position: 'relative' }}>
-                                    <MapPin size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
-                                    <input
-                                        type="text"
-                                        inputMode="numeric"
-                                        value={newOrderTable}
-                                        onChange={(e) => {
-                                            const val = e.target.value.replace(/\D/g, '');
-                                            setNewOrderTable(val);
-                                        }}
-                                        placeholder="Enter table number"
-                                        style={{
-                                            width: '100%',
-                                            padding: '12px 12px 12px 38px',
-                                            borderRadius: '12px',
-                                            border: '2px solid #E5E7EB',
-                                            fontSize: 'clamp(0.875rem, 2vw, 0.95rem)',
-                                            fontWeight: 600,
-                                            outline: 'none',
-                                            transition: 'border-color 0.2s',
-                                            boxSizing: 'border-box'
-                                        }}
-                                        onFocus={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}
-                                        onBlur={(e) => e.currentTarget.style.borderColor = '#E5E7EB'}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Guests + Location Row */}
-                            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                                <div style={{ flex: '1 1 140px', minWidth: '140px' }}>
-                                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                        Guests
-                                    </label>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <button
-                                            onClick={() => setNewOrderGuests(Math.max(1, newOrderGuests - 1))}
-                                            style={{ width: '40px', height: '40px', borderRadius: '10px', border: '2px solid #E5E7EB', background: 'white', cursor: 'pointer', fontWeight: 900, fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                                        >-</button>
-                                        <span style={{ minWidth: '32px', textAlign: 'center', fontWeight: 900, fontSize: '1.1rem' }}>{newOrderGuests}</span>
-                                        <button
-                                            onClick={() => setNewOrderGuests(newOrderGuests + 1)}
-                                            style={{ width: '40px', height: '40px', borderRadius: '10px', border: '2px solid #E5E7EB', background: 'white', cursor: 'pointer', fontWeight: 900, fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                                        >+</button>
-                                    </div>
-                                </div>
-                                <div style={{ flex: '1 1 160px', minWidth: '160px' }}>
-                                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                        Location
-                                    </label>
-                                    <div style={{ display: 'flex', gap: '6px' }}>
-                                        <button
-                                            onClick={() => setNewOrderLocation('indoor')}
-                                            style={{
-                                                flex: 1,
-                                                height: '40px',
-                                                borderRadius: '10px',
-                                                border: `2px solid ${newOrderLocation === 'indoor' ? '#2563EB' : '#E5E7EB'}`,
-                                                background: newOrderLocation === 'indoor' ? '#DBEAFE' : 'white',
-                                                color: newOrderLocation === 'indoor' ? '#1E40AF' : '#6B7280',
-                                                fontWeight: 700,
-                                                fontSize: '0.8rem',
-                                                cursor: 'pointer',
-                                                textTransform: 'uppercase'
-                                            }}
-                                        >Indoor</button>
-                                        <button
-                                            onClick={() => setNewOrderLocation('outdoor')}
-                                            style={{
-                                                flex: 1,
-                                                height: '40px',
-                                                borderRadius: '10px',
-                                                border: `2px solid ${newOrderLocation === 'outdoor' ? '#D97706' : '#E5E7EB'}`,
-                                                background: newOrderLocation === 'outdoor' ? '#FEF3C7' : 'white',
-                                                color: newOrderLocation === 'outdoor' ? '#92400E' : '#6B7280',
-                                                fontWeight: 700,
-                                                fontSize: '0.8rem',
-                                                cursor: 'pointer',
-                                                textTransform: 'uppercase'
-                                            }}
-                                        >Outdoor</button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Order Items */}
-                            <div>
-                                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    Order Items *
-                                </label>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    {newOrderItems.map((item, idx) => {
-                                        const menuItem = menuItems.find(m => m.id === item.menuItemId)
-                                        return (
-                                            <div key={idx} style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                padding: '10px 14px',
-                                                background: '#FAFAF9',
-                                                borderRadius: '10px',
-                                                border: '1px solid #E7E5E4',
-                                                gap: '8px',
-                                                flexWrap: 'wrap',
-                                            }}>
-                                                <span style={{ flex: '1 1 100px', fontWeight: 700, fontSize: '0.9rem', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{menuItem?.name || 'Unknown'}</span>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                                                    <button
-                                                        onClick={() => {
-                                                            if (item.quantity <= 1) {
-                                                                setNewOrderItems(prev => prev.filter((_, i) => i !== idx))
-                                                            } else {
-                                                                setNewOrderItems(prev => prev.map((it, i) => i === idx ? { ...it, quantity: it.quantity - 1 } : it))
-                                                            }
-                                                        }}
-                                                        style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #D6D3D1', background: 'white', cursor: 'pointer', fontWeight: 800 }}
-                                                    >-</button>
-                                                    <span style={{ minWidth: '20px', textAlign: 'center', fontWeight: 900, fontSize: '0.9rem' }}>{item.quantity}</span>
-                                                    <button
-                                                        onClick={() => setNewOrderItems(prev => prev.map((it, i) => i === idx ? { ...it, quantity: it.quantity + 1 } : it))}
-                                                        style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #D6D3D1', background: 'white', cursor: 'pointer', fontWeight: 800 }}
-                                                    >+</button>
-                                                    <button
-                                                        onClick={() => setNewOrderItems(prev => prev.filter((_, i) => i !== idx))}
-                                                        style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #FCA5A5', background: '#FEF2F2', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem' }}
-                                                    >✕</button>
-                                                    <span style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '0.9rem', minWidth: '48px', textAlign: 'right' }}>₹{((menuItem?.price || 0) * item.quantity).toFixed(0)}</span>
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+                                gap: '24px'
+                            }}>
+                                {/* Left Column: Customer & Details */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                    <div style={{ background: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                                        <h3 style={{ margin: '0 0 16px', fontSize: '0.9rem', fontWeight: 800, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Customer Info</h3>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#6B7280', marginBottom: '6px' }}>CUSTOMER NAME *</label>
+                                                <div style={{ position: 'relative' }}>
+                                                    <User size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
+                                                    <input
+                                                        type="text"
+                                                        value={newOrderName}
+                                                        onChange={(e) => setNewOrderName(e.target.value.replace(/[^a-zA-Z\s]/g, ''))}
+                                                        placeholder="Enter customer name"
+                                                        style={{ width: '100%', padding: '12px 12px 12px 38px', borderRadius: '10px', border: '1.5px solid #E5E7EB', fontSize: '0.95rem', fontWeight: 600, outline: 'none', transition: 'all 0.2s' }}
+                                                        onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(169, 30, 34, 0.1)' }}
+                                                        onBlur={(e) => { e.currentTarget.style.borderColor = '#E5E7EB'; e.currentTarget.style.boxShadow = 'none' }}
+                                                    />
                                                 </div>
                                             </div>
-                                        )
-                                    })}
-                                    <button
-                                        onClick={() => setShowNewOrderMenu(true)}
-                                        style={{
-                                            padding: '12px',
-                                            borderRadius: '10px',
-                                            border: '2px dashed var(--primary)',
-                                            background: 'rgba(var(--primary-rgb), 0.03)',
-                                            fontWeight: 700,
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            gap: '8px',
-                                            color: 'var(--primary)',
-                                            fontSize: '0.9rem'
-                                        }}
-                                    >
-                                        <Plus size={16} strokeWidth={3} />
-                                        Add Item
-                                    </button>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#6B7280', marginBottom: '6px' }}>PHONE NUMBER *</label>
+                                                <div style={{ position: 'relative' }}>
+                                                    <Phone size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
+                                                    <input
+                                                        type="tel"
+                                                        value={newOrderPhone}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value.replace(/\D/g, '');
+                                                            if (val.length <= 10) setNewOrderPhone(val);
+                                                        }}
+                                                        placeholder="10-digit phone number"
+                                                        maxLength={10}
+                                                        style={{ width: '100%', padding: '12px 12px 12px 38px', borderRadius: '10px', border: '1.5px solid #E5E7EB', fontSize: '0.95rem', fontWeight: 600, outline: 'none', transition: 'all 0.2s' }}
+                                                        onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(169, 30, 34, 0.1)' }}
+                                                        onBlur={(e) => { e.currentTarget.style.borderColor = '#E5E7EB'; e.currentTarget.style.boxShadow = 'none' }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ background: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                                        <h3 style={{ margin: '0 0 16px', fontSize: '0.9rem', fontWeight: 800, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Seating Details</h3>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#6B7280', marginBottom: '6px' }}>TABLE NUMBER *</label>
+                                                <div style={{ position: 'relative' }}>
+                                                    <MapPin size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
+                                                    <input
+                                                        type="text"
+                                                        inputMode="numeric"
+                                                        value={newOrderTable}
+                                                        onChange={(e) => setNewOrderTable(e.target.value.replace(/\D/g, ''))}
+                                                        placeholder="00"
+                                                        style={{ width: '100%', padding: '12px 12px 12px 38px', borderRadius: '10px', border: '1.5px solid #E5E7EB', fontSize: '0.95rem', fontWeight: 600, outline: 'none', transition: 'all 0.2s' }}
+                                                        onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(169, 30, 34, 0.1)' }}
+                                                        onBlur={(e) => { e.currentTarget.style.borderColor = '#E5E7EB'; e.currentTarget.style.boxShadow = 'none' }}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '16px' }}>
+                                                <div style={{ flex: 1 }}>
+                                                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#6B7280', marginBottom: '6px' }}>GUESTS</label>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#F3F4F6', padding: '4px', borderRadius: '10px' }}>
+                                                        <button onClick={() => setNewOrderGuests(Math.max(1, newOrderGuests - 1))} style={{ width: '32px', height: '32px', borderRadius: '6px', border: 'none', background: 'white', cursor: 'pointer', fontWeight: 900, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>-</button>
+                                                        <span style={{ flex: 1, textAlign: 'center', fontWeight: 800 }}>{newOrderGuests}</span>
+                                                        <button onClick={() => setNewOrderGuests(newOrderGuests + 1)} style={{ width: '32px', height: '32px', borderRadius: '6px', border: 'none', background: 'white', cursor: 'pointer', fontWeight: 900, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>+</button>
+                                                    </div>
+                                                </div>
+                                                <div style={{ flex: 1 }}>
+                                                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#6B7280', marginBottom: '6px' }}>LOCATION</label>
+                                                    <div style={{ display: 'flex', gap: '2px', background: '#F3F4F6', padding: '2px', borderRadius: '10px' }}>
+                                                        <button onClick={() => setNewOrderLocation('indoor')} style={{ flex: 1, height: '36px', borderRadius: '8px', border: 'none', background: newOrderLocation === 'indoor' ? 'white' : 'transparent', color: newOrderLocation === 'indoor' ? 'var(--primary)' : '#6B7280', fontWeight: 700, fontSize: '0.7rem', cursor: 'pointer', boxShadow: newOrderLocation === 'indoor' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none' }}>INDOOR</button>
+                                                        <button onClick={() => setNewOrderLocation('outdoor')} style={{ flex: 1, height: '36px', borderRadius: '8px', border: 'none', background: newOrderLocation === 'outdoor' ? 'white' : 'transparent', color: newOrderLocation === 'outdoor' ? 'var(--primary)' : '#6B7280', fontWeight: 700, fontSize: '0.7rem', cursor: 'pointer', boxShadow: newOrderLocation === 'outdoor' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none' }}>OUTDOOR</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Right Column: Order Items */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                    <div style={{ background: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', minHeight: '300px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                            <h3 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 800, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Order Items</h3>
+                                            <span style={{ padding: '4px 10px', background: 'rgba(169, 30, 34, 0.1)', color: 'var(--primary)', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 800 }}>{newOrderItems.length} ITEMS</span>
+                                        </div>
+                                        
+                                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto', maxHeight: '350px', paddingRight: '4px' }}>
+                                            {newOrderItems.length === 0 ? (
+                                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF', gap: '8px', opacity: 0.6 }}>
+                                                    <ShoppingBag size={32} />
+                                                    <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 600 }}>No items added yet</p>
+                                                </div>
+                                            ) : (
+                                                newOrderItems.map((item, idx) => {
+                                                    const menuItem = menuItems.find(m => m.id === item.menuItemId)
+                                                    return (
+                                                        <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: '#F9FAFB', borderRadius: '12px', border: '1px solid #F3F4F6', gap: '12px' }}>
+                                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{menuItem?.name || 'Unknown'}</div>
+                                                                <div style={{ fontSize: '0.75rem', color: '#6B7280', fontWeight: 600 }}>₹{menuItem?.price || 0} x {item.quantity}</div>
+                                                            </div>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'white', padding: '2px', borderRadius: '8px', border: '1px solid #E5E7EB' }}>
+                                                                    <button onClick={() => {
+                                                                        if (item.quantity <= 1) setNewOrderItems(prev => prev.filter((_, i) => i !== idx))
+                                                                        else setNewOrderItems(prev => prev.map((it, i) => i === idx ? { ...it, quantity: it.quantity - 1 } : it))
+                                                                    }} style={{ width: '24px', height: '24px', borderRadius: '6px', border: 'none', background: 'transparent', cursor: 'pointer', color: '#6B7280' }}>-</button>
+                                                                    <span style={{ minWidth: '16px', textAlign: 'center', fontWeight: 800, fontSize: '0.85rem' }}>{item.quantity}</span>
+                                                                    <button onClick={() => setNewOrderItems(prev => prev.map((it, i) => i === idx ? { ...it, quantity: it.quantity + 1 } : it))} style={{ width: '24px', height: '24px', borderRadius: '6px', border: 'none', background: 'transparent', cursor: 'pointer', color: '#6B7280' }}>+</button>
+                                                                </div>
+                                                                <button onClick={() => setNewOrderItems(prev => prev.filter((_, i) => i !== idx))} style={{ width: '28px', height: '28px', borderRadius: '8px', border: 'none', background: '#FEE2E2', color: '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><XIcon size={14} /></button>
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                })
+                                            )}
+                                        </div>
+
+                                        <button
+                                            onClick={() => setShowNewOrderMenu(true)}
+                                            style={{ marginTop: '16px', padding: '14px', borderRadius: '12px', border: '2px dashed #D1D5DB', background: '#F9FAFB', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#6B7280', fontSize: '0.9rem', transition: 'all 0.2s' }}
+                                            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)'; e.currentTarget.style.background = 'rgba(169, 30, 34, 0.02)' }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#D1D5DB'; e.currentTarget.style.color = '#6B7280'; e.currentTarget.style.background = '#F9FAFB' }}
+                                        >
+                                            <Plus size={18} />
+                                            Add Menu Items
+                                        </button>
+                                    </div>
+
+                                    {newOrderItems.length > 0 && (
+                                        <div style={{ background: 'var(--primary)', padding: '20px', borderRadius: '16px', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 10px 15px -3px rgba(169, 30, 34, 0.3)' }}>
+                                            <div>
+                                                <div style={{ fontSize: '0.75rem', fontWeight: 800, opacity: 0.8, textTransform: 'uppercase' }}>Total Amount</div>
+                                                <div style={{ fontSize: '1.5rem', fontWeight: 900 }}>₹{newOrderItems.reduce((sum, item) => {
+                                                    const mi = menuItems.find(m => m.id === item.menuItemId)
+                                                    return sum + (mi?.price || 0) * item.quantity
+                                                }, 0).toFixed(0)}</div>
+                                            </div>
+                                            <Utensils size={32} style={{ opacity: 0.3 }} />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-
-                            {/* Total */}
-                            {newOrderItems.length > 0 && (
-                                <div style={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    padding: '14px 16px',
-                                    background: '#F5F5F4',
-                                    borderRadius: '12px',
-                                    border: '1px solid #E7E5E4'
-                                }}>
-                                    <span style={{ fontWeight: 900, fontSize: '1.1rem' }}>Total</span>
-                                    <span style={{ fontWeight: 900, fontSize: '1.3rem', color: 'var(--primary)' }}>
-                                        ₹{newOrderItems.reduce((sum, item) => {
-                                            const mi = menuItems.find(m => m.id === item.menuItemId)
-                                            return sum + (mi?.price || 0) * item.quantity
-                                        }, 0).toFixed(0)}
-                                    </span>
-                                </div>
-                            )}
                         </div>
 
                         {/* Modal Footer — sticky */}
@@ -2311,6 +2227,16 @@ export default function KitchenPage() {
                     0% { opacity: 1; }
                     50% { opacity: 0.6; }
                     100% { opacity: 1; }
+                }
+
+                @keyframes slideDown {
+                    from { transform: translateY(-30px); opacity: 0; }
+                    to { transform: translateY(0); opacity: 1; }
+                }
+
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
                 }
                 
                 /* Custom scrollbar for order items */
