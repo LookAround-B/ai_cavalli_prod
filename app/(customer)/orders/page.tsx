@@ -502,7 +502,7 @@ export default function OrdersPage() {
                                 Order Edit Window
                             </div>
                             <div style={{ lineHeight: 1.4 }}>
-                                Please ensure that any changes to the order are communicated within  {formatCooldownTime(cooldownTime)} time
+                                Please ensure that any changes to the order are communicated within  {formatCooldownTime(cooldownTime)}.
                             </div>
                         </div>
                         <button

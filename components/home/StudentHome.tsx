@@ -206,8 +206,22 @@ export default function StudentHome() {
                             letterSpacing: '-0.01em',
                         }}
                     >
-                        Ai Cavalli | Savour The Legacy
+                        Ai Cavalli
                     </h3>
+                    <h2
+                        className='bottom-section'
+                        style={{
+                            fontFamily: 'var(--font-serif)',
+                            lineHeight: 1,
+                            marginBottom: '2rem',
+                            textTransform: 'capitalize',
+                            fontWeight: 700,
+                            color: CRISP_WHITE,
+                            opacity: 100,
+                        }}
+                    >
+                        Savour the Legacy
+                    </h2>
 
                     <div style={{ width: '80px', height: '1px', background: DEEP_BLACK, margin: '0 auto 2.5rem', opacity: 0.6 }} />
 
