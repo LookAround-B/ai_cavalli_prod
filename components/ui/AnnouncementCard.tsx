@@ -5,7 +5,7 @@ import { Calendar, ArrowRight } from 'lucide-react'
 
 export function AnnouncementCard({ announcement }: { announcement: any }) {
     return (
-        <div style={{
+        <div className="hover-lift" style={{
             background: 'white',
             borderRadius: 'clamp(16px, 4vw, 24px)',
             overflow: 'hidden',
@@ -15,14 +15,6 @@ export function AnnouncementCard({ announcement }: { announcement: any }) {
             transition: 'transform 0.3s ease, box-shadow 0.3s ease',
             cursor: 'pointer'
         }}
-            onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-6px)';
-                e.currentTarget.style.boxShadow = '0 20px 40px rgba(0,0,0,0.08)';
-            }}
-            onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = 'none';
-            }}
         >
             {/* Image Container */}
             {announcement.image_url && (
@@ -67,7 +59,7 @@ export function AnnouncementCard({ announcement }: { announcement: any }) {
                 <p style={{
                     color: '#666',
                     lineHeight: 1.6,
-                    fontSize: '0.95rem',
+                    fontSize: 'clamp(0.85rem, 2vw, 0.95rem)',
                     marginBottom: '1.5rem',
                     display: '-webkit-box',
                     WebkitLineClamp: 3,

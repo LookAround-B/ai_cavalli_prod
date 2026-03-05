@@ -1,5 +1,5 @@
 .main {
-    min-height: 100vh;
+    min-height: 100dvh;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -18,12 +18,13 @@
     backdrop-filter: blur(12px);
 }
 
+/* Mobile-first: compact padding for small screens */
 .contentWrapper {
     position: relative;
     z-index: 10;
     width: 100%;
     max-width: 480px;
-    padding: 2rem;
+    padding: clamp(1rem, 4vw, 2rem);
 }
 
 /* Header */
@@ -39,7 +40,7 @@
 
 .brandTitle {
     font-family: var(--font-serif);
-    font-size: 4rem;
+    font-size: clamp(2.5rem, 10vw, 4rem);
     color: #FDFBF7;
     margin: 0;
     line-height: 1;
@@ -49,10 +50,10 @@
 .brandSubtitle {
     color: rgba(253, 251, 247, 0.4);
     letter-spacing: 2px;
-    font-size: 0.8rem;
+    font-size: clamp(0.65rem, 2vw, 0.8rem);
     text-transform: uppercase;
     margin-top: 1rem;
-    margin-bottom: 3rem;
+    margin-bottom: clamp(2rem, 6vw, 3rem);
 }
 
 /* Role Cards */
@@ -65,7 +66,7 @@
 .premiumCard {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 1.5rem;
+    padding: clamp(1rem, 3vw, 1.5rem);
     display: flex;
     align-items: center;
     gap: 1.25rem;
@@ -75,10 +76,12 @@
     width: 100%;
 }
 
-.premiumCard:hover {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: #A91E22;
-    transform: translateX(8px);
+@media (hover: hover) and (pointer: fine) {
+    .premiumCard:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: #A91E22;
+        transform: translateX(8px);
+    }
 }
 
 .iconCircle {
@@ -90,23 +93,24 @@
     align-items: center;
     justify-content: center;
     border-radius: 50%;
+    flex-shrink: 0;
 }
 
 .cardText h3 {
     color: #FDFBF7;
     margin: 0;
-    font-size: 1.1rem;
+    font-size: clamp(0.95rem, 3vw, 1.1rem);
 }
 
 .cardText p {
     color: rgba(253, 251, 247, 0.3);
     margin: 0;
-    font-size: 0.8rem;
+    font-size: clamp(0.7rem, 2vw, 0.8rem);
 }
 
 /* Authorized Access Footer */
 .selectFooter {
-    margin-top: 3.5rem;
+    margin-top: clamp(2rem, 8vw, 3.5rem);
     width: 100%;
 }
 
@@ -129,20 +133,23 @@
     letter-spacing: 3px;
     text-transform: uppercase;
     color: #FDFBF7;
+    white-space: nowrap;
 }
 
 .staffProceedButton {
     width: 100%;
     background: rgba(169, 30, 34, 0.05);
     border: 1px solid rgba(169, 30, 34, 0.2);
-    padding: 1.25rem;
+    padding: clamp(1rem, 3vw, 1.25rem);
     cursor: pointer;
     transition: all 0.3s ease;
 }
 
-.staffProceedButton:hover {
-    background: rgba(169, 30, 34, 0.15);
-    border-color: #A91E22;
+@media (hover: hover) and (pointer: fine) {
+    .staffProceedButton:hover {
+        background: rgba(169, 30, 34, 0.15);
+        border-color: #A91E22;
+    }
 }
 
 .staffButtonContent {
@@ -177,10 +184,10 @@
     margin-top: 2px;
 }
 
-/* Auth Form Card */
+/* Auth Form Card — mobile-first: compact, then expand */
 .authCard {
     background: #FDFBF7;
-    padding: 3.5rem 2.5rem;
+    padding: clamp(2rem, 6vw, 3.5rem) clamp(1.25rem, 5vw, 2.5rem);
     border-radius: 2px;
     color: #1A1A1A;
     position: relative;
@@ -189,17 +196,18 @@
 
 .backArrow {
     position: absolute;
-    top: 1.5rem;
-    left: 1.5rem;
+    top: 1rem;
+    left: 1rem;
     background: none;
     border: none;
     color: #A91E22;
     cursor: pointer;
+    padding: 0.25rem;
 }
 
 .cardTitle {
     font-family: var(--font-serif);
-    font-size: 2.25rem;
+    font-size: clamp(1.75rem, 6vw, 2.25rem);
     margin-bottom: 0.5rem;
 }
 
@@ -208,7 +216,7 @@
     text-transform: uppercase;
     letter-spacing: 2px;
     color: #888;
-    margin-bottom: 2.5rem;
+    margin-bottom: clamp(1.5rem, 5vw, 2.5rem);
 }
 
 .inputGroup {
@@ -230,7 +238,7 @@
     border: none;
     border-bottom: 1px solid #DDD;
     padding: 0.5rem 0;
-    font-size: 1.2rem;
+    font-size: clamp(1rem, 3vw, 1.2rem);
     outline: none;
     transition: border-color 0.3s;
 }
@@ -243,7 +251,7 @@
     background: #1A1A1A !important;
     color: #FDFBF7 !important;
     width: 100%;
-    height: 56px !important;
+    height: clamp(48px, 10vw, 56px) !important;
     letter-spacing: 3px;
     font-weight: 700;
     border-radius: 0 !important;
@@ -318,15 +326,4 @@
     font-size: 0.875rem;
     text-align: center;
     margin-bottom: 1rem;
-}
-@media (max-width: 480px) {
-    .contentWrapper {
-        padding: 1rem;
-    }
-    .brandTitle {
-        font-size: clamp(2.5rem, 10vw, 3.5rem);
-    }
-    .authCard {
-        padding: 2.5rem 1.5rem;
-    }
 }

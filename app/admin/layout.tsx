@@ -41,7 +41,7 @@ export default function AdminLayout({
                 <main style={{
                     padding: 'clamp(0.75rem, 3vw, 2rem)',
                     background: '#f5f5f5',
-                    minHeight: 'calc(100vh - 64px)'
+                    minHeight: 'calc(100dvh - 64px)'
                 }}>
                     {children}
                 </main>

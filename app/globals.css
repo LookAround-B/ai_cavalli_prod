@@ -50,10 +50,14 @@
 html {
   height: 100%;
   overflow-x: hidden;
+  /* Prevent horizontal scroll globally */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
-  min-height: 100%;
+  min-height: 100dvh;
+  /* dvh: adapts to mobile browser chrome */
   color: var(--text);
   background: var(--background);
   font-family: var(--font-sans);
@@ -63,6 +67,15 @@ body {
   overflow-x: hidden;
   margin: 0;
   padding: 0;
+}
+
+/* Global image protection — never cause horizontal overflow */
+img,
+video,
+svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
 }
 
 h1,
@@ -75,15 +88,17 @@ h6 {
   color: var(--primary);
   font-weight: 700;
   line-height: 1.2;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
+/* Fluid container — clamp replaces multiple media query breakpoints */
 .container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 clamp(0.75rem, 4vw, 2rem);
   width: 100%;
 }
-
 
 /* Glassmorphism */
 .glass {
@@ -93,7 +108,6 @@ h6 {
   border: 1px solid rgba(var(--surface-rgb), 0.3);
 }
 
-/* Texture Overlay */
 /* Texture Overlay - Optimized for GPU Performance */
 .texture-overlay {
   position: fixed;
@@ -107,14 +121,24 @@ h6 {
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='1' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
 }
 
-/* Premium Animations */
-.hover-lift {
-  transition: var(--transition);
+/* Premium Animations — only on devices that support hover (mouse/trackpad) */
+@media (hover: hover) and (pointer: fine) {
+  .hover-lift {
+    transition: var(--transition);
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+  }
 }
 
-.hover-lift:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-lg);
+/* Touch device: immediate tap feedback instead of hover */
+@media (hover: none) {
+  .hover-lift:active {
+    transform: scale(0.98);
+    box-shadow: var(--shadow-md);
+  }
 }
 
 .fade-in {
@@ -133,21 +157,38 @@ h6 {
   }
 }
 
-/* Mobile Friendly Grid */
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Mobile-First Responsive Grid — base is 1 col, scale up with min-width */
 .menu-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--space-4);
 }
 
-@media (min-width: 640px) {
+@media (min-width: 40em) {
+
+  /* 640px */
   .menu-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: var(--space-6);
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 64em) {
+
+  /* 1024px */
   .menu-grid {
     grid-template-columns: repeat(3, 1fr);
   }
@@ -168,4 +209,14 @@ h6 {
   50% {
     opacity: 0.5;
   }
+}
+
+/* Utility: hide scrollbar but keep functionality */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

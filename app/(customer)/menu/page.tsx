@@ -166,7 +166,7 @@ export default function MenuPage() {
                     <div style={{ marginBottom: 'var(--space-10)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
                             <div style={{ width: '8px', height: '24px', background: '#059669', borderRadius: '4px' }} />
-                            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: 'var(--text)' }}>Regular Staff Meal</h2>
+                            <h2 style={{ fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', fontWeight: 800, margin: 0, color: 'var(--text)' }}>Regular Staff Meal</h2>
                         </div>
                         <div className="menu-grid">
                             <MenuItemCard item={regularMealItem} onAdd={handleAddToCart} />
@@ -180,7 +180,7 @@ export default function MenuPage() {
                     <div style={{ marginBottom: 'var(--space-10)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
                             <div style={{ width: '8px', height: '24px', background: 'var(--primary)', borderRadius: '4px' }} />
-                            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: 'var(--text)' }}>Today's Specials</h2>
+                            <h2 style={{ fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', fontWeight: 800, margin: 0, color: 'var(--text)' }}>Today's Specials</h2>
                         </div>
                         <div className="menu-grid">
                             {specials.map(item => (
@@ -196,7 +196,7 @@ export default function MenuPage() {
                     <div style={{ marginBottom: 'var(--space-10)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
                             <div style={{ width: '8px', height: '24px', background: '#3B82F6', borderRadius: '4px' }} />
-                            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: 'var(--text)' }}>Staff Fixed Menu</h2>
+                            <h2 style={{ fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', fontWeight: 800, margin: 0, color: 'var(--text)' }}>Staff Fixed Menu</h2>
                         </div>
                         <div className="menu-grid">
                             {filteredFixedItems.map(item => (
@@ -224,7 +224,7 @@ export default function MenuPage() {
             {/* Floating Category Menu Container */}
             <div style={{
                 position: 'fixed',
-                bottom: '120px', // Lifted slightly from the very bottom
+                bottom: 'clamp(100px, 18vw, 120px)',
                 left: '50%',
                 transform: 'translateX(-50%)',
                 zIndex: 10001,
@@ -232,8 +232,8 @@ export default function MenuPage() {
                 flexDirection: 'column',
                 alignItems: 'center',
                 width: '100%',
-                maxWidth: '320px',
-                padding: '0 20px'
+                maxWidth: 'clamp(280px, 80vw, 320px)',
+                padding: '0 clamp(12px, 3vw, 20px)'
             }}>
                 {/* The Pop-up Menu */}
                 {isCategoryMenuOpen && (
@@ -312,8 +312,8 @@ export default function MenuPage() {
                 <button
                     onClick={() => setIsCategoryMenuOpen(!isCategoryMenuOpen)}
                     style={{
-                        width: isCategoryMenuOpen ? '72px' : '180px', // Morphing effect
-                        height: '64px',
+                        width: isCategoryMenuOpen ? '64px' : 'clamp(150px, 40vw, 180px)',
+                        height: 'clamp(52px, 12vw, 64px)',
                         borderRadius: '40px',
                         background: isCategoryMenuOpen ? 'white' : ITALIAN_RED,
                         color: isCategoryMenuOpen ? DEEP_BLACK : 'white',
@@ -322,7 +322,7 @@ export default function MenuPage() {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '12px',
+                        gap: 'clamp(6px, 2vw, 12px)',
                         cursor: 'pointer',
                         transition: 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
                         fontWeight: 700,

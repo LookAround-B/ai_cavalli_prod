@@ -185,12 +185,13 @@ export function TopNav({ title, links, accentColor = '#1A1A1A', accentText = '#F
                         background: `${accentText}10`,
                         border: `1px solid ${accentText}20`,
                         borderRadius: '10px',
-                        padding: '0.35rem 0.75rem',
+                        padding: '0.35rem clamp(0.5rem, 1.5vw, 0.75rem)',
                         color: accentText,
                         cursor: 'pointer',
                         fontSize: '0.85rem',
                         fontWeight: 600,
                         transition: 'all 0.15s ease',
+                        minHeight: '44px', /* Touch target */
                     }}
                     aria-label="User menu"
                 >
@@ -205,15 +206,17 @@ export function TopNav({ title, links, accentColor = '#1A1A1A', accentText = '#F
                         justifyContent: 'center',
                         fontSize: '0.75rem',
                         fontWeight: 700,
+                        flexShrink: 0,
                     }}>
                         {user?.name?.charAt(0)?.toUpperCase() || '?'}
                     </span>
-                    <span style={{ maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <span className="user-name-label" style={{ maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {user?.name || 'User'}
                     </span>
                     <ChevronDown size={14} style={{
                         transform: menuOpen ? 'rotate(180deg)' : 'rotate(0)',
                         transition: 'transform 0.2s ease',
+                        flexShrink: 0,
                     }} />
                 </button>
 

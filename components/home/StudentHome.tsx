@@ -29,11 +29,11 @@ export default function StudentHome() {
     }, [])
 
     return (
-        <div style={{ background: CRISP_WHITE, color: DEEP_BLACK, minHeight: '100vh' }} className="fade-in">
+        <div style={{ background: CRISP_WHITE, color: DEEP_BLACK, minHeight: '100dvh' }} className="fade-in">
             {/* 1. Cinematic Video Hero */}
             <header
                 style={{
-                    height: 'clamp(450px, 85vh, 900px)',
+                    height: 'clamp(450px, 85dvh, 900px)',
                     minHeight: '400px',
                     display: 'flex',
                     alignItems: 'center',
@@ -304,7 +304,7 @@ export default function StudentHome() {
                         padding: 40px 12px !important;
                     }
                     header {
-                        height: 75vh !important;
+                        height: 75dvh !important;
                         min-height: 380px !important;
                     }
                     .hero-title {
@@ -316,7 +316,7 @@ export default function StudentHome() {
                         padding: 32px 10px !important;
                     }
                     header {
-                        height: 70vh !important;
+                        height: 70dvh !important;
                         min-height: 360px !important;
                     }
                 }

@@ -27,7 +27,7 @@ export default function CustomerLayout({
 
     if (isLoading) {
         return <div className="loading-screen" style={{
-            height: '100vh',
+            height: '100dvh',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',

@@ -24,8 +24,8 @@
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Small phones (320px - 374px) */
-@media (max-width: 374px) {
+/* Small phones (320px - 374px) → < 23.4375em */
+@media (max-width: 23.4375em) {
     .nav {
         height: 64px;
         bottom: var(--space-3, 0.75rem);
@@ -35,16 +35,16 @@
     }
 }
 
-/* Standard phones (375px - 767px) */
-@media (min-width: 375px) and (max-width: 767px) {
+/* Standard phones (375px - 767px) → 23.4375em - 47.9375em */
+@media (min-width: 23.4375em) and (max-width: 47.9375em) {
     .nav {
         height: 72px;
         max-width: 100%;
     }
 }
 
-/* Tablets (768px - 1023px) */
-@media (min-width: 768px) and (max-width: 1023px) {
+/* Tablets (768px - 1023px) → 48em - 63.9375em */
+@media (min-width: 48em) and (max-width: 63.9375em) {
     .nav {
         left: 50%;
         transform: translateX(-50%);
@@ -54,8 +54,8 @@
     }
 }
 
-/* Desktop (1024px+) */
-@media (min-width: 1024px) {
+/* Desktop (1024px+) → 64em */
+@media (min-width: 64em) {
     .nav {
         left: 50%;
         transform: translateX(-50%);
@@ -65,8 +65,8 @@
     }
 }
 
-/* Large desktop (1440px+) */
-@media (min-width: 1440px) {
+/* Large desktop (1440px+) → 90em */
+@media (min-width: 90em) {
     .nav {
         width: 450px;
         height: 84px;
@@ -91,9 +91,16 @@
     /* Prevents flex overflow */
 }
 
-.link:hover {
-    color: var(--primary, #dc2626);
-    background: rgba(var(--primary-rgb, 220, 38, 38), 0.04);
+/* Hover only for mouse/trackpad users */
+@media (hover: hover) and (pointer: fine) {
+    .link:hover {
+        color: var(--primary, #dc2626);
+        background: rgba(var(--primary-rgb, 220, 38, 38), 0.04);
+    }
+
+    .link:hover .iconWrapper {
+        transform: translateY(-1px);
+    }
 }
 
 .link:active {
@@ -116,7 +123,7 @@
     position: relative;
 }
 
-@media (max-width: 374px) {
+@media (max-width: 23.4375em) {
     .iconWrapper {
         padding: var(--space-1, 0.25rem);
     }
@@ -127,9 +134,6 @@
     transform: translateY(-2px);
 }
 
-.link:hover .iconWrapper {
-    transform: translateY(-1px);
-}
 
 .label {
     font-size: 0.6875rem;
@@ -143,20 +147,20 @@
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-@media (min-width: 375px) {
+@media (min-width: 23.4375em) {
     .label {
         font-size: 0.75rem;
     }
 }
 
-@media (min-width: 768px) {
+@media (min-width: 48em) {
     .label {
         font-size: 0.8125rem;
         margin-top: 2px;
     }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 64em) {
     .label {
         font-size: 0.875rem;
     }
@@ -166,9 +170,10 @@
     font-weight: 700;
 }
 
-/* Safe area insets for iOS devices */
+/* Safe area insets for iOS devices — account for home indicator */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
     .nav {
+        bottom: max(var(--space-4, 1rem), env(safe-area-inset-bottom));
         padding-bottom: 0;
     }
 }

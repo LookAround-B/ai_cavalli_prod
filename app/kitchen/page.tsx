@@ -851,12 +851,14 @@ export default function KitchenPage() {
                                 background: 'rgba(var(--primary-rgb), 0.08)',
                                 border: '1.5px solid rgba(var(--primary-rgb), 0.2)',
                                 borderRadius: '10px',
-                                padding: '6px',
+                                padding: '8px',
                                 cursor: refreshing ? 'not-allowed' : 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 transition: 'all 0.2s ease',
+                                minWidth: '44px',
+                                minHeight: '44px',
                             }}
                             title="Refresh all data"
                         >
@@ -1308,10 +1310,10 @@ export default function KitchenPage() {
                                                         <div key={item.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'white', borderRadius: '10px', border: '1.5px solid #E7E5E4', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                                                             <span style={{ flex: 1, fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)' }}>{item.menu_item?.name}</span>
                                                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                                <button onClick={() => updateItemQuantity(item.id, order.id, item.quantity - 1)} disabled={item.quantity <= 1} style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1.5px solid #D6D3D1', background: 'white', cursor: item.quantity <= 1 ? 'not-allowed' : 'pointer', fontWeight: 800, fontSize: '1.1rem', opacity: item.quantity <= 1 ? 0.5 : 1, transition: 'all 0.2s' }}>-</button>
+                                                                <button onClick={() => updateItemQuantity(item.id, order.id, item.quantity - 1)} disabled={item.quantity <= 1} style={{ width: '36px', height: '36px', borderRadius: '8px', border: '1.5px solid #D6D3D1', background: 'white', cursor: item.quantity <= 1 ? 'not-allowed' : 'pointer', fontWeight: 800, fontSize: '1.1rem', opacity: item.quantity <= 1 ? 0.5 : 1, transition: 'all 0.2s' }}>-</button>
                                                                 <span style={{ minWidth: '32px', textAlign: 'center', fontWeight: 900, fontSize: '1rem' }}>{item.quantity}</span>
-                                                                <button onClick={() => updateItemQuantity(item.id, order.id, item.quantity + 1)} style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1.5px solid #D6D3D1', background: 'white', cursor: 'pointer', fontWeight: 800, fontSize: '1.1rem', transition: 'all 0.2s' }}>+</button>
-                                                                <button onClick={() => deleteOrderItem(item.id, order.id)} style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1.5px solid #DC2626', background: '#FEE2E2', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', transition: 'all 0.2s' }}>🗑️</button>
+                                                                <button onClick={() => updateItemQuantity(item.id, order.id, item.quantity + 1)} style={{ width: '36px', height: '36px', borderRadius: '8px', border: '1.5px solid #D6D3D1', background: 'white', cursor: 'pointer', fontWeight: 800, fontSize: '1.1rem', transition: 'all 0.2s' }}>+</button>
+                                                                <button onClick={() => deleteOrderItem(item.id, order.id)} style={{ width: '36px', height: '36px', borderRadius: '8px', border: '1.5px solid #DC2626', background: '#FEE2E2', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', transition: 'all 0.2s' }}>🗑️</button>
                                                             </div>
                                                         </div>
                                                     ))}

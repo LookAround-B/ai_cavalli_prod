@@ -53,11 +53,11 @@ export default function GuestHome() {
     }
 
     return (
-        <div style={{ background: CRISP_WHITE, color: DEEP_BLACK, minHeight: '100vh' }} className="fade-in">
+        <div style={{ background: CRISP_WHITE, color: DEEP_BLACK, minHeight: '100dvh' }} className="fade-in">
             {/* 1. Hero Section with Simpler CTA */}
             <header
                 style={{
-                    height: 'clamp(450px, 80vh, 800px)',
+                    height: 'clamp(450px, 80dvh, 800px)',
                     minHeight: '400px',
                     display: 'flex',
                     alignItems: 'center',
@@ -475,7 +475,7 @@ export default function GuestHome() {
                         padding: 40px 12px !important;
                     }
                     header {
-                        height: 75vh !important;
+                        height: 75dvh !important;
                         min-height: 380px !important;
                     }
                     .hero-title {
@@ -493,7 +493,7 @@ export default function GuestHome() {
                         padding: 32px 10px !important;
                     }
                     header {
-                        height: 70vh !important;
+                        height: 70dvh !important;
                         min-height: 360px !important;
                     }
                 }

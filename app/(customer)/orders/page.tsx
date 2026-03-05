@@ -28,6 +28,9 @@ export default function OrdersPage() {
     const [billPreview, setBillPreview] = useState<BillData | null>(null)
     const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
 
+    // Roles that should see Sign Out button and auto-logout after 5 min
+    const isAutoLogoutRole = user?.role === 'OUTSIDER' || user?.role === 'RIDER' || user?.role === 'STAFF'
+
     // Track whether we've already triggered auto-logout to avoid double-firing
     const [autoLogoutTriggered, setAutoLogoutTriggered] = useState(false)
 
@@ -148,7 +151,8 @@ export default function OrdersPage() {
         if (cooldownTime === 0) {
             // Timer expired — auto-logout immediately
             setShowCooldown(false)
-            if (userRef.current?.role === 'OUTSIDER') {
+            const role = userRef.current?.role
+            if (role === 'OUTSIDER' || role === 'RIDER' || role === 'STAFF') {
                 console.log('Auto-logout triggered after 5-min cooldown')
                 clearCartRef.current()
                 logoutRef.current()
@@ -443,21 +447,11 @@ export default function OrdersPage() {
 
     const handleBillPreviewClose = () => {
         setBillPreview(null)
-        // Logout guest after viewing the bill
-        if (user?.role === 'OUTSIDER') {
-            clearCart()
-            setTimeout(() => logout(), 500)
-        }
     }
 
     const handlePrintComplete = () => {
         setBillPreview(null)
         setActiveSession(null)
-        // Auto-logout guest after billing is complete
-        if (user?.role === 'OUTSIDER') {
-            clearCart()
-            setTimeout(() => logout(), 500)
-        }
     }
 
     return (
@@ -574,12 +568,14 @@ export default function OrdersPage() {
                                     background: 'rgba(255,255,255,0.15)',
                                     border: '1.5px solid rgba(255,255,255,0.25)',
                                     borderRadius: '10px',
-                                    padding: '6px',
+                                    padding: '8px',
                                     cursor: refreshing ? 'not-allowed' : 'pointer',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     transition: 'all 0.2s ease',
+                                    minWidth: '44px',
+                                    minHeight: '44px',
                                 }}
                                 title="Refresh orders"
                             >
@@ -598,8 +594,8 @@ export default function OrdersPage() {
                             </p>
                         )}
                     </div>
-                    {/* Logout button in header */}
-                    {user?.role === 'OUTSIDER' && (
+                    {/* Logout button in header for riders, staff, and guests */}
+                    {isAutoLogoutRole && (
                         <button
                             onClick={() => { clearCart(); logout() }}
                             style={{
@@ -1079,8 +1075,8 @@ export default function OrdersPage() {
                 )}
             </div>
 
-            {/* Sign Out Button for guests */}
-            {user?.role === 'OUTSIDER' && (
+            {/* Sign Out Button for riders, staff, and guests */}
+            {isAutoLogoutRole && (
                 <div style={{ marginTop: '24px', textAlign: 'center' }}>
                     <button
                         onClick={() => {
