@@ -154,7 +154,7 @@ export default function ProfilePage() {
     }
 
     return (
-        <div className="container fade-in" style={{ paddingTop: 'var(--space-6)', paddingBottom: 'var(--space-12)' }}>
+        <div className="container fade-in" style={{ padding: 'clamp(1rem, 4vw, 2rem) clamp(1rem, 4vw, 1.5rem)', paddingBottom: 'var(--space-12)' }}>
             <PageHeader title="My Account" backHref="/home" />
 
             <div style={{
@@ -198,7 +198,7 @@ export default function ProfilePage() {
                             </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-6)', marginBottom: 'var(--space-8)' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: 'var(--space-6)', marginBottom: 'var(--space-8)' }}>
                             <div style={{ padding: 'var(--space-4)', background: 'var(--background)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
                                 <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600 }}>
                                     {/* {role === 'RIDER' || role === 'STAFF' ? 'PHONE NUMBER' : 'EMAIL ADDRESS'} */}
@@ -396,9 +396,9 @@ export default function ProfilePage() {
                 )}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-6)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-6)', flexWrap: 'wrap' }}>
                 <Package size={24} color="var(--primary)" />
-                <h2 style={{ margin: 0, fontSize: '1.5rem', fontFamily: 'var(--font-serif)' }}>Order History</h2>
+                <h2 style={{ margin: 0, fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', fontFamily: 'var(--font-serif)' }}>Order History</h2>
             </div>
 
             {!user ? (

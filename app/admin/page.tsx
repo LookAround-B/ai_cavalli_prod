@@ -109,83 +109,83 @@ export default function AdminDashboard() {
             const json = await res.json()
             const orders: any[] = json.success ? json.data : null
 
-        if (orders) {
-            const totalRevenue = orders.reduce((sum, o) => sum + (o.total || 0), 0)
-            const today = new Date().toLocaleDateString()
-            const todayRevenue = orders
-                .filter(o => new Date(o.created_at).toLocaleDateString() === today)
-                .reduce((sum, o) => sum + (o.total || 0), 0)
+            if (orders) {
+                const totalRevenue = orders.reduce((sum, o) => sum + (o.total || 0), 0)
+                const today = new Date().toLocaleDateString()
+                const todayRevenue = orders
+                    .filter(o => new Date(o.created_at).toLocaleDateString() === today)
+                    .reduce((sum, o) => sum + (o.total || 0), 0)
 
-            const pending = orders.filter(o => o.status === 'pending' || o.status === 'preparing').length
-            const avgVal = orders.length > 0 ? (totalRevenue / orders.length).toFixed(2) : '0'
+                const pending = orders.filter(o => o.status === 'pending' || o.status === 'preparing').length
+                const avgVal = orders.length > 0 ? (totalRevenue / orders.length).toFixed(2) : '0'
 
-            setStats({
-                totalOrders: orders.length,
-                totalRevenue,
-                pendingOrders: pending,
-                growth: 12.5,
-                avgOrderValue: parseFloat(avgVal),
-                todayRevenue
-            })
-            setAllOrders(orders)
-            setRecentOrders(orders.slice(0, 10))
-
-            // 1. Process Revenue Data
-            const dailyRevenue: { [key: string]: { date: string, amount: number, orders: number, rawDate: string } } = {}
-            orders.forEach(o => {
-                const dateObj = new Date(o.created_at)
-                const dateKey = dateObj.toISOString().split('T')[0]
-                const dateDisplay = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-
-                if (!dailyRevenue[dateKey]) {
-                    dailyRevenue[dateKey] = { date: dateDisplay, amount: 0, orders: 0, rawDate: dateKey }
-                }
-                dailyRevenue[dateKey].amount += (o.total || 0)
-                dailyRevenue[dateKey].orders++
-            })
-            setRevenueData(Object.values(dailyRevenue).sort((a, b) => a.rawDate.localeCompare(b.rawDate)).slice(-30))
-
-            // 2. Process Demographic Data (User role: RIDER -> UI label: Rider)
-            const demographics = { rider: 0, staff: 0, guest: 0 }
-            orders.forEach(o => {
-                const role = o.user?.role || 'guest'
-                if (role === 'RIDER') demographics.rider++
-                else if (role === 'staff') demographics.staff++
-                else demographics.guest++
-            })
-            setDemographicData([
-                { name: 'Riders', value: demographics.rider, color: '#C0272D' },
-                { name: 'Staff', value: demographics.staff, color: '#D97706' },
-                { name: 'Guests', value: demographics.guest, color: '#15803D' }
-            ])
-
-            // 3. Process Category Data
-            const categories: { [key: string]: number } = {}
-            orders.forEach(o => {
-                o.items?.forEach((item: any) => {
-                    const catName = item.menu_item?.category?.name || 'Other'
-                    categories[catName] = (categories[catName] || 0) + item.quantity
+                setStats({
+                    totalOrders: orders.length,
+                    totalRevenue,
+                    pendingOrders: pending,
+                    growth: 12.5,
+                    avgOrderValue: parseFloat(avgVal),
+                    todayRevenue
                 })
-            })
-            const catChart = Object.entries(categories)
-                .map(([name, count], idx) => ({
-                    name,
-                    count,
-                    color: ['#EF4444', '#F59E0B', '#10B981', '#8B5CF6', '#3B82F6'][idx % 5]
-                }))
-                .sort((a, b) => b.count - a.count)
-                .slice(0, 5)
-            setCategoryData(catChart)
+                setAllOrders(orders)
+                setRecentOrders(orders.slice(0, 10))
 
-            // 4. Process Hourly Activity
-            const hourly: { [key: string]: number } = {}
-            orders.filter(o => new Date(o.created_at).toLocaleDateString() === today).forEach(o => {
-                const hour = new Date(o.created_at).toLocaleTimeString([], { hour: 'numeric' })
-                hourly[hour] = (hourly[hour] || 0) + 1
-            })
-            const hourlyChart = Object.entries(hourly).map(([hour, orders]) => ({ hour, orders }))
-            setHourlyData(hourlyChart.length > 0 ? hourlyChart : [{ hour: 'Now', orders: 0 }])
-        }
+                // 1. Process Revenue Data
+                const dailyRevenue: { [key: string]: { date: string, amount: number, orders: number, rawDate: string } } = {}
+                orders.forEach(o => {
+                    const dateObj = new Date(o.created_at)
+                    const dateKey = dateObj.toISOString().split('T')[0]
+                    const dateDisplay = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+
+                    if (!dailyRevenue[dateKey]) {
+                        dailyRevenue[dateKey] = { date: dateDisplay, amount: 0, orders: 0, rawDate: dateKey }
+                    }
+                    dailyRevenue[dateKey].amount += (o.total || 0)
+                    dailyRevenue[dateKey].orders++
+                })
+                setRevenueData(Object.values(dailyRevenue).sort((a, b) => a.rawDate.localeCompare(b.rawDate)).slice(-30))
+
+                // 2. Process Demographic Data (User role: RIDER -> UI label: Rider)
+                const demographics = { rider: 0, staff: 0, guest: 0 }
+                orders.forEach(o => {
+                    const role = o.user?.role || 'guest'
+                    if (role === 'RIDER') demographics.rider++
+                    else if (role === 'staff') demographics.staff++
+                    else demographics.guest++
+                })
+                setDemographicData([
+                    { name: 'Riders', value: demographics.rider, color: '#C0272D' },
+                    { name: 'Staff', value: demographics.staff, color: '#D97706' },
+                    { name: 'Guests', value: demographics.guest, color: '#15803D' }
+                ])
+
+                // 3. Process Category Data
+                const categories: { [key: string]: number } = {}
+                orders.forEach(o => {
+                    o.items?.forEach((item: any) => {
+                        const catName = item.menu_item?.category?.name || 'Other'
+                        categories[catName] = (categories[catName] || 0) + item.quantity
+                    })
+                })
+                const catChart = Object.entries(categories)
+                    .map(([name, count], idx) => ({
+                        name,
+                        count,
+                        color: ['#EF4444', '#F59E0B', '#10B981', '#8B5CF6', '#3B82F6'][idx % 5]
+                    }))
+                    .sort((a, b) => b.count - a.count)
+                    .slice(0, 5)
+                setCategoryData(catChart)
+
+                // 4. Process Hourly Activity
+                const hourly: { [key: string]: number } = {}
+                orders.filter(o => new Date(o.created_at).toLocaleDateString() === today).forEach(o => {
+                    const hour = new Date(o.created_at).toLocaleTimeString([], { hour: 'numeric' })
+                    hourly[hour] = (hourly[hour] || 0) + 1
+                })
+                const hourlyChart = Object.entries(hourly).map(([hour, orders]) => ({ hour, orders }))
+                setHourlyData(hourlyChart.length > 0 ? hourlyChart : [{ hour: 'Now', orders: 0 }])
+            }
         } catch (e) { console.error('fetchData error:', e) }
         setLoading(false)
     }
@@ -243,37 +243,37 @@ export default function AdminDashboard() {
 
             <div style={{ maxWidth: '1600px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
                 {/* Header */}
-                <div style={{ marginBottom: '3rem' }}>
+                <div style={{ marginBottom: 'clamp(1.5rem, 5vw, 3rem)' }}>
                     <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1.5rem' }}>
                         <AdminPageHeader title="Command Center" subtitle="Real-time system analytics and control" icon={Activity} />
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(8px, 2vw, 12px)', flexWrap: 'wrap' }}>
                             {/* Dashboard Stats Date Range */}
                             <div style={{
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '8px',
                                 background: 'rgba(255,255,255,0.7)',
-                                padding: '8px 16px',
+                                padding: 'clamp(6px, 1.5vw, 10px) clamp(10px, 2vw, 20px)',
                                 borderRadius: '12px',
-                                border: '1px solid rgba(0,0,0,0.1)'
+                                border: '1px solid rgba(0,0,0,0.1)',
+                                flex: '1 1 auto',
+                                minWidth: '280px'
                             }}>
                                 <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#64748b' }}>STATS</span>
                                 <input
                                     type="date"
                                     value={startDate}
                                     onChange={(e) => setStartDate(e.target.value)}
-                                    style={{ background: 'transparent', border: 'none', color: '#1f2937', fontWeight: '600', outline: 'none', fontSize: '0.85rem' }}
+                                    style={{ background: 'transparent', border: 'none', color: '#1f2937', fontWeight: '600', outline: 'none', fontSize: '0.85rem', width: 'auto' }}
                                 />
                                 <span style={{ color: '#cbd5e1' }}>to</span>
                                 <input
                                     type="date"
                                     value={endDate}
                                     onChange={(e) => setEndDate(e.target.value)}
-                                    style={{ background: 'transparent', border: 'none', color: '#1f2937', fontWeight: '600', outline: 'none', fontSize: '0.85rem' }}
+                                    style={{ background: 'transparent', border: 'none', color: '#1f2937', fontWeight: '600', outline: 'none', fontSize: '0.85rem', width: 'auto' }}
                                 />
                             </div>
-
-                            <div style={{ width: '2px', height: '32px', background: 'rgba(0,0,0,0.1)', margin: '0 8px' }} />
 
                             {/* Export Date Range Group */}
                             <div style={{
@@ -281,10 +281,13 @@ export default function AdminDashboard() {
                                 alignItems: 'center',
                                 gap: '8px',
                                 background: 'white',
-                                padding: '8px 16px',
+                                padding: 'clamp(6px, 1.5vw, 10px) clamp(10px, 2vw, 20px)',
                                 borderRadius: '12px',
                                 border: '1px solid rgba(var(--primary-rgb), 0.2)',
-                                boxShadow: '0 2px 8px rgba(var(--primary-rgb), 0.1)'
+                                boxShadow: '0 2px 8px rgba(var(--primary-rgb), 0.1)',
+                                flex: '1 1 auto',
+                                minWidth: '320px',
+                                flexWrap: 'wrap'
                             }}>
                                 <span style={{ fontSize: '0.7rem', fontWeight: '800', color: 'var(--primary)', letterSpacing: '0.05em' }}>EXPORT</span>
                                 <input
@@ -312,7 +315,9 @@ export default function AdminDashboard() {
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: '6px',
-                                    marginLeft: '8px',
+                                    flex: '1 1 auto',
+                                    justifyContent: 'center',
+                                    marginTop: 'clamp(0px, 0vw, 4px)',
                                     transition: 'all 0.3s ease',
                                 }}
                                     onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
@@ -595,11 +600,13 @@ export default function AdminDashboard() {
                     transition: 'all 0.4s ease'
                 }}>
                     <div style={{
-                        padding: '2rem',
+                        padding: 'clamp(1rem, 4vw, 2rem)',
                         borderBottom: '1px solid rgba(var(--primary-rgb), 0.1)',
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: '1rem',
                         background: 'linear-gradient(to right, rgba(var(--primary-rgb), 0.02), transparent)'
                     }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -620,12 +627,12 @@ export default function AdminDashboard() {
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
                                 <tr style={{ background: 'rgba(var(--primary-rgb), 0.02)' }}>
-                                    <th style={{ textAlign: 'left', padding: '1.25rem 2rem', fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Order ID</th>
-                                    <th style={{ textAlign: 'left', padding: '1.25rem 2rem', fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Table/Rider</th>
-                                    <th style={{ textAlign: 'left', padding: '1.25rem 2rem', fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</th>
-                                    <th style={{ textAlign: 'left', padding: '1.25rem 2rem', fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Details</th>
-                                    <th style={{ textAlign: 'left', padding: '1.25rem 2rem', fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Time</th>
-                                    <th style={{ textAlign: 'right', padding: '1.25rem 2rem', fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Amount</th>
+                                    <th style={{ textAlign: 'left', padding: '1rem clamp(1rem, 3vw, 2rem)', fontSize: '0.7rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Order ID</th>
+                                    <th style={{ textAlign: 'left', padding: '1rem clamp(1rem, 3vw, 2rem)', fontSize: '0.7rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Table/Rider</th>
+                                    <th style={{ textAlign: 'left', padding: '1rem clamp(1rem, 3vw, 2rem)', fontSize: '0.7rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</th>
+                                    <th style={{ textAlign: 'left', padding: '1rem clamp(1rem, 3vw, 2rem)', fontSize: '0.7rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Details</th>
+                                    <th style={{ textAlign: 'left', padding: '1rem clamp(1rem, 3vw, 2rem)', fontSize: '0.7rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Time</th>
+                                    <th style={{ textAlign: 'right', padding: '1rem clamp(1rem, 3vw, 2rem)', fontSize: '0.7rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Amount</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -644,7 +651,7 @@ export default function AdminDashboard() {
                                             borderTop: '1px solid rgba(var(--primary-rgb), 0.05)',
                                             transition: 'all 0.2s ease',
                                         }} className="transaction-row">
-                                            <td style={{ padding: '1.5rem 2rem' }}>
+                                            <td style={{ padding: '1rem clamp(1rem, 3vw, 2rem)' }}>
                                                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                                                     <span style={{
                                                         fontFamily: 'monospace',
@@ -657,7 +664,7 @@ export default function AdminDashboard() {
                                                     <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>ID: {order.id.slice(0, 4)}...</span>
                                                 </div>
                                             </td>
-                                            <td style={{ padding: '1.5rem 2rem' }}>
+                                            <td style={{ padding: '1rem clamp(1rem, 3vw, 2rem)' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                                     <div style={{
                                                         width: '32px', height: '32px', borderRadius: '8px',
@@ -670,10 +677,10 @@ export default function AdminDashboard() {
                                                     <span style={{ fontWeight: '700', color: 'var(--text)' }}>{order.table_name || 'Rider Order'}</span>
                                                 </div>
                                             </td>
-                                            <td style={{ padding: '1.5rem 2rem' }}>
+                                            <td style={{ padding: '1rem clamp(1rem, 3vw, 2rem)' }}>
                                                 <StatusBadge status={order.status} />
                                             </td>
-                                            <td style={{ padding: '1.5rem 2rem' }}>
+                                            <td style={{ padding: '1rem clamp(1rem, 3vw, 2rem)' }}>
                                                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                                                     <span style={{ fontSize: '0.85rem', color: 'var(--text)', fontWeight: '700' }}>
                                                         {order.num_guests || 1} Guests
@@ -681,7 +688,7 @@ export default function AdminDashboard() {
                                                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Confirmed</span>
                                                 </div>
                                             </td>
-                                            <td style={{ padding: '1.5rem 2rem' }}>
+                                            <td style={{ padding: '1rem clamp(1rem, 3vw, 2rem)' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                                                     <Clock size={14} />
                                                     <span style={{ fontWeight: '600' }}>

@@ -7,7 +7,7 @@ export function AnnouncementCard({ announcement }: { announcement: any }) {
     return (
         <div style={{
             background: 'white',
-            borderRadius: '24px',
+            borderRadius: 'clamp(16px, 4vw, 24px)',
             overflow: 'hidden',
             border: '1px solid rgba(0,0,0,0.06)',
             display: 'flex',
@@ -26,7 +26,7 @@ export function AnnouncementCard({ announcement }: { announcement: any }) {
         >
             {/* Image Container */}
             {announcement.image_url && (
-                <div style={{ width: '100%', height: '220px', overflow: 'hidden' }}>
+                <div style={{ width: '100%', height: 'clamp(160px, 30vw, 220px)', overflow: 'hidden' }}>
                     <img
                         src={announcement.image_url}
                         alt={announcement.title}
@@ -36,7 +36,7 @@ export function AnnouncementCard({ announcement }: { announcement: any }) {
             )}
 
             {/* Content Container */}
-            <div style={{ padding: '1.75rem', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: 'clamp(1.25rem, 4vw, 1.75rem)', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.75rem' }}>
                     <Calendar size={14} color="#A91E22" />
                     <span style={{
@@ -56,7 +56,7 @@ export function AnnouncementCard({ announcement }: { announcement: any }) {
 
                 <h3 style={{
                     fontFamily: 'var(--font-serif)',
-                    fontSize: '1.5rem',
+                    fontSize: 'clamp(1.2rem, 4vw, 1.5rem)',
                     color: '#1A1A1A',
                     marginBottom: '0.75rem',
                     lineHeight: 1.25

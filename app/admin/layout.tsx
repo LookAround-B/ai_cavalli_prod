@@ -38,7 +38,11 @@ export default function AdminLayout({
                     roleLabel="Admin"
                     viewToggle={{ currentView: 'admin' }}
                 />
-                <main style={{ padding: '2rem', background: '#f5f5f5', minHeight: 'calc(100vh - 60px)' }}>
+                <main style={{
+                    padding: 'clamp(0.75rem, 3vw, 2rem)',
+                    background: '#f5f5f5',
+                    minHeight: 'calc(100vh - 64px)'
+                }}>
                     {children}
                 </main>
                 <PopupProvider />

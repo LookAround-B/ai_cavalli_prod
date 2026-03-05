@@ -817,12 +817,12 @@ export default function KitchenPage() {
                 alignItems: 'center',
                 marginBottom: 'var(--space-6)',
                 background: 'white',
-                padding: '1.25rem 2rem',
-                borderRadius: '24px',
+                padding: 'clamp(0.75rem, 2vw, 1.25rem) clamp(1rem, 3vw, 2rem)',
+                borderRadius: 'clamp(12px, 3vw, 24px)',
                 boxShadow: '0 8px 32px rgba(0,0,0,0.05)',
                 border: '1px solid rgba(var(--primary-rgb), 0.1)',
                 flexWrap: 'wrap',
-                gap: '1rem',
+                gap: 'clamp(0.75rem, 2vw, 1.25rem)',
                 position: 'sticky',
                 top: '0',
                 zIndex: 50,
@@ -1125,7 +1125,7 @@ export default function KitchenPage() {
 
             <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))',
                 gap: 'clamp(1rem, 2vw, 1.5rem)',
                 alignItems: 'stretch'
             }}>
@@ -1938,18 +1938,18 @@ export default function KitchenPage() {
                     display: 'flex',
                     alignItems: 'flex-start',
                     justifyContent: 'center',
-                    padding: '40px 20px',
+                    padding: 'clamp(10px, 4vw, 40px) 16px',
                     animation: 'fadeIn 0.2s ease-out',
                 }}
                     onClick={(e) => { if (e.target === e.currentTarget) { setShowCreateOrder(false); setShowNewOrderMenu(false) } }}
                 >
                     <div style={{
                         background: 'white',
-                        borderRadius: '24px',
+                        borderRadius: 'clamp(16px, 4vw, 24px)',
                         width: '100%',
                         maxWidth: '850px',
                         maxHeight: 'calc(100vh - 80px)',
-                        boxShadow: '0 30px 60px -12px rgba(0,0,0,0.25)',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)',
                         display: 'flex',
                         flexDirection: 'column',
                         overflow: 'hidden',
@@ -1957,7 +1957,7 @@ export default function KitchenPage() {
                     }}>
                         {/* Modal Header — sticky */}
                         <div style={{
-                            padding: '32px 32px 24px',
+                            padding: 'clamp(20px, 4vw, 32px) clamp(20px, 4vw, 32px) clamp(16px, 3vw, 24px)',
                             borderBottom: '1px solid #F3F4F6',
                             display: 'flex',
                             justifyContent: 'space-between',
@@ -1966,7 +1966,7 @@ export default function KitchenPage() {
                             background: 'white',
                         }}>
                             <div>
-                                <h2 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 900, color: 'var(--text)', letterSpacing: '-0.03em' }}>
+                                <h2 style={{ margin: 0, fontSize: 'clamp(1.25rem, 4vw, 1.75rem)', fontWeight: 900, color: 'var(--text)', letterSpacing: '-0.03em' }}>
                                     Create Walk-in Order
                                 </h2>
                                 <p style={{ margin: '4px 0 0', fontSize: '0.9rem', color: '#6B7280', fontWeight: 600 }}>Enter details below to generate a new kitchen order</p>
@@ -1974,9 +1974,9 @@ export default function KitchenPage() {
                             <button
                                 onClick={() => { setShowCreateOrder(false); setShowNewOrderMenu(false) }}
                                 style={{
-                                    width: '44px',
-                                    height: '44px',
-                                    borderRadius: '14px',
+                                    width: 'clamp(36px, 10vw, 44px)',
+                                    height: 'clamp(36px, 10vw, 44px)',
+                                    borderRadius: '12px',
                                     border: 'none',
                                     background: '#F3F4F6',
                                     cursor: 'pointer',
@@ -1995,18 +1995,18 @@ export default function KitchenPage() {
 
                         {/* Modal Body — scrollable */}
                         <div style={{
-                            padding: '32px',
+                            padding: 'clamp(16px, 4vw, 32px)',
                             display: 'flex',
                             flexDirection: 'column',
-                            gap: '24px',
+                            gap: 'clamp(16px, 4vw, 24px)',
                             overflowY: 'auto',
                             flex: '1 1 auto',
                             background: '#F9FAFB',
                         }}>
                             <div style={{
                                 display: 'grid',
-                                gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
-                                gap: '24px'
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))',
+                                gap: 'clamp(16px, 4vw, 24px)'
                             }}>
                                 {/* Left Column: Customer & Details */}
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -2097,7 +2097,7 @@ export default function KitchenPage() {
                                             <h3 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 800, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Order Items</h3>
                                             <span style={{ padding: '4px 10px', background: 'rgba(169, 30, 34, 0.1)', color: 'var(--primary)', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 800 }}>{newOrderItems.length} ITEMS</span>
                                         </div>
-                                        
+
                                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto', maxHeight: '350px', paddingRight: '4px' }}>
                                             {newOrderItems.length === 0 ? (
                                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF', gap: '8px', opacity: 0.6 }}>

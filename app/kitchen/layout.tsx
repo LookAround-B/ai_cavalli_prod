@@ -50,7 +50,7 @@ export default function KitchenLayout({
                     roleLabel={getRoleLabel()}
                     viewToggle={user.role === 'ADMIN' ? { currentView: 'kitchen' } : undefined}
                 />
-                <main style={{ padding: '2rem', background: '#f5f5f5', minHeight: 'calc(100vh - 60px)' }}>
+                <main style={{ padding: 'clamp(1rem, 3vw, 2rem)', background: '#f5f5f5', minHeight: 'calc(100vh - 60px)' }}>
                     {children}
                 </main>
                 <PopupProvider />

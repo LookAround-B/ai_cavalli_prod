@@ -13,8 +13,8 @@ export function PageHeader({ title, backHref }: PageHeaderProps) {
         <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 'var(--space-3)',
-            marginBottom: 'var(--space-8)',
+            gap: 'clamp(0.5rem, 2vw, 1.25rem)',
+            marginBottom: 'clamp(1rem, 4vw, 2.5rem)',
         }}>
             <Link
                 href={backHref}
@@ -28,8 +28,9 @@ export function PageHeader({ title, backHref }: PageHeaderProps) {
             </Link>
             <h1 style={{
                 margin: 0,
-                fontSize: '2.5rem',
+                fontSize: 'clamp(1.5rem, 6vw, 2.5rem)',
                 fontFamily: 'var(--font-serif)',
+                lineHeight: 1.1,
             }}>
                 {title}
             </h1>

@@ -543,8 +543,8 @@ export default function OrdersPage() {
             {/* Hero Header */}
             <div style={{
                 background: 'linear-gradient(135deg, var(--primary) 0%, #8B1A1F 100%)',
-                padding: 'clamp(1.25rem, 5vw, 2rem) clamp(1rem, 4vw, 1.5rem)',
-                paddingTop: 'clamp(2.5rem, 8vw, 4rem)',
+                padding: 'clamp(1rem, 4vw, 2rem) clamp(1rem, 4vw, 1.5rem)',
+                paddingTop: 'clamp(2rem, 10vw, 4rem)',
                 color: 'white',
                 position: 'relative',
                 overflow: 'hidden'
@@ -553,16 +553,17 @@ export default function OrdersPage() {
                 <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '140px', height: '140px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
                 <div style={{ position: 'absolute', bottom: '-30px', left: '20%', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
-                    <div style={{ maxWidth: '500px', position: 'relative', zIndex: 1, flex: 1 }}>
-                        <Link href={user ? "/home" : "/menu"} style={{ color: 'rgba(255,255,255,0.95)', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.9rem', fontWeight: 700, textDecoration: 'none', marginBottom: '12px' }}>
-                            <ChevronLeft size={18} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'nowrap' }}>
+                    <div style={{ position: 'relative', zIndex: 1, flex: 1, minWidth: 0 }}>
+                        <Link href={user ? "/home" : "/menu"} style={{ color: 'rgba(255,255,255,0.95)', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', fontWeight: 700, textDecoration: 'none', marginBottom: '8px' }}>
+                            <ChevronLeft size={16} />
                             Back
                         </Link>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                             <h1 style={{
-                                margin: 0, fontSize: 'clamp(1.75rem, 5vw, 2.25rem)', fontFamily: 'var(--font-serif)', fontWeight: 900, letterSpacing: '-0.02em',
-                                color: 'white', textShadow: '0 2px 4px rgba(0,0,0,0.15)'
+                                margin: 0, fontSize: 'clamp(1.5rem, 6vw, 2.25rem)', fontFamily: 'var(--font-serif)', fontWeight: 900, letterSpacing: '-0.02em',
+                                color: 'white', textShadow: '0 2px 4px rgba(0,0,0,0.15)',
+                                lineHeight: 1.1
                             }}>
                                 {orderIdParam && !user ? 'Order Status' : 'My Orders'}
                             </h1>
@@ -583,7 +584,7 @@ export default function OrdersPage() {
                                 title="Refresh orders"
                             >
                                 <RefreshCw
-                                    size={18}
+                                    size={16}
                                     color="white"
                                     style={{
                                         animation: refreshing ? 'spin 1s linear infinite' : 'none',
@@ -592,7 +593,7 @@ export default function OrdersPage() {
                             </button>
                         </div>
                         {orders.length > 0 && (
-                            <p style={{ margin: '6px 0 0', opacity: 1, fontSize: '0.95rem', fontWeight: 700, textShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
+                            <p style={{ margin: '6px 0 0', opacity: 1, fontSize: '0.85rem', fontWeight: 700, textShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
                                 {orders.length} order{orders.length !== 1 ? 's' : ''} &middot; ₹{orders.reduce((sum: number, o: any) => sum + (o.total || 0), 0).toFixed(0)} total
                             </p>
                         )}
@@ -608,18 +609,19 @@ export default function OrdersPage() {
                                 background: '#EF4444',
                                 color: 'white',
                                 border: 'none',
-                                padding: '10px 16px',
-                                borderRadius: '12px',
+                                padding: '8px 12px',
+                                borderRadius: '10px',
                                 fontWeight: 700,
-                                fontSize: '0.85rem',
+                                fontSize: '0.75rem',
                                 cursor: 'pointer',
                                 whiteSpace: 'nowrap',
                                 boxShadow: '0 4px 12px rgba(239,68,68,0.4)',
                                 position: 'relative',
                                 zIndex: 2,
+                                marginTop: '4px'
                             }}
                         >
-                            <LogOut size={16} />
+                            <LogOut size={14} />
                             Sign Out
                         </button>
                     )}
@@ -638,8 +640,11 @@ export default function OrdersPage() {
                         position: 'relative',
                         zIndex: 2,
                         overflowX: 'auto',
-                        paddingBottom: '4px',
+                        paddingBottom: '8px',
+                        msOverflowStyle: 'none',
+                        scrollbarWidth: 'none',
                     }}>
+                        <style>{`div::-webkit-scrollbar { display: none; }`}</style>
                         {[
                             { key: 'pending', label: 'Preparing', color: '#F59E0B', bg: '#FFFBEB', icon: Clock },
                             { key: 'ready', label: 'Ready', color: 'var(--primary)', bg: '#FEF2F2', icon: CheckCircle2 },

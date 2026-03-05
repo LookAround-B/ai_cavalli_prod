@@ -138,18 +138,20 @@ export default function MenuPage() {
 
     return (
         <>
-            <div className="container fade-in" style={{ paddingTop: 'var(--space-6)', paddingBottom: 'var(--space-12)' }}>
+            <div className="container fade-in" style={{ paddingTop: 'clamp(1rem, 4vw, 1.5rem)', paddingBottom: 'var(--space-12)' }}>
                 <PageHeader title="Menu" backHref="/home" />
 
                 <div style={{
                     position: 'sticky',
                     top: 0,
                     zIndex: 10,
-                    background: 'rgba(253, 251, 247, 0.9)',
-                    backdropFilter: 'blur(8px)',
-                    margin: '0 calc(-1 * var(--space-4)) var(--space-6)',
-                    padding: 'var(--space-4) var(--space-4) var(--space-4)',
-                    borderBottom: '1px solid var(--border)'
+                    background: 'rgba(253, 251, 247, 0.95)',
+                    backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
+                    margin: '0 calc(-1 * var(--space-4)) clamp(1.5rem, 5vw, 2.5rem)',
+                    padding: 'clamp(0.75rem, 3vw, 1.25rem) var(--space-4)',
+                    borderBottom: '1px solid var(--border)',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
                 }}>
                     <SearchInput
                         placeholder="What are you craving?"

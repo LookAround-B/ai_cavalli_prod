@@ -179,7 +179,7 @@ export default function CartPage() {
     }
 
     return (
-        <div className="container fade-in" style={{ paddingTop: 'var(--space-6)', paddingBottom: 'var(--space-12)' }}>
+        <div className="container fade-in" style={{ padding: 'clamp(1rem, 4vw, 2rem) clamp(1rem, 4vw, 1.5rem)', paddingBottom: 'var(--space-12)' }}>
             <PageHeader title={editingOrderId ? "Edit Order" : "Checkout"} backHref={editingOrderId ? "/menu" : "/orders"} />
 
             {/* Editing Order Banner */}
@@ -248,12 +248,12 @@ export default function CartPage() {
                                     border: '1px solid var(--border)',
                                     boxShadow: 'var(--shadow-sm)'
                                 }}>
-                                    <div style={{ flex: 1 }}>
-                                        <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '2px' }}>{item.name}</h3>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <h3 style={{ fontSize: 'clamp(1rem, 3vw, 1.125rem)', fontWeight: 600, marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</h3>
                                         <p style={{ color: 'var(--primary)', fontWeight: 700 }}>₹{(item.price * item.quantity).toFixed(2)}</p>
                                     </div>
 
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(0.5rem, 2vw, 1rem)', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                                         <div style={{
                                             display: 'flex',
                                             alignItems: 'center',
@@ -265,8 +265,8 @@ export default function CartPage() {
                                             <button
                                                 onClick={() => updateQuantity(item.itemId, -1)}
                                                 style={{
-                                                    width: '32px',
-                                                    height: '32px',
+                                                    width: 'clamp(28px, 6vw, 32px)',
+                                                    height: 'clamp(28px, 6vw, 32px)',
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
@@ -277,12 +277,12 @@ export default function CartPage() {
                                                     fontSize: '1.25rem'
                                                 }}
                                             >-</button>
-                                            <span style={{ minWidth: '32px', textAlign: 'center', fontWeight: 700 }}>{item.quantity}</span>
+                                            <span style={{ minWidth: 'clamp(28px, 6vw, 32px)', textAlign: 'center', fontWeight: 700 }}>{item.quantity}</span>
                                             <button
                                                 onClick={() => updateQuantity(item.itemId, 1)}
                                                 style={{
-                                                    width: '32px',
-                                                    height: '32px',
+                                                    width: 'clamp(28px, 6vw, 32px)',
+                                                    height: 'clamp(28px, 6vw, 32px)',
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',

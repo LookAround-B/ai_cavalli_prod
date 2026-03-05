@@ -219,14 +219,14 @@ export default function AdminMenuPage() {
                 <div style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))',
-                    gap: '2.5rem',
+                    gap: 'clamp(1.25rem, 4vw, 2.5rem)',
                     alignItems: 'start'
                 }}>
                     {/* Editor Section */}
                     <div style={{
                         background: 'white',
-                        padding: '2.5rem',
-                        borderRadius: '24px',
+                        padding: 'clamp(1.25rem, 5vw, 2.5rem)',
+                        borderRadius: 'clamp(16px, 3vw, 24px)',
                         border: '1px solid rgba(var(--primary-rgb), 0.15)',
                         boxShadow: '0 8px 32px rgba(var(--primary-rgb), 0.08)',
                         position: isMobile ? 'static' : 'sticky',

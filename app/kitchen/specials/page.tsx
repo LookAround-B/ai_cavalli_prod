@@ -149,10 +149,10 @@ export default function KitchenSpecialsPage() {
     const existing = specials.find(
       s => s.menu_item_id === menuItemId && s.period === period
     );
-    
+
     if (existing) {
       const itemName = items.find(i => i.id === menuItemId)?.name || 'This item';
-      showInfo(`${itemName} is already added as a ${period} special today!` , `Please choose a different item or period.`);
+      showInfo(`${itemName} is already added as a ${period} special today!`, `Please choose a different item or period.`);
       return;
     }
 
@@ -198,14 +198,14 @@ export default function KitchenSpecialsPage() {
   }
 
   return (
-    <div style={{ background: "#fcfcfc", minHeight: "100vh", padding: "2rem" }}>
+    <div style={{ background: "#fcfcfc", minHeight: "100vh", padding: "clamp(1rem, 3vw, 2rem)" }}>
       <div
         style={{
           maxWidth: "800px",
           margin: "0 auto",
           background: "white",
-          padding: "2rem",
-          borderRadius: "12px",
+          padding: "clamp(1.25rem, 5vw, 2.5rem)",
+          borderRadius: "clamp(12px, 3vw, 24px)",
           boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
         }}
       >
@@ -213,11 +213,13 @@ export default function KitchenSpecialsPage() {
 
         <div
           style={{
-            marginBottom: "2rem",
+            marginBottom: "clamp(1rem, 4vw, 2rem)",
             borderBottom: "1px solid #eee",
-            paddingBottom: "1rem",
+            paddingBottom: "0.5rem",
             display: "flex",
-            gap: "2rem",
+            gap: "clamp(1rem, 4vw, 2rem)",
+            overflowX: "auto",
+            scrollbarWidth: "none",
           }}
         >
           <button
@@ -276,12 +278,13 @@ export default function KitchenSpecialsPage() {
               >
                 Select Period
               </label>
-              <div style={{ display: "flex", gap: "0.75rem" }}>
+              <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
                 <button
                   onClick={() => setPeriod("breakfast")}
                   style={{
-                    flex: 1,
-                    padding: "1rem",
+                    flex: "1 1 auto",
+                    minWidth: "140px",
+                    padding: "clamp(0.75rem, 2vw, 1.25rem)",
                     borderRadius: "12px",
                     border: period === "breakfast" ? "2px solid #0369a1" : "2px solid #e0e0e0",
                     background: period === "breakfast" ? "#e0f2fe" : "white",
@@ -297,8 +300,9 @@ export default function KitchenSpecialsPage() {
                 <button
                   onClick={() => setPeriod("lunch")}
                   style={{
-                    flex: 1,
-                    padding: "1rem",
+                    flex: "1 1 auto",
+                    minWidth: "140px",
+                    padding: "clamp(0.75rem, 2vw, 1.25rem)",
                     borderRadius: "12px",
                     border: period === "lunch" ? "2px solid #d97706" : "2px solid #e0e0e0",
                     background: period === "lunch" ? "#fef3c7" : "white",
@@ -357,8 +361,8 @@ export default function KitchenSpecialsPage() {
                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                   <Plus size={20} />
                   <span>
-                    {selectedItem 
-                      ? items.find(i => i.id === selectedItem)?.name || "Select Item" 
+                    {selectedItem
+                      ? items.find(i => i.id === selectedItem)?.name || "Select Item"
                       : "Click to Browse Menu Items"}
                   </span>
                 </div>
@@ -377,8 +381,8 @@ export default function KitchenSpecialsPage() {
             </div>
 
             {/* Add Button */}
-            <Button 
-              onClick={() => addSpecial()} 
+            <Button
+              onClick={() => addSpecial()}
               disabled={!selectedItem || loading}
               isLoading={loading}
               size="lg"
@@ -489,7 +493,7 @@ export default function KitchenSpecialsPage() {
               </div>
             </div>
 
-            <Button type="submit" isLoading={loading} size="lg" style={{ 
+            <Button type="submit" isLoading={loading} size="lg" style={{
               width: "100%",
               height: "56px",
               fontSize: "1rem",
@@ -513,21 +517,21 @@ export default function KitchenSpecialsPage() {
         </h3>
 
         {loading ? (
-          <div style={{ 
-            textAlign: "center", 
-            padding: "3rem", 
+          <div style={{
+            textAlign: "center",
+            padding: "3rem",
             color: "#999",
-            fontSize: "0.95rem" 
+            fontSize: "0.95rem"
           }}>
             Loading specials...
           </div>
         ) : specials.length === 0 ? (
-          <div style={{ 
-            textAlign: "center", 
-            padding: "3rem", 
-            background: "#f9f9f9", 
+          <div style={{
+            textAlign: "center",
+            padding: "3rem",
+            background: "#f9f9f9",
             borderRadius: "12px",
-            border: "2px dashed #ddd" 
+            border: "2px dashed #ddd"
           }}>
             <p style={{ margin: 0, color: "#666", fontSize: "0.95rem" }}>
               No specials set for today. Add your first special above!
@@ -607,7 +611,7 @@ export default function KitchenSpecialsPage() {
                           variant="ghost"
                           onClick={() => removeSpecial(special.id)}
                           disabled={loading}
-                          style={{ 
+                          style={{
                             color: "#dc2626",
                             padding: "8px",
                           }}
@@ -692,7 +696,7 @@ export default function KitchenSpecialsPage() {
                           variant="ghost"
                           onClick={() => removeSpecial(special.id)}
                           disabled={loading}
-                          style={{ 
+                          style={{
                             color: "#dc2626",
                             padding: "8px",
                           }}

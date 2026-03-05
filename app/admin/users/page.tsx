@@ -335,7 +335,7 @@ export default function UserControlPage() {
         }}
       >
         {/* Header */}
-        <div style={{ marginBottom: "3rem" }}>
+        <div style={{ marginBottom: 'clamp(1.5rem, 5vw, 3rem)' }}>
           <div
             style={{
               display: "flex",
@@ -344,7 +344,7 @@ export default function UserControlPage() {
               alignItems: "center",
               marginBottom: "1.5rem",
               flexWrap: "wrap",
-              gap: "1.5rem",
+              gap: "clamp(1rem, 3vw, 1.5rem)",
             }}
           >
             <AdminPageHeader
@@ -374,6 +374,9 @@ export default function UserControlPage() {
                 alignItems: "center",
                 gap: "12px",
                 transition: "all 0.3s ease",
+                flex: '1 1 auto',
+                justifyContent: 'center',
+                minWidth: '220px'
               }}
             >
               <UserPlus size={20} />
@@ -386,7 +389,7 @@ export default function UserControlPage() {
         <div
           style={{
             background: "white",
-            padding: "1.75rem",
+            padding: "clamp(1.25rem, 4vw, 1.75rem)",
             borderRadius: "24px",
             border: "1px solid rgba(var(--primary-rgb), 0.15)",
             marginBottom: "2.5rem",
@@ -404,7 +407,7 @@ export default function UserControlPage() {
               alignItems: "center",
             }}
           >
-            <div style={{ position: "relative", flex: 1, minWidth: "300px" }}>
+            <div style={{ position: "relative", flex: 1, minWidth: "min(100%, 300px)" }}>
               <Search
                 style={{
                   position: "absolute",
@@ -417,7 +420,7 @@ export default function UserControlPage() {
               />
               <input
                 type="text"
-                placeholder="Search by name or phone..."
+                placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{
@@ -436,18 +439,21 @@ export default function UserControlPage() {
             <div
               style={{
                 display: "flex",
-                gap: "10px",
+                gap: "8px",
                 overflowX: "auto",
                 paddingBottom: "4px",
+                scrollbarWidth: "none",
+                msOverflowStyle: "none",
               }}
             >
+              <style>{`div::-webkit-scrollbar { display: none; }`}</style>
               {["all", "RIDER", "STAFF", "KITCHEN", "ADMIN", "OUTSIDER"].map(
                 (role) => (
                   <button
                     key={role}
                     onClick={() => setRoleFilter(role as RoleType)}
                     style={{
-                      padding: "12px 22px",
+                      padding: "clamp(8px, 1.5vw, 12px) clamp(16px, 2vw, 22px)",
                       borderRadius: "24px",
                       border: "1.5px solid",
                       transition: "all 0.3s ease",
@@ -491,8 +497,10 @@ export default function UserControlPage() {
             background: "white",
             borderRadius: "28px",
             border: "1px solid rgba(var(--primary-rgb), 0.15)",
-            overflow: "hidden",
             boxShadow: "0 8px 32px rgba(var(--primary-rgb), 0.05)",
+            width: "100%",
+            overflowX: "auto",
+            scrollbarWidth: "thin",
           }}
         >
           <table
@@ -984,8 +992,8 @@ export default function UserControlPage() {
                     <ItalianFormField
                       label={
                         formData.role === "KITCHEN" ||
-                        formData.role === "RIDER" ||
-                        formData.role === "STAFF"
+                          formData.role === "RIDER" ||
+                          formData.role === "STAFF"
                           ? "Phone Number"
                           : "Phone (Optional)"
                       }
@@ -996,8 +1004,8 @@ export default function UserControlPage() {
                       }
                       placeholder={
                         formData.role === "KITCHEN" ||
-                        formData.role === "RIDER" ||
-                        formData.role === "STAFF"
+                          formData.role === "RIDER" ||
+                          formData.role === "STAFF"
                           ? "10 digit number"
                           : "Optional (10 digits)"
                       }

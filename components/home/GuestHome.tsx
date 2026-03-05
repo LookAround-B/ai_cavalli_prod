@@ -57,14 +57,14 @@ export default function GuestHome() {
             {/* 1. Hero Section with Simpler CTA */}
             <header
                 style={{
-                    height: '80vh',
-                    minHeight: '500px',
-                    position: 'relative',
+                    height: 'clamp(450px, 80vh, 800px)',
+                    minHeight: '400px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     overflow: 'hidden',
                     background: '#000',
+                    position: 'relative',
                 }}
             >
                 <video
@@ -96,7 +96,7 @@ export default function GuestHome() {
                     }}
                 />
 
-                <div style={{ position: 'relative', textAlign: 'center', padding: '0 24px', zIndex: 10 }}>
+                <div style={{ position: 'relative', textAlign: 'center', padding: '0 clamp(16px, 5vw, 24px)', zIndex: 10, maxWidth: '100%' }}>
                     <h1
                         className="hero-title"
                         style={{
@@ -170,7 +170,7 @@ export default function GuestHome() {
             </header>
 
             {/* 2. Active Session Card (Prominent for Guests) */}
-            <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '100px 24px' }} id="session">
+            <main style={{ maxWidth: '1400px', margin: '0 auto', padding: 'clamp(32px, 8vw, 100px) clamp(12px, 4vw, 24px)' }} id="session">
                 {activeSession ? (
                     <div
                         className="hover-lift session-card"
@@ -256,19 +256,19 @@ export default function GuestHome() {
                 ) : (
                     <div
                         style={{
-                            marginBottom: '80px',
+                            marginBottom: 'clamp(40px, 8vw, 80px)',
                             background: 'linear-gradient(135deg, #FEF3C7 0%, #FCD34D 100%)',
-                            borderRadius: '24px',
-                            padding: '40px',
+                            borderRadius: 'clamp(16px, 4vw, 24px)',
+                            padding: 'clamp(24px, 6vw, 40px)',
                             textAlign: 'center',
                             color: DEEP_BLACK,
                             boxShadow: '0 20px 40px rgba(252, 211, 77, 0.2)',
                         }}
                     >
-                        <h3 style={{ margin: 0, fontSize: '1.5rem', fontFamily: 'var(--font-serif)', fontWeight: 800, marginBottom: '12px' }}>
+                        <h3 style={{ margin: 0, fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', fontFamily: 'var(--font-serif)', fontWeight: 800, marginBottom: '12px' }}>
                             No Active Session
                         </h3>
-                        <p style={{ margin: 0, fontSize: '1rem', opacity: 0.9 }}>
+                        <p style={{ margin: 0, fontSize: 'clamp(0.875rem, 2.5vw, 1rem)', opacity: 0.9 }}>
                             Start exploring the menu to place your first order
                         </p>
                     </div>
@@ -282,7 +282,7 @@ export default function GuestHome() {
                         flexDirection: 'column',
                         alignItems: 'center',
                         textAlign: 'center',
-                        marginBottom: '80px',
+                        marginBottom: 'clamp(40px, 6vw, 80px)',
                     }}
                 >
                     <div style={{ width: '50px', height: '2px', background: ITALIAN_RED, marginBottom: '2rem' }} />
@@ -297,7 +297,7 @@ export default function GuestHome() {
                     >
                         Il Giornale
                     </h2>
-                    <p style={{ color: '#666', fontSize: '1.1rem', fontStyle: 'italic', maxWidth: '500px' }}>
+                    <p style={{ color: '#666', fontSize: 'clamp(0.9rem, 2.5vw, 1.1rem)', fontStyle: 'italic', maxWidth: '500px', padding: '0 1rem' }}>
                         Today's specials and dining highlights
                     </p>
                 </div>
@@ -307,8 +307,8 @@ export default function GuestHome() {
                         <div
                             style={{
                                 display: 'grid',
-                                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))',
-                                gap: '48px',
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))',
+                                gap: 'clamp(24px, 4vw, 48px)',
                             }}
                         >
                             {announcements.map((item) => (
@@ -324,10 +324,11 @@ export default function GuestHome() {
             </main >
 
             {/* 4. Guest Call to Action Section */}
-            < section
+            <section
                 style={{
                     background: ITALIAN_RED,
-                    padding: '140px 24px',
+                    padding: 'clamp(60px, 12vw, 140px) clamp(16px, 5vw, 24px)',
+                    paddingBottom: 'clamp(100px, 15vw, 140px)',
                     textAlign: 'center',
                     position: 'relative',
                 }}
@@ -471,19 +472,29 @@ export default function GuestHome() {
 
                 @media (max-width: 768px) {
                     main {
-                        padding: 60px 16px !important;
+                        padding: 40px 12px !important;
                     }
                     header {
-                        height: 70vh !important;
+                        height: 75vh !important;
+                        min-height: 380px !important;
                     }
                     .hero-title {
                         letter-spacing: -0.01em;
                     }
                     .session-card {
-                        margin-bottom: 40px !important;
+                        margin-bottom: 32px !important;
                         border-radius: 16px !important;
                         gap: 10px !important;
                         padding: 16px !important;
+                    }
+                }
+                @media (max-width: 480px) {
+                    main {
+                        padding: 32px 10px !important;
+                    }
+                    header {
+                        height: 70vh !important;
+                        min-height: 360px !important;
                     }
                 }
             `}</style>

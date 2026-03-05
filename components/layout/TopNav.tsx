@@ -86,10 +86,17 @@ export function TopNav({ title, links, accentColor = '#1A1A1A', accentText = '#F
                 display: 'flex',
                 gap: '0.25rem',
                 alignItems: 'center',
-                overflow: 'hidden',
+                overflowX: 'auto',
+                paddingBottom: '2px', // Space for focus ring if needed
                 flexShrink: 1,
                 minWidth: 0,
+                msOverflowStyle: 'none',
+                scrollbarWidth: 'none',
+                WebkitOverflowScrolling: 'touch',
             }}>
+                <style>{`
+                    nav::-webkit-scrollbar { display: none; }
+                `}</style>
                 {links.map((link) => {
                     const isActive = pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href))
                     return (
@@ -101,7 +108,7 @@ export function TopNav({ title, links, accentColor = '#1A1A1A', accentText = '#F
                                     ? `${accentText}88`
                                     : isActive ? accentText : `${accentText}cc`,
                                 textDecoration: 'none',
-                                fontSize: 'clamp(0.75rem, 1.5vw, 0.85rem)',
+                                fontSize: 'clamp(0.7rem, 1.5vw, 0.85rem)',
                                 fontWeight: isActive ? 700 : 500,
                                 padding: '0.4rem clamp(0.4rem, 1vw, 0.75rem)',
                                 borderRadius: '8px',
@@ -124,14 +131,14 @@ export function TopNav({ title, links, accentColor = '#1A1A1A', accentText = '#F
                             display: 'flex',
                             alignItems: 'center',
                             gap: '6px',
-                            marginLeft: '0.5rem',
+                            marginLeft: 'clamp(0.25rem, 1vw, 0.5rem)',
                             padding: '0.3rem 0.7rem',
                             borderRadius: '20px',
                             border: `1.5px solid ${accentText}30`,
                             background: `${accentText}08`,
                             color: `${accentText}90`,
                             textDecoration: 'none',
-                            fontSize: 'clamp(0.7rem, 1.2vw, 0.78rem)',
+                            fontSize: 'clamp(0.65rem, 1.2vw, 0.78rem)',
                             fontWeight: 600,
                             whiteSpace: 'nowrap',
                             transition: 'all 0.2s ease',
@@ -140,8 +147,8 @@ export function TopNav({ title, links, accentColor = '#1A1A1A', accentText = '#F
                     >
                         <span style={{
                             display: 'inline-block',
-                            width: '32px',
-                            height: '18px',
+                            width: '28px',
+                            height: '16px',
                             borderRadius: '12px',
                             background: isAdmin
                                 ? 'linear-gradient(135deg, #C0272D, #8B1A1F)'
@@ -153,9 +160,9 @@ export function TopNav({ title, links, accentColor = '#1A1A1A', accentText = '#F
                             <span style={{
                                 position: 'absolute',
                                 top: '2px',
-                                left: isAdmin ? '16px' : '2px',
-                                width: '14px',
-                                height: '14px',
+                                left: isAdmin ? '14px' : '2px',
+                                width: '12px',
+                                height: '12px',
                                 borderRadius: '50%',
                                 background: 'white',
                                 transition: 'left 0.25s ease',
