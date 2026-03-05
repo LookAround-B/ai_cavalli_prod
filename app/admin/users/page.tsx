@@ -468,7 +468,7 @@ export default function UserControlPage() {
                     {role === "all"
                       ? "All Users"
                       : role === "RIDER"
-                        ? "rider"
+                        ? "Rider"
                         : role === "STAFF"
                           ? "Staff"
                           : role === "KITCHEN"

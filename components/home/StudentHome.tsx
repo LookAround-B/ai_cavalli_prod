@@ -99,7 +99,7 @@ export default function StudentHome() {
                             opacity: 0,
                         }}
                     >
-                        An INDO-ITALIAN CAFE AT EIRS • WHERE TRADITION, TASTE & EQUESTRIAN GRACE UNITE
+                        An Indo-Italian café at EIRS—where tradition, taste, and equestrian grace unite
                     </p>
 
                     <button
@@ -205,7 +205,7 @@ export default function StudentHome() {
                             letterSpacing: '-0.01em',
                         }}
                     >
-                        Ai cavalli
+                        Ai Cavalli | Savour The Legacy
                     </h3>
 
                     <div style={{ width: '80px', height: '1px', background: DEEP_BLACK, margin: '0 auto 2.5rem', opacity: 0.6 }} />
@@ -220,8 +220,7 @@ export default function StudentHome() {
                             maxWidth: '750px',
                         }}
                     >
-                         Savour the legacy - Where Tradition, Taste & Equestrian Grace Unite
-                    </p>
+                        An Indo-Italian café at EIRS—where tradition, taste, and equestrian grace unite.                    </p>
                 </div>
             </section>
 

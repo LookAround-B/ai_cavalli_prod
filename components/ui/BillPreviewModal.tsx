@@ -412,11 +412,11 @@ export function BillPreviewModal({
             <div className={styles.receiptHeader}>
               <h3>AI CAVALLI</h3>
               <p style={{ fontSize: '0.75rem', color: '#000', fontWeight: 700, marginTop: '4px', lineHeight: 1.4 }}>
-                Embassy Projects Pvt Ltd<br />
-                Embassy Point, Infantry Road<br />
-                Bangalore - 560001<br />
+                Embassy International Riding School<br />
+                Tharahunise Village<br />
+                Bangalore - 562157<br />
                 Phone: 080-43418451/2<br />
-                Mobile: 7353779533<br />
+                Mobile: 7353779533 | 9845054013<br />
                 GSTIN: 29AAACE8809Q1ZW
               </p>
             </div>

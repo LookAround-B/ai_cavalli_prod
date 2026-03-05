@@ -101,7 +101,7 @@ export default function ProfilePage() {
         const isStaffRole = user?.role === 'ADMIN' || user?.role === 'KITCHEN'
         const confirmed = await showConfirm(
             isStaffRole ? 'Generate Bill?' : 'Before Bill Preview',
-            isStaffRole 
+            isStaffRole
                 ? 'This will generate your bill. You can print or save it as PDF.'
                 : "You'll be logged out after billing and will need to start a new order next time. Continue to generate your bill preview?",
             isStaffRole ? 'Get Bill' : 'Continue',
@@ -194,19 +194,21 @@ export default function ProfilePage() {
                             </div>
                             <div>
                                 <h2 style={{ fontSize: '1.5rem', margin: 0 }}>{userDetails?.name || 'Ai Cavalli Member'}</h2>
-                                <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.875rem' }}>{role === 'RIDER' || role === 'STAFF' ? 'RIDER' : role} ACCOUNT</p>
+                                <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.875rem' }}>{role === 'OUTSIDER' ? 'GUEST' : role} ACCOUNT</p>
                             </div>
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-6)', marginBottom: 'var(--space-8)' }}>
                             <div style={{ padding: 'var(--space-4)', background: 'var(--background)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
                                 <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600 }}>
-                                    {role === 'RIDER' || role === 'STAFF' ? 'PHONE NUMBER' : 'EMAIL ADDRESS'}
+                                    {/* {role === 'RIDER' || role === 'STAFF' ? 'PHONE NUMBER' : 'EMAIL ADDRESS'} */}
+                                    PHONE NUMBER
                                 </p>
                                 <p style={{ fontWeight: 700, margin: 0 }}>
-                                    {role === 'RIDER' || role === 'STAFF'
+                                    {/* {role === 'RIDER' || role === 'STAFF'
                                         ? (userDetails?.phone || 'Not set')
-                                        : (userDetails?.email || 'Not set')}
+                                        : (userDetails?.email || 'Not set')} */}
+                                    {userDetails?.phone}
                                 </p>
                             </div>
                             <div style={{ padding: 'var(--space-4)', background: 'var(--background)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
@@ -227,113 +229,113 @@ export default function ProfilePage() {
                                 border: '1px solid rgba(16, 185, 129, 0.2)',
                                 marginBottom: 'var(--space-2)'
                             }}>
-                                    {/* Order Summary */}
-                                    {activeSession && !activeSession._virtual && (
-                                        <div style={{
-                                            background: 'var(--background)',
-                                            padding: 'var(--space-4)',
-                                            borderRadius: 'var(--radius-sm)',
-                                            marginBottom: 'var(--space-4)',
-                                            border: '1px solid var(--border)'
-                                        }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>SESSION SUMMARY</span>
-                                                <span style={{ fontSize: '0.75rem', background: '#10B981', color: 'white', padding: '2px 8px', borderRadius: '4px' }}>ACTIVE</span>
+                                {/* Order Summary */}
+                                {activeSession && !activeSession._virtual && (
+                                    <div style={{
+                                        background: 'var(--background)',
+                                        padding: 'var(--space-4)',
+                                        borderRadius: 'var(--radius-sm)',
+                                        marginBottom: 'var(--space-4)',
+                                        border: '1px solid var(--border)'
+                                    }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>SESSION SUMMARY</span>
+                                            <span style={{ fontSize: '0.75rem', background: '#10B981', color: 'white', padding: '2px 8px', borderRadius: '4px' }}>ACTIVE</span>
+                                        </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                            <div>
+                                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0 0 4px 0' }}>TABLE</p>
+                                                <p style={{ fontWeight: 700, margin: 0, fontSize: '1.1rem' }}>{activeSession.table_name}</p>
                                             </div>
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                                                <div>
-                                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0 0 4px 0' }}>TABLE</p>
-                                                    <p style={{ fontWeight: 700, margin: 0, fontSize: '1.1rem' }}>{activeSession.table_name}</p>
-                                                </div>
-                                                <div>
-                                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0 0 4px 0' }}>ORDERS</p>
-                                                    <p style={{ fontWeight: 700, margin: 0, fontSize: '1.1rem' }}>{orders.length} placed</p>
-                                                </div>
-                                            </div>
-                                            <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Current Total</span>
-                                                    <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--primary)' }}>
-                                                        ₹{(activeSession.total_amount || orders.reduce((sum: number, o: any) => sum + (o.total || 0), 0)).toFixed(2)}
-                                                    </span>
-                                                </div>
+                                            <div>
+                                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0 0 4px 0' }}>ORDERS</p>
+                                                <p style={{ fontWeight: 700, margin: 0, fontSize: '1.1rem' }}>{orders.length} placed</p>
                                             </div>
                                         </div>
-                                    )}
-
-                                    {/* Simple order summary for RIDER/STAFF */}
-                                    {activeSession?._virtual && orders.length > 0 && (
-                                        <div style={{
-                                            background: 'var(--background)',
-                                            padding: 'var(--space-4)',
-                                            borderRadius: 'var(--radius-sm)',
-                                            marginBottom: 'var(--space-4)',
-                                            border: '1px solid var(--border)'
-                                        }}>
+                                        <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <div>
-                                                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>{orders.length} ORDER{orders.length !== 1 ? 'S' : ''}</span>
-                                                </div>
+                                                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Current Total</span>
                                                 <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--primary)' }}>
-                                                    ₹{orders.reduce((sum: number, o: any) => sum + (o.total || 0), 0).toFixed(2)}
+                                                    ₹{(activeSession.total_amount || orders.reduce((sum: number, o: any) => sum + (o.total || 0), 0)).toFixed(2)}
                                                 </span>
                                             </div>
                                         </div>
-                                    )}
-
-                                    {/* Action Buttons */}
-                                    <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
-                                        <Button
-                                            onClick={() => window.location.href = '/home'}
-                                            variant="outline"
-                                            style={{
-                                                flex: 1,
-                                                height: '48px',
-                                                fontSize: '1rem',
-                                                fontWeight: 700,
-                                                borderColor: 'var(--primary)',
-                                                color: 'var(--primary)'
-                                            }}
-                                        >
-                                            <Utensils size={18} style={{ marginRight: '8px' }} />
-                                            ORDER MORE
-                                        </Button>
                                     </div>
+                                )}
 
+                                {/* Simple order summary for RIDER/STAFF */}
+                                {activeSession?._virtual && orders.length > 0 && (
+                                    <div style={{
+                                        background: 'var(--background)',
+                                        padding: 'var(--space-4)',
+                                        borderRadius: 'var(--radius-sm)',
+                                        marginBottom: 'var(--space-4)',
+                                        border: '1px solid var(--border)'
+                                    }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <div>
+                                                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>{orders.length} ORDER{orders.length !== 1 ? 'S' : ''}</span>
+                                            </div>
+                                            <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--primary)' }}>
+                                                ₹{orders.reduce((sum: number, o: any) => sum + (o.total || 0), 0).toFixed(2)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Action Buttons */}
+                                <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
                                     <Button
-                                        onClick={handleGetBill}
-                                        disabled={endingSession || orders.length === 0}
+                                        onClick={() => window.location.href = '/home'}
+                                        variant="outline"
                                         style={{
-                                            width: '100%',
-                                            height: '56px',
-                                            fontSize: '1.25rem',
-                                            fontWeight: 900,
-                                            background: orders.length === 0 ? '#ccc' : 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                                            border: 'none',
-                                            boxShadow: orders.length === 0 ? 'none' : '0 4px 12px rgba(16, 185, 129, 0.3)',
-                                            color: 'white',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            gap: '12px',
-                                            cursor: orders.length === 0 ? 'not-allowed' : 'pointer'
+                                            flex: 1,
+                                            height: '48px',
+                                            fontSize: '1rem',
+                                            fontWeight: 700,
+                                            borderColor: 'var(--primary)',
+                                            color: 'var(--primary)'
                                         }}
                                     >
-                                        <Receipt size={24} />
-                                        {endingSession ? 'Requesting...' : orders.length === 0 ? 'NO ORDERS YET' : 'GET THE BILL'}
+                                        <Utensils size={18} style={{ marginRight: '8px' }} />
+                                        ORDER MORE
                                     </Button>
-
-                                    {orders.length > 0 && (
-                                        <p style={{
-                                            margin: '10px 0 0 0',
-                                            fontSize: '0.8rem',
-                                            color: '#059669',
-                                            textAlign: 'center'
-                                        }}>
-                                            A waiter will bring your bill to the table
-                                        </p>
-                                    )}
                                 </div>
+
+                                <Button
+                                    onClick={handleGetBill}
+                                    disabled={endingSession || orders.length === 0}
+                                    style={{
+                                        width: '100%',
+                                        height: '56px',
+                                        fontSize: '1.25rem',
+                                        fontWeight: 900,
+                                        background: orders.length === 0 ? '#ccc' : 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                                        border: 'none',
+                                        boxShadow: orders.length === 0 ? 'none' : '0 4px 12px rgba(16, 185, 129, 0.3)',
+                                        color: 'white',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '12px',
+                                        cursor: orders.length === 0 ? 'not-allowed' : 'pointer'
+                                    }}
+                                >
+                                    <Receipt size={24} />
+                                    {endingSession ? 'Requesting...' : orders.length === 0 ? 'NO ORDERS YET' : 'GET THE BILL'}
+                                </Button>
+
+                                {orders.length > 0 && (
+                                    <p style={{
+                                        margin: '10px 0 0 0',
+                                        fontSize: '0.8rem',
+                                        color: '#059669',
+                                        textAlign: 'center'
+                                    }}>
+                                        A waiter will bring your bill to the table
+                                    </p>
+                                )}
+                            </div>
                             <Button
                                 onClick={() => window.open('https://wa.me/1234567890', '_blank')}
                                 variant="outline"

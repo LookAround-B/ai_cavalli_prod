@@ -159,7 +159,13 @@ function formatBillForPrinting(bill: any) {
         .ft { text-align:center; margin-top:12px; font-size:17px; font-weight:900;
               -webkit-text-stroke:0.8px #000000; }
     </style></head><body>
-        <div class="c"><div class="name"><b>AI CAVALLI</b></div><div class="sub"><b>RESTAURANT & CAFE</b></div></div>
+        <div class="c"><div class="name"><b>AI CAVALLI</b></div>
+<div class="sub"><b>Embassy International Riding School<br/>
+Tharahunise Village<br/>
+Bangalore - 562157<br/>
+Phone: 080-43418451/2<br/>
+Mobile: 7353779533 | 9845054013<br/>
+GSTIN: 29AAACE8809Q1ZW</b></div></div>
         <hr>
         <div class="r"><b>Bill No:</b><b>${bill.billNumber}</b></div>
         <div class="r"><b>Date:</b><b>${dateStr} ${timeStr}</b></div>
@@ -186,6 +192,12 @@ function formatBillForPrinting(bill: any) {
     const lines = [
         '================================',
         '       AI CAVALLI RESTAURANT    ',
+        '  Embassy Intl Riding School    ',
+        '      Tharahunise Village       ',
+        '      Bangalore - 562157        ',
+        '      PH: 080-43418451/2        ',
+        '  7353779533 | 9845054013       ',
+        '   GSTIN: 29AAACE8809Q1ZW       ',
         '================================',
         `Bill No: ${bill.billNumber}`,
         `Date: ${dateStr} ${timeStr}`,

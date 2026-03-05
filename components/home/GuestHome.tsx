@@ -137,7 +137,7 @@ export default function GuestHome() {
                             opacity: 0,
                         }}
                     >
-                        An Indo-Italian Café at EIRS — Where Tradition, Taste & Equestrian Grace Unite.
+                        An Indo-Italian café at EIRS—where tradition, taste, and equestrian grace unite.
                     </p>
 
                     {!activeSession && (
@@ -193,53 +193,64 @@ export default function GuestHome() {
                             <Receipt size={200} />
                         </div>
 
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative', zIndex: 2, flexWrap: 'wrap', gap: '20px' }}>
-                            <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 2, flexWrap: 'wrap', gap: '24px' }}>
+                            <div style={{ flex: '1 1 auto' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                                     <Clock size={20} />
                                     <span style={{ fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '0.875rem' }}>Active Dining Session</span>
                                 </div>
-                                <h3 style={{ margin: 0, fontSize: 'clamp(1.5rem, 5vw, 2.5rem)', fontFamily: 'var(--font-serif)', fontWeight: 800 }}>
+                                <h3 style={{
+                                    margin: '8px 0',
+                                    fontSize: 'clamp(1.5rem, 8vw, 2.5rem)',
+                                    fontFamily: 'var(--font-serif)',
+                                    fontWeight: 900,
+                                    color: ITALIAN_RED,
+                                    lineHeight: 1
+                                }}>
                                     ₹{activeSession.total_amount?.toFixed(2) || '0.00'}
                                 </h3>
-                                <p style={{ margin: 0, opacity: 0.9, fontSize: 'clamp(0.85rem, 2vw, 1.1rem)' }}>
+                                <p style={{ margin: 0, opacity: 0.9, fontSize: 'clamp(0.9rem, 2.2vw, 1.2rem)', fontWeight: 600 }}>
                                     {activeSession.orderCount || 0} Orders placed • {activeSession.num_guests} {activeSession.num_guests === 1 ? 'Guest' : 'Guests'}
                                 </p>
                             </div>
-                            <Button
-                                onClick={() => router.push('/orders')}
-                                style={{
-                                    background: 'white',
-                                    color: '#059669',
-                                    fontWeight: 900,
-                                    padding: 'clamp(0.75rem, 2vw, 1.5rem) clamp(1.25rem, 3vw, 2.5rem)',
-                                    height: 'auto',
-                                    borderRadius: '12px',
-                                    fontSize: 'clamp(0.8rem, 2vw, 1rem)',
-                                    whiteSpace: 'nowrap',
-                                }}
-                            >
-                                VIEW STATUS <ArrowRight size={16} style={{ marginLeft: '6px' }} />
-                            </Button>
-                        </div>
 
-                        <div style={{ display: 'flex', gap: '12px', position: 'relative', zIndex: 2, flexWrap: 'wrap' }}>
-                            <Button
-                                onClick={() => router.push('/menu')}
-                                style={{
-                                    background: 'rgba(255, 255, 255, 0.2)',
-                                    color: 'white',
-                                    fontWeight: 700,
-                                    padding: '0.75rem 1.5rem',
-                                    height: 'auto',
-                                    borderRadius: '8px',
-                                    fontSize: '0.9rem',
-                                    border: '2px solid white',
-                                    cursor: 'pointer',
-                                }}
-                            >
-                                Add More Orders
-                            </Button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                                <Button
+                                    onClick={() => router.push('/menu')}
+                                    style={{
+                                        background: 'rgba(255, 255, 255, 0.1)',
+                                        color: 'white',
+                                        fontWeight: 800,
+                                        padding: '0.85rem 1.75rem',
+                                        height: 'auto',
+                                        borderRadius: '12px',
+                                        fontSize: '0.95rem',
+                                        border: '2px solid white',
+                                        cursor: 'pointer',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.05em'
+                                    }}
+                                >
+                                    Add More Orders
+                                </Button>
+
+                                <Button
+                                    onClick={() => router.push('/orders')}
+                                    style={{
+                                        background: 'white',
+                                        color: '#059669',
+                                        fontWeight: 900,
+                                        padding: 'clamp(0.75rem, 2vw, 1.25rem) clamp(1.25rem, 3vw, 2rem)',
+                                        height: 'auto',
+                                        borderRadius: '12px',
+                                        fontSize: 'clamp(0.85rem, 2vw, 1.05rem)',
+                                        whiteSpace: 'nowrap',
+                                        boxShadow: '0 10px 20px rgba(0,0,0,0.1)'
+                                    }}
+                                >
+                                    VIEW STATUS <ArrowRight size={18} style={{ marginLeft: '8px' }} />
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 ) : (
@@ -261,7 +272,8 @@ export default function GuestHome() {
                             Start exploring the menu to place your first order
                         </p>
                     </div>
-                )}
+                )
+                }
 
                 {/* 3. News Section (Il Giornale) */}
                 <div
@@ -290,27 +302,29 @@ export default function GuestHome() {
                     </p>
                 </div>
 
-                {announcements.length > 0 ? (
-                    <div
-                        style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))',
-                            gap: '48px',
-                        }}
-                    >
-                        {announcements.map((item) => (
-                            <AnnouncementCard key={item.id} announcement={item} />
-                        ))}
-                    </div>
-                ) : (
-                    <div style={{ textAlign: 'center', padding: '100px 24px', border: '1px solid #F0F0F0', borderRadius: '4px' }}>
-                        <p style={{ color: '#BBB', letterSpacing: '0.2em', fontSize: '0.8rem' }}>No updates at this time</p>
-                    </div>
-                )}
-            </main>
+                {
+                    announcements.length > 0 ? (
+                        <div
+                            style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))',
+                                gap: '48px',
+                            }}
+                        >
+                            {announcements.map((item) => (
+                                <AnnouncementCard key={item.id} announcement={item} />
+                            ))}
+                        </div>
+                    ) : (
+                        <div style={{ textAlign: 'center', padding: '100px 24px', border: '1px solid #F0F0F0', borderRadius: '4px' }}>
+                            <p style={{ color: '#BBB', letterSpacing: '0.2em', fontSize: '0.8rem' }}>No updates at this time</p>
+                        </div>
+                    )
+                }
+            </main >
 
             {/* 4. Guest Call to Action Section */}
-            <section
+            < section
                 style={{
                     background: ITALIAN_RED,
                     padding: '140px 24px',
@@ -328,7 +342,7 @@ export default function GuestHome() {
                 />
 
                 <div style={{ position: 'relative', zIndex: 2, maxWidth: '900px', margin: '0 auto' }}>
-                    <h3
+                    <h1
                         style={{
                             fontFamily: 'var(--font-serif)',
                             fontSize: 'clamp(2rem, 5vw, 3.5rem)',
@@ -339,20 +353,21 @@ export default function GuestHome() {
                         }}
                     >
                         Ai Cavalli
-                    </h3>
-
-                    <p
+                    </h1>
+                    <h2
+                        className='bottom-section'
                         style={{
+                            fontFamily: 'var(--font-serif)',
+                            lineHeight: 1,
+                            marginBottom: '2rem',
+                            textTransform: 'capitalize',
+                            fontWeight: 700,
                             color: CRISP_WHITE,
-                            fontSize: 'clamp(1.05rem, 2.2vw, 1.4rem)',
-                            fontWeight: 600,
-                            margin: '0 auto 2rem',
-                            fontStyle: 'italic',
-                            opacity: 0.95,
+                            opacity: 100,
                         }}
                     >
                         Savour the Legacy
-                    </p>
+                    </h2>
 
                     <div style={{ width: '80px', height: '1px', background: CRISP_WHITE, margin: '0 auto 2.5rem', opacity: 0.6 }} />
 
@@ -366,10 +381,10 @@ export default function GuestHome() {
                             maxWidth: '750px',
                         }}
                     >
-                        An Indo-Italian Café at EIRS — Where Tradition, Taste & Equestrian Grace Unite.
+                        An Indo-Italian café at EIRS—where tradition, taste, and equestrian grace unite.
                     </p>
                 </div>
-            </section>
+            </section >
 
             <style jsx>{`
                 /* 1. Cinematic Title Reveal & Shimmer */
@@ -472,6 +487,6 @@ export default function GuestHome() {
                     }
                 }
             `}</style>
-        </div>
+        </div >
     )
 }
