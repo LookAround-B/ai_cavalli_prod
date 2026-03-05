@@ -420,8 +420,10 @@ export default function ProfilePage() {
                         const StatusIcon = config.icon
                         const isExpanded = expandedOrder === order.id
                         const itemCount = order.items?.length || 0
-                        const firstItem = order.notes === 'REGULAR_STAFF_MEAL' ? 'Staff Meal' : order.items?.[0]?.menu_item?.name || 'Order'
-                        const summary = itemCount > 1 ? `${firstItem} +${itemCount - 1} more` : firstItem
+                        const isStaffMeal = order.notes === 'REGULAR_STAFF_MEAL'
+                        const firstItem = isStaffMeal ? 'Staff Meal' : order.items?.[0]?.menu_item?.name || 'Order'
+                        const extraCount = isStaffMeal ? itemCount : (itemCount - 1)
+                        const summary = extraCount > 0 ? `${firstItem} +${extraCount} more` : firstItem
 
                         return (
                             <div
@@ -508,12 +510,13 @@ export default function ProfilePage() {
                                                 padding: '10px 12px',
                                                 border: '1px solid var(--border)'
                                             }}>
-                                                {order.notes === 'REGULAR_STAFF_MEAL' ? (
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)', fontWeight: 600, fontSize: '0.85rem' }}>
+                                                {order.notes === 'REGULAR_STAFF_MEAL' && (
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)', fontWeight: 600, fontSize: '0.85rem', marginBottom: order.items?.length ? '6px' : 0, paddingBottom: order.items?.length ? '6px' : 0, borderBottom: order.items?.length ? '1px solid var(--border)' : 'none' }}>
                                                         <Utensils size={14} />
                                                         <span>Standard Regular Staff Meal</span>
                                                     </div>
-                                                ) : (
+                                                )}
+                                                {order.items?.length > 0 && (
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                                         {order.items?.map((item: any) => (
                                                             <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 600 }}>

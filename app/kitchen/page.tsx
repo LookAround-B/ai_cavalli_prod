@@ -822,7 +822,10 @@ export default function KitchenPage() {
                 boxShadow: '0 8px 32px rgba(0,0,0,0.05)',
                 border: '1px solid rgba(var(--primary-rgb), 0.1)',
                 flexWrap: 'wrap',
-                gap: '1rem'
+                gap: '1rem',
+                position: 'sticky',
+                top: '0',
+                zIndex: 50,
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', flexWrap: 'wrap' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

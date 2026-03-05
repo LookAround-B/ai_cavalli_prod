@@ -313,6 +313,17 @@ export default function OrdersPage() {
             price: Number(item.price),
             subtotal: item.quantity * Number(item.price)
         }))
+
+        // Prepend staff meal label for staff meal orders
+        if (order.notes === 'REGULAR_STAFF_MEAL') {
+            items.unshift({
+                item_name: 'Standard Regular Staff Meal',
+                quantity: 1,
+                price: 0,
+                subtotal: 0,
+            })
+        }
+
         const itemsTotal = items.reduce((sum: number, i: any) => sum + i.subtotal, 0)
         setBillPreview({
             billNumber: `ORD-${order.id.slice(0, 8).toUpperCase()}`,
@@ -749,8 +760,10 @@ export default function OrdersPage() {
                             const StatusIcon = config.icon
                             const isExpanded = expandedOrder === order.id
                             const itemCount = order.items?.length || 0
-                            const firstItem = order.notes === 'REGULAR_STAFF_MEAL' ? 'Staff Meal' : order.items?.[0]?.menu_item?.name || 'Order'
-                            const summary = itemCount > 1 ? `${firstItem} +${itemCount - 1} more` : firstItem
+                            const isStaffMeal = order.notes === 'REGULAR_STAFF_MEAL'
+                            const firstItem = isStaffMeal ? 'Staff Meal' : order.items?.[0]?.menu_item?.name || 'Order'
+                            const extraCount = isStaffMeal ? itemCount : (itemCount - 1)
+                            const summary = extraCount > 0 ? `${firstItem} +${extraCount} more` : firstItem
 
                             return (
                                 <div
@@ -892,7 +905,7 @@ export default function OrdersPage() {
                                                     padding: '12px 14px',
                                                     border: '1px solid var(--border)',
                                                 }}>
-                                                    {order.notes === 'REGULAR_STAFF_MEAL' ? (
+                                                    {order.notes === 'REGULAR_STAFF_MEAL' && (
                                                         <div style={{
                                                             display: 'flex',
                                                             alignItems: 'center',
@@ -900,6 +913,9 @@ export default function OrdersPage() {
                                                             color: 'var(--primary)',
                                                             fontWeight: 700,
                                                             fontSize: '0.9rem',
+                                                            marginBottom: order.items?.length ? '8px' : 0,
+                                                            paddingBottom: order.items?.length ? '8px' : 0,
+                                                            borderBottom: order.items?.length ? '1px solid var(--border)' : 'none',
                                                         }}>
                                                             <div style={{
                                                                 width: '32px',
@@ -914,7 +930,8 @@ export default function OrdersPage() {
                                                             </div>
                                                             Standard Regular Staff Meal
                                                         </div>
-                                                    ) : (
+                                                    )}
+                                                    {order.items?.length > 0 && (
                                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                                             {order.items?.map((item: any, i: number) => (
                                                                 <div key={item.id} style={{

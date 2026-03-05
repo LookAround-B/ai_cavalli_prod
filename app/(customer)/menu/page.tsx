@@ -120,7 +120,7 @@ export default function MenuPage() {
             name: 'Regular Staff Meal',
             description: 'Standard meal for staff members (Free)',
             price: 0,
-            image_url: '',
+            image_url: 'https://images.unsplash.com/photo-1547592166-23ac45744acd?q=80&w=800',
             available: true
         }
     }, [role])

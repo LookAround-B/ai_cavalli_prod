@@ -91,6 +91,24 @@ export async function POST(request: NextRequest) {
         }
 
         // 5. Create bill with items in transaction
+        // Build bill items - include staff meal label if applicable
+        const billItemsData = order.orderItems.map((item) => ({
+            itemName: item.menuItem?.name || 'Unknown Item',
+            quantity: item.quantity,
+            price: Number(item.price),
+            subtotal: item.quantity * Number(item.price),
+        }))
+
+        // Prepend "Standard Regular Staff Meal" for staff meal orders
+        if (order.notes === 'REGULAR_STAFF_MEAL') {
+            billItemsData.unshift({
+                itemName: 'Standard Regular Staff Meal',
+                quantity: 1,
+                price: 0,
+                subtotal: 0,
+            })
+        }
+
         const bill = await prisma.bill.create({
             data: {
                 orderId,
@@ -103,12 +121,7 @@ export async function POST(request: NextRequest) {
                 guestName: resolvedGuestName || undefined,
                 tableName: order.tableName || undefined,
                 billItems: {
-                    create: order.orderItems.map((item) => ({
-                        itemName: item.menuItem?.name || 'Unknown Item',
-                        quantity: item.quantity,
-                        price: Number(item.price),
-                        subtotal: item.quantity * Number(item.price),
-                    })),
+                    create: billItemsData,
                 },
             },
             include: { billItems: true },
