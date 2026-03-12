@@ -126,6 +126,7 @@ export async function POST(request: NextRequest) {
                     billNumber: existingBill.billNumber,
                     itemsTotal: Number(existingBill.itemsTotal),
                     discountAmount: Number(existingBill.discountAmount || 0),
+                    gstAmount: Number((existingBill as any).gstAmount || 0),
                     finalTotal: Number(existingBill.finalTotal),
                     paymentMethod: existingBill.paymentMethod,
                     createdAt: existingBill.createdAt,
@@ -168,7 +169,10 @@ export async function POST(request: NextRequest) {
             if (dp > totalDiscountPercent) totalDiscountPercent = dp // use highest discount %
         })
         const totalDiscount = totalDiscountPercent > 0 ? Math.round((totalItemsAmount * (totalDiscountPercent / 100)) * 100) / 100 : 0
-        const finalTotal = totalItemsAmount - totalDiscount
+        const afterDiscount = totalItemsAmount - totalDiscount
+        // GST 5% on the amount after discount
+        const gstAmount = Math.round((afterDiscount * 0.05) * 100) / 100
+        const finalTotal = afterDiscount + gstAmount
 
         // 4. Generate bill number
         let billNumber: string
@@ -191,6 +195,7 @@ export async function POST(request: NextRequest) {
                     billNumber,
                     itemsTotal: totalItemsAmount,
                     discountAmount: totalDiscount,
+                    gstAmount,
                     finalTotal,
                     paymentMethod,
                     paymentStatus: 'pending',
@@ -236,6 +241,7 @@ export async function POST(request: NextRequest) {
                 billNumber: bill.billNumber,
                 itemsTotal: Number(totalItemsAmount),
                 discountAmount: Number(totalDiscount),
+                gstAmount: Number(gstAmount),
                 finalTotal: Number(finalTotal),
                 paymentMethod,
                 createdAt: new Date().toISOString(),

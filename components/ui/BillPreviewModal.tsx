@@ -20,6 +20,8 @@ export interface BillData {
   items: BillItem[];
   discountAmount?: number;
   discount_amount?: number;
+  gstAmount?: number;
+  gst_amount?: number;
   itemsTotal?: number;
   items_total?: number;
   finalTotal?: number;
@@ -68,7 +70,11 @@ export function BillPreviewModal({
   // Normalize data for consistency
   const itemsTotal = Number(bill.itemsTotal || bill.items_total || 0);
   const discountAmount = Number(bill.discountAmount || bill.discount_amount || 0);
-  const finalTotal = Number(bill.finalTotal || bill.final_total || (itemsTotal - discountAmount));
+  const afterDiscount = itemsTotal - discountAmount;
+  // GST 5%: use provided value or calculate
+  const gstAmount = Number(bill.gstAmount || bill.gst_amount || 0) || Math.round((afterDiscount * 0.05) * 100) / 100;
+  // Always compute final total as afterDiscount + GST so that the displayed total includes GST
+  const finalTotal = Math.round((afterDiscount + gstAmount) * 100) / 100;
   const rawPaymentMethod = bill.paymentMethod || bill.payment_method || "";
 
   // Format payment method for display
@@ -78,8 +84,10 @@ export function BillPreviewModal({
       credit: 'Credit',
       upi: 'UPI',
       card: 'Card',
-      staff_payment: 'Staff Payment',
+      staff_payment: 'Staff',
       rider_payment: 'Rider Payment',
+      silva: 'Silva',
+      chandar: 'Chandar'
     }
     return labels[method.toLowerCase()] || method.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
   }
@@ -219,7 +227,7 @@ export function BillPreviewModal({
         Tharahunise Village<br/>
         Bangalore - 562157<br/>
         Phone: 080-43418451/2<br/>
-        Mobile: 7353779533 | 9845054013<br/>
+        Mobile:  9845054013  | 7353779533<br/>
         GSTIN: 29AAACE8809Q1ZW
     </div>
 </div>
@@ -249,6 +257,7 @@ export function BillPreviewModal({
     <hr>
     <div class="total-row"><b>Subtotal:</b><b>₹${itemsTotal.toFixed(2)}</b></div>
     ${discountAmount > 0 ? `<div class="total-row"><b>Discount ${discountPercent > 0 ? `(${discountPercent}%)` : ""}:</b><b>-₹${discountAmount.toFixed(2)}</b></div>` : ""}
+    <div class="total-row"><b>GST (5%):</b><b>₹${gstAmount.toFixed(2)}</b></div>
     <hr>
     <div class="grand-total"><b>TOTAL:</b><b>₹${finalTotal.toFixed(2)}</b></div>
     ${paymentMethod ? `<div class="total-row"><b>Payment:</b><b>${paymentMethod.toUpperCase()}</b></div>` : ""}
@@ -259,7 +268,7 @@ export function BillPreviewModal({
     </div>
 </body>
 </html>`;
-  }, [bill, dateStr, timeStr, guestName, numGuests, orderCount, itemsTotal, discountAmount, finalTotal, paymentMethod, discountPercent]);
+  }, [bill, dateStr, timeStr, guestName, numGuests, orderCount, itemsTotal, discountAmount, gstAmount, finalTotal, paymentMethod, discountPercent]);
 
   // Open browser print dialog (works for both printing and saving as PDF via browser)
   const handlePrint = useCallback(() => {
@@ -494,6 +503,10 @@ export function BillPreviewModal({
                   <span>-₹{discountAmount.toFixed(2)}</span>
                 </div>
               )}
+              <div className={styles.totalRow}>
+                <span>GST (5%):</span>
+                <span>₹{gstAmount.toFixed(2)}</span>
+              </div>
             </div>
 
             <hr className={styles.divider} />

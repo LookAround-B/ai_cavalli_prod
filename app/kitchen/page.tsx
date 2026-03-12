@@ -147,8 +147,10 @@ export default function KitchenPage() {
         { value: 'credit', label: 'Credit', icon: <CreditCard size={16} /> },
         { value: 'upi', label: 'UPI', icon: <Smartphone size={16} /> },
         { value: 'card', label: 'Card', icon: <CreditCard size={16} /> },
-        { value: 'staff_payment', label: 'Staff Payment', icon: <Briefcase size={16} /> },
+        { value: 'staff_payment', label: 'Staff', icon: <Briefcase size={16} /> },
         { value: 'rider_payment', label: 'Rider Payment', icon: <Bike size={16} /> },
+        { value: 'silva', label: 'Silva', icon: <User size={16} /> },
+        { value: 'chandar', label: 'Chandar', icon: <User size={16} /> },
     ]
 
     const { user, logout, isLoading: authLoading } = useAuth()
@@ -248,8 +250,20 @@ export default function KitchenPage() {
                 const res = await fetch('/api/menu')
                 const json = await res.json()
                 if (json.success) {
-                    setMenuItems(json.data?.menuItems || [])
-                    setCategories(json.data?.categories || [])
+                    const fetchedItems = json.data?.menuItems || []
+                    const fetchedCategories = json.data?.categories || []
+                    const specials = json.data?.specials || []
+
+                    // Merge daily special items that aren't already in the menu items list
+                    // (specials may reference items that are unavailable in regular menu)
+                    const itemIds = new Set(fetchedItems.map((i: any) => i.id))
+                    const specialItems = specials
+                        .filter((s: any) => s.menu_item && !itemIds.has(s.menu_item.id))
+                        .map((s: any) => s.menu_item)
+                    const allItems = [...fetchedItems, ...specialItems]
+
+                    setMenuItems(allItems)
+                    setCategories(fetchedCategories)
                 }
             } catch (e) { console.error('fetchMenuData error:', e) }
         }
@@ -524,6 +538,7 @@ export default function KitchenPage() {
                         })),
                         itemsTotal: Number(data.bill.itemsTotal || data.bill.items_total || 0),
                         discountAmount: Number(data.bill.discountAmount || data.bill.discount_amount || 0),
+                        gstAmount: Number(data.bill.gstAmount || data.bill.gst_amount || 0),
                         finalTotal: Number(data.bill.finalTotal || data.bill.final_total || 0),
                         paymentMethod: formatPaymentMethod(data.bill.paymentMethod || selectedPayment),
                         createdAt: data.bill.createdAt || new Date().toISOString(),
@@ -567,8 +582,10 @@ export default function KitchenPage() {
             credit: 'Credit',
             upi: 'UPI',
             card: 'Card',
-            staff_payment: 'Staff Payment',
+            staff_payment: 'Staff',
             rider_payment: 'Rider Payment',
+            silva: 'Silva',
+            chandar: 'Chandar'
         }
         return labels[method] || method.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
     }
@@ -679,6 +696,7 @@ export default function KitchenPage() {
                     })),
                     itemsTotal: Number(data.bill.itemsTotal || data.bill.items_total || 0),
                     discountAmount: Number(data.bill.discountAmount || data.bill.discount_amount || 0),
+                    gstAmount: Number(data.bill.gstAmount || data.bill.gst_amount || 0),
                     finalTotal: Number(data.bill.finalTotal || data.bill.final_total || 0),
                     paymentMethod: formatPaymentMethod(data.bill.paymentMethod || data.bill.payment_method || paymentMethod),
                     createdAt: data.bill.createdAt || data.bill.created_at || data.bill.orderDetails?.createdAt,
@@ -765,6 +783,7 @@ export default function KitchenPage() {
                 })),
                 itemsTotal: Number(bill.items_total || bill.itemsTotal || 0),
                 discountAmount: Number(bill.discount_amount || bill.discountAmount || 0),
+                gstAmount: Number(bill.gst_amount || bill.gstAmount || 0),
                 finalTotal: Number(bill.final_total || bill.finalTotal || 0),
                 paymentMethod: formatPaymentMethod(effectivePayment),
                 createdAt: bill.created_at || bill.createdAt,

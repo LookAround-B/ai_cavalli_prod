@@ -367,7 +367,7 @@ export default function CartPage() {
                                 onChange={e => setNotes(e.target.value)}
                             />
 
-                            {user && (
+                            {user && (user?.role === 'STAFF' || user?.role === 'RIDER') && (
                                 <div style={{
                                     padding: '1.25rem',
                                     background: 'rgba(var(--primary-rgb), 0.05)',

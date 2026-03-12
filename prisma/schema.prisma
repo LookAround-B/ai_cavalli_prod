@@ -216,6 +216,7 @@ model Bill {
   billNumber     String    @unique @map("bill_number")
   itemsTotal     Decimal   @map("items_total") @db.Decimal(10, 2)
   discountAmount Decimal?  @default(0) @map("discount_amount") @db.Decimal(10, 2)
+  gstAmount      Decimal?  @default(0) @map("gst_amount") @db.Decimal(10, 2)
   finalTotal     Decimal   @map("final_total") @db.Decimal(10, 2)
   paymentMethod  String?   @map("payment_method")
   paymentStatus  String    @default("pending") @map("payment_status")

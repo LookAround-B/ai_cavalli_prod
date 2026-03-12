@@ -79,6 +79,7 @@ export async function GET(request: NextRequest) {
         table_name: bill.tableName,
         items_total: Number(bill.itemsTotal),
         discount_amount: Number(bill.discountAmount),
+        gst_amount: Number((bill as any).gstAmount || 0),
         final_total: Number(bill.finalTotal),
         payment_method: bill.paymentMethod,
         created_at: bill.createdAt.toISOString(),

@@ -74,7 +74,10 @@ export async function POST(request: NextRequest) {
         // discount_amount in orders table is stored as a percentage (e.g. 10 = 10%)
         const discountPercent = Number(order.discountAmount) || 0
         const discountAmount = discountPercent > 0 ? Math.round((itemsTotal * (discountPercent / 100)) * 100) / 100 : 0
-        const finalTotal = Math.round((itemsTotal - discountAmount) * 100) / 100
+        const afterDiscount = Math.round((itemsTotal - discountAmount) * 100) / 100
+        // GST 5% on the amount after discount
+        const gstAmount = Math.round((afterDiscount * 0.05) * 100) / 100
+        const finalTotal = Math.round((afterDiscount + gstAmount) * 100) / 100
 
         // 4. Generate bill number
         const billNumber = `BILL-${Date.now().toString(36).toUpperCase()}`
@@ -115,6 +118,7 @@ export async function POST(request: NextRequest) {
                 billNumber,
                 itemsTotal,
                 discountAmount,
+                gstAmount,
                 finalTotal,
                 paymentMethod,
                 paymentStatus: 'pending',
@@ -137,6 +141,7 @@ export async function POST(request: NextRequest) {
                 billNumber: bill.billNumber,
                 itemsTotal: Number(bill.itemsTotal),
                 discountAmount: Number(bill.discountAmount || 0),
+                gstAmount: Number(bill.gstAmount || 0),
                 finalTotal: Number(bill.finalTotal),
                 paymentMethod: bill.paymentMethod,
                 guestName: bill.guestName || resolvedGuestName,
