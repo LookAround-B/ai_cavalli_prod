@@ -40,6 +40,7 @@ export default function KitchenSpecialsPage() {
 
   // Selection state
   const [selectedItem, setSelectedItem] = useState("");
+  const [selectedItemName, setSelectedItemName] = useState("");
   const [period, setPeriod] = useState<string>("breakfast");
 
   // Quick create state
@@ -171,8 +172,12 @@ export default function KitchenSpecialsPage() {
       if (!res.ok) {
         console.error('Error adding special:', result.error);
         showError("Failed to add special: " + result.error, `"please try again."`);
+      } else if (result.alreadyExists) {
+        const itemName = selectedItemName || items.find(i => i.id === menuItemId)?.name || 'This item';
+        showInfo(`${itemName} is already added as a ${period} special today!`, `Please choose a different item or period.`);
       } else {
         setSelectedItem("");
+        setSelectedItemName("");
         await fetchData();
       }
     } catch (err: any) {
@@ -362,7 +367,7 @@ export default function KitchenSpecialsPage() {
                   <Plus size={20} />
                   <span>
                     {selectedItem
-                      ? items.find(i => i.id === selectedItem)?.name || "Select Item"
+                      ? selectedItemName || items.find(i => i.id === selectedItem)?.name || "Select Item"
                       : "Click to Browse Menu Items"}
                   </span>
                 </div>
@@ -718,7 +723,7 @@ export default function KitchenSpecialsPage() {
           categories={categories}
           onSelect={(item) => {
             setSelectedItem(item.id);
-            setShowMenuSelector(false);
+            setSelectedItemName(item.name);
           }}
           onClose={() => setShowMenuSelector(false)}
         />

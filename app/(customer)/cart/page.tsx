@@ -21,6 +21,7 @@ export default function CartPage() {
 
     const [locationType, setLocationType] = useState<'indoor' | 'outdoor'>('indoor')
     const [notes, setNotes] = useState('')
+    const [riderSettlementType, setRiderSettlementType] = useState<'monthly' | 'paid_now'>('monthly')
 
     // Resolve table name and guests from session/user data
     const getTableInfo = () => {
@@ -51,7 +52,15 @@ export default function CartPage() {
             // Check for virtual items
             const hasRegularMeal = items.some(item => item.itemId === 'REGULAR_MEAL_VIRTUAL')
             const isStaffUser = user?.role === 'STAFF'
-            const finalNotes = hasRegularMeal && isStaffUser ? 'REGULAR_STAFF_MEAL' : notes
+            const isRiderPaidNow = user?.role === 'RIDER' && riderSettlementType === 'paid_now'
+            const trimmedNotes = notes.trim()
+            const finalNotes = hasRegularMeal && isStaffUser
+                ? 'REGULAR_STAFF_MEAL'
+                : isRiderPaidNow
+                    ? trimmedNotes
+                        ? `[RIDER_PAID_NOW] ${trimmedNotes}`
+                        : '[RIDER_PAID_NOW]'
+                    : trimmedNotes
 
             // Resolve table info automatically
             const { tableName, numGuests } = getTableInfo()
@@ -96,6 +105,7 @@ export default function CartPage() {
                         userId: user?.id,
                         items: items.filter(item => item.itemId !== 'REGULAR_MEAL_VIRTUAL'),
                         notes: finalNotes,
+                        riderPaidNow: isRiderPaidNow,
                     })
                 })
 
@@ -116,6 +126,7 @@ export default function CartPage() {
                         numGuests,
                         locationType,
                         notes: finalNotes,
+                        riderPaidNow: isRiderPaidNow,
                         sessionId
                     })
                 })
@@ -367,7 +378,110 @@ export default function CartPage() {
                                 onChange={e => setNotes(e.target.value)}
                             />
 
-                            {user && (user?.role === 'STAFF' || user?.role === 'RIDER') && (
+                            {user?.role === 'RIDER' && (
+                                <div style={{
+                                    padding: '1.25rem',
+                                    background: 'rgba(var(--primary-rgb), 0.05)',
+                                    borderRadius: '16px',
+                                    border: '1px solid rgba(var(--primary-rgb), 0.15)',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '12px',
+                                    marginTop: 'var(--space-2)'
+                                }}>
+                                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text)' }}>
+                                        Rider Settlement
+                                    </div>
+
+                                    <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}>
+                                            <input
+                                                type="radio"
+                                                name="riderSettlementType"
+                                                checked={riderSettlementType === 'monthly'}
+                                                onChange={() => setRiderSettlementType('monthly')}
+                                                style={{ accentColor: 'var(--primary)', width: '16px', height: '16px' }}
+                                            />
+                                            Add to monthly account
+                                        </label>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}>
+                                            <input
+                                                type="radio"
+                                                name="riderSettlementType"
+                                                checked={riderSettlementType === 'paid_now'}
+                                                onChange={() => setRiderSettlementType('paid_now')}
+                                                style={{ accentColor: 'var(--primary)', width: '16px', height: '16px' }}
+                                            />
+                                            Paid now
+                                        </label>
+                                    </div>
+
+                                    {riderSettlementType === 'monthly' ? (
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'flex-start',
+                                            gap: '14px',
+                                        }}>
+                                            <div style={{
+                                                minWidth: '28px',
+                                                height: '28px',
+                                                borderRadius: '50%',
+                                                background: 'var(--primary)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                color: 'white',
+                                                fontSize: '0.85rem',
+                                                fontWeight: '900',
+                                                boxShadow: '0 2px 8px rgba(var(--primary-rgb), 0.3)'
+                                            }}>!</div>
+                                            <p style={{
+                                                margin: 0,
+                                                fontSize: '0.9rem',
+                                                color: 'var(--text)',
+                                                fontWeight: '600',
+                                                lineHeight: 1.5
+                                            }}>
+                                                This transaction will be recorded and settled as part of your <span style={{ color: 'var(--primary)' }}>monthly expense account</span>.
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'flex-start',
+                                            gap: '14px',
+                                            background: 'rgba(16, 185, 129, 0.08)',
+                                            border: '1px solid rgba(16, 185, 129, 0.25)',
+                                            borderRadius: '12px',
+                                            padding: '12px'
+                                        }}>
+                                            <div style={{
+                                                minWidth: '28px',
+                                                height: '28px',
+                                                borderRadius: '50%',
+                                                background: '#10B981',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                color: 'white',
+                                                fontSize: '0.9rem',
+                                                fontWeight: '900'
+                                            }}>✓</div>
+                                            <p style={{
+                                                margin: 0,
+                                                fontSize: '0.9rem',
+                                                color: 'var(--text)',
+                                                fontWeight: '600',
+                                                lineHeight: 1.5
+                                            }}>
+                                                This order will be marked as <span style={{ color: '#10B981' }}>paid on order day</span> and should be excluded from monthly account deductions in reports.
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {user?.role === 'STAFF' && (
                                 <div style={{
                                     padding: '1.25rem',
                                     background: 'rgba(var(--primary-rgb), 0.05)',
