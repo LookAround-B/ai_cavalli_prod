@@ -107,7 +107,7 @@ export default function AdminMenuPage() {
         setEditingId(item.id)
         setName(item.name)
         setDesc(item.description || '')
-        setPrice(item.price.toString())
+        setPrice(Number(item.price).toFixed(2))
         setCategoryId(item.category_id)
         setImageUrl(item.image_url || '')
         setAvailable(item.available !== false)
@@ -126,10 +126,17 @@ export default function AdminMenuPage() {
             return
         }
 
+        const parsedPrice = parseFloat(price)
+        if (isNaN(parsedPrice) || parsedPrice < 0) {
+            showError('Invalid Price', 'Please enter a valid price (e.g. 1700.00)')
+            setLoading(false)
+            return
+        }
+
         const payload: any = {
             name,
             description: desc,
-            price: parseFloat(price),
+            price: parsedPrice,
             category_id: finalCategoryId,
             image_url: imageUrl,
             available: available
@@ -315,10 +322,16 @@ export default function AdminMenuPage() {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                                 <ItalianFormField
                                     label="Price (₹)"
-                                    type="number"
-                                    step="0.01"
+                                    type="text"
+                                    inputMode="decimal"
+                                    pattern="[0-9]*\.?[0-9]*"
                                     value={price}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPrice(e.target.value)}
+                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                        const val = e.target.value
+                                        if (val === '' || /^\d*\.?\d{0,2}$/.test(val)) {
+                                            setPrice(val)
+                                        }
+                                    }}
                                     placeholder="0.00"
                                     required
                                 />
@@ -756,7 +769,7 @@ function ItalianMenuItemCard({ item, isActive, onEdit, onDelete, onToggleAvailab
                     }}>
                         {item.name}
                     </h4>
-                    <span style={{ fontSize: '1.15rem', fontWeight: '800', color: 'var(--primary)' }}>₹{item.price.toFixed(2)}</span>
+                    <span style={{ fontSize: '1.15rem', fontWeight: '800', color: 'var(--primary)' }}>₹{Number(item.price).toFixed(2)}</span>
                 </div>
 
                 <p style={{

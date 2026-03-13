@@ -39,11 +39,17 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { name, description, price, category_id, image_url, available } = body
 
+    // Validate price
+    const parsedPrice = parseFloat(String(price))
+    if (isNaN(parsedPrice) || parsedPrice < 0) {
+      return NextResponse.json({ success: false, error: 'Invalid price value' }, { status: 400 })
+    }
+
     const item = await prisma.menuItem.create({
       data: {
         name,
         description: description || null,
-        price,
+        price: parsedPrice.toFixed(2),
         categoryId: category_id,
         imageUrl: image_url || null,
         available: available !== false
@@ -71,12 +77,18 @@ export async function PUT(request: NextRequest) {
 
     if (!id) return NextResponse.json({ success: false, error: 'ID required' }, { status: 400 })
 
+    // Validate price
+    const parsedPrice = parseFloat(String(price))
+    if (isNaN(parsedPrice) || parsedPrice < 0) {
+      return NextResponse.json({ success: false, error: 'Invalid price value' }, { status: 400 })
+    }
+
     const item = await prisma.menuItem.update({
       where: { id },
       data: {
         name,
         description: description || null,
-        price,
+        price: parsedPrice.toFixed(2),
         categoryId: category_id,
         imageUrl: image_url || null,
         available
