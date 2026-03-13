@@ -88,6 +88,7 @@ export default function KitchenPage() {
     const [editingOrderId, setEditingOrderId] = useState<string | null>(null)
     const [menuItems, setMenuItems] = useState<any[]>([])
     const [categories, setCategories] = useState<any[]>([])
+    const [dailySpecials, setDailySpecials] = useState<any[]>([])
     const [generatingBill, setGeneratingBill] = useState<string | null>(null)
     const [printingBill, setPrintingBill] = useState<string | null>(null)
     const [reprintingBill, setReprintingBill] = useState<string | null>(null)
@@ -264,6 +265,7 @@ export default function KitchenPage() {
 
                     setMenuItems(allItems)
                     setCategories(fetchedCategories)
+                    setDailySpecials(specials)
                 }
             } catch (e) { console.error('fetchMenuData error:', e) }
         }
@@ -811,6 +813,20 @@ export default function KitchenPage() {
         } catch (e) { showError('Add Failed', 'Failed to add item') }
     }
 
+    function quickAddSpecialToOrder(specialItemId: string) {
+        const existing = newOrderItems.find(item => item.menuItemId === specialItemId)
+        if (existing) {
+            setNewOrderItems(newOrderItems.map(item =>
+                item.menuItemId === specialItemId
+                    ? { ...item, quantity: item.quantity + 1 }
+                    : item
+            ))
+        } else {
+            setNewOrderItems([...newOrderItems, { menuItemId: specialItemId, quantity: 1 }])
+        }
+        showSuccess('Added to Order', `Item added to walk-in order`)
+    }
+
     const getOrderTypeBadge = (order: Order) => {
         if (order.guest_info || order.user?.role === 'OUTSIDER') return { label: 'GUEST', color: '#9333ea', icon: User }
         if (order.user?.role === 'RIDER') return { label: 'RIDER', color: '#2563eb', icon: LayoutDashboard }
@@ -1039,6 +1055,67 @@ export default function KitchenPage() {
                                     >
                                         <XIcon size={14} />
                                     </Button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Daily Specials Section */}
+            {dailySpecials.length > 0 && (
+                <div style={{
+                    background: 'linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%)',
+                    padding: 'var(--space-4)',
+                    borderRadius: '16px',
+                    marginBottom: 'var(--space-6)',
+                    boxShadow: '0 8px 32px rgba(245, 158, 11, 0.3)',
+                    border: '2px solid #FCD34D'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                        <span style={{ fontSize: '1.75rem' }}>⭐</span>
+                        <h3 style={{ margin: 0, color: '#92400E', fontSize: '1.25rem', fontWeight: 800 }}>
+                            Today's Specials
+                        </h3>
+                        <a href="/kitchen/specials" style={{ marginLeft: 'auto', padding: '8px 12px', background: 'rgba(255,255,255,0.3)', color: '#78350F', textDecoration: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '0.75rem', border: '1px solid rgba(255,255,255,0.5)', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.background = 'white'; e.currentTarget.style.color = '#F59E0B' }} onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.3)'; e.currentTarget.style.color = '#78350F' }}>
+                            MANAGE →
+                        </a>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: '12px' }}>
+                        {dailySpecials.map((special) => (
+                            <div key={special.id} style={{
+                                background: 'white',
+                                padding: '16px',
+                                borderRadius: '12px',
+                                border: '2px solid #FCD34D',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '12px',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+                            }}>
+                                {special.menu_item.image_url && (
+                                    <div style={{
+                                        width: '100%',
+                                        height: '120px',
+                                        borderRadius: '8px',
+                                        background: '#F3F4F6',
+                                        backgroundImage: `url(${special.menu_item.image_url})`,
+                                        backgroundSize: 'cover',
+                                        backgroundPosition: 'center',
+                                        border: '1px solid #E5E7EB'
+                                    }} />
+                                )}
+                                <div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '8px', marginBottom: '4px' }}>
+                                        <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#1F2937' }}>{special.menu_item.name}</h4>
+                                        <span style={{ padding: '4px 8px', background: '#FEF3C7', color: '#92400E', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                                            {special.period.toUpperCase()}
+                                        </span>
+                                    </div>
+                                    {special.menu_item.description && <p style={{ margin: '4px 0', fontSize: '0.8rem', color: '#6B7280', lineHeight: 1.4 }}>{special.menu_item.description}</p>}
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+                                        <div style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--primary)' }}>₹{special.menu_item.price}</div>
+                                    </div>
                                 </div>
                             </div>
                         ))}
@@ -2150,6 +2227,50 @@ export default function KitchenPage() {
                                                 })
                                             )}
                                         </div>
+
+                                        {dailySpecials.length > 0 && (
+                                            <div style={{ marginTop: '16px', padding: '16px', background: 'linear-gradient(135deg, #FFF7ED 0%, #FEF3C7 100%)', borderRadius: '12px', border: '2px solid #FBBF24' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', fontSize: '0.75rem', fontWeight: 800, color: '#92400E', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                    ⭐ Today's Specials
+                                                </div>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '150px', overflowY: 'auto' }}>
+                                                    {dailySpecials.map((special) => (
+                                                        <button
+                                                            key={special.id}
+                                                            onClick={() => quickAddSpecialToOrder(special.menu_item.id)}
+                                                            style={{
+                                                                padding: '10px 12px',
+                                                                background: 'white',
+                                                                border: '1px solid #FBBF24',
+                                                                borderRadius: '8px',
+                                                                cursor: 'pointer',
+                                                                textAlign: 'left',
+                                                                fontSize: '0.85rem',
+                                                                fontWeight: 600,
+                                                                transition: 'all 0.2s',
+                                                                display: 'flex',
+                                                                justifyContent: 'space-between',
+                                                                alignItems: 'center',
+                                                            }}
+                                                            onMouseEnter={(e) => {
+                                                                e.currentTarget.style.background = '#FBBF24'
+                                                                e.currentTarget.style.color = 'white'
+                                                            }}
+                                                            onMouseLeave={(e) => {
+                                                                e.currentTarget.style.background = 'white'
+                                                                e.currentTarget.style.color = 'inherit'
+                                                            }}
+                                                        >
+                                                            <div>
+                                                                <div style={{ fontWeight: 700, color: '#92400E' }}>{special.menu_item.name}</div>
+                                                                <div style={{ fontSize: '0.7rem', opacity: 0.7 }}>₹{special.menu_item.price} • {special.period}</div>
+                                                            </div>
+                                                            <Plus size={16} style={{ flexShrink: 0 }} />
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
 
                                         <button
                                             onClick={() => setShowNewOrderMenu(true)}
