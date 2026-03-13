@@ -187,7 +187,7 @@ function formatBillForPrinting(bill: any) {
 Tharahunise Village<br/>
 Bangalore - 562157<br/>
 Phone: 080-43418451/2<br/>
-Mobile: 7353779533 | 9845054013<br/>
+Mobile: 9845054013 | 7353779533<br/>
 GSTIN: 29AAACE8809Q1ZW</b></div></div>
         <hr>
         <div class="r"><b>Bill No:</b><b>${bill.billNumber}</b></div>
@@ -220,7 +220,7 @@ GSTIN: 29AAACE8809Q1ZW</b></div></div>
     "      Tharahunise Village       ",
     "      Bangalore - 562157        ",
     "      PH: 080-43418451/2        ",
-    "  7353779533 | 9845054013       ",
+    "  9845054013 | 7353779533       ",
     "   GSTIN: 29AAACE8809Q1ZW       ",
     "================================",
     `Bill No: ${bill.billNumber}`,
