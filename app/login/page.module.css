@@ -360,6 +360,6 @@
     color: rgba(255, 255, 255, 0.5);
     font-size: 0.8rem;
     letter-spacing: 1px;
-    text-transform: uppercase;
+    text-transform: none;
     z-index: 10;
 }

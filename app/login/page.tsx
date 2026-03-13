@@ -325,7 +325,7 @@ export default function LoginPage() {
         )}
       </div>
       <div className={styles.loginFooter}>
-        Powered by Lookaround
+        Powered by LookAround
       </div>
     </main>
   );
