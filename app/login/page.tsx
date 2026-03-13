@@ -122,7 +122,9 @@ export default function LoginPage() {
         loop
         muted
         playsInline
+        preload="auto"
         className={styles.bgVideo}
+        style={{ backgroundColor: '#000' }}
       >
         <source src="/horse-cavalli.mp4" type="video/mp4" />
       </video>
@@ -321,6 +323,9 @@ export default function LoginPage() {
             </form>
           </div>
         )}
+      </div>
+      <div className={styles.loginFooter}>
+        Powered by Lookaround
       </div>
     </main>
   );

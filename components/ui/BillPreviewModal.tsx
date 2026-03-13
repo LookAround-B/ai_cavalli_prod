@@ -37,6 +37,7 @@ export interface BillData {
     orderCount?: number;
     startedAt?: string;
   };
+  attendedBy?: string;
 }
 
 interface BillPreviewModalProps {
@@ -239,7 +240,7 @@ export function BillPreviewModal({
     ${guestName ? `<div class="info"><b>Guest:</b><b>${guestName}</b></div>` : ""}
     ${orderCount ? `<div class="info"><b>Orders:</b><b>${orderCount}</b></div>` : ""}
     <hr>
-    <div class="info"><b>Attended By:</b><b>Anand</b></div>
+    <div class="info"><b>Attended By:</b><b>${bill.attendedBy || "Anand"}</b></div>
     <hr>
     <table>
         <thead>
@@ -468,7 +469,7 @@ export function BillPreviewModal({
             <hr className={styles.divider} />
             <div className={styles.infoRow}>
               <span>Attended By:</span>
-              <span>Anand</span>
+              <span>{bill.attendedBy || "Anand"}</span>
             </div>
 
             <hr className={styles.divider} />

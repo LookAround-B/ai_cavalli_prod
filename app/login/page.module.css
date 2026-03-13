@@ -350,3 +350,16 @@
     text-align: center;
     margin-bottom: 1rem;
 }
+
+.loginFooter {
+    position: absolute;
+    bottom: 2rem;
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    z-index: 10;
+}

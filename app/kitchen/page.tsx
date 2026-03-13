@@ -424,7 +424,8 @@ export default function KitchenPage() {
     useEffect(() => {
         setKitchenStaff([
             { id: '1', name: 'Sonia' },
-            { id: '2', name: 'Anand' }
+            { id: '2', name: 'Anand' },
+            { id: '3', name: 'Others' }
         ])
     }, [])
 
@@ -544,7 +545,8 @@ export default function KitchenPage() {
                         finalTotal: Number(data.bill.finalTotal || data.bill.final_total || 0),
                         paymentMethod: formatPaymentMethod(data.bill.paymentMethod || selectedPayment),
                         createdAt: data.bill.createdAt || new Date().toISOString(),
-                        sessionDetails: data.bill.sessionDetails
+                        sessionDetails: data.bill.sessionDetails,
+                        attendedBy: orderAttendees[data.bill.id] || orderAttendees[sessionId] || ''
                     })
                 }
                 showSuccess('Bill Generated', `Bill ${data.bill.billNumber || data.bill.bill_number} — ₹${data.bill.finalTotal || data.bill.final_total}`)
@@ -702,6 +704,7 @@ export default function KitchenPage() {
                     finalTotal: Number(data.bill.finalTotal || data.bill.final_total || 0),
                     paymentMethod: formatPaymentMethod(data.bill.paymentMethod || data.bill.payment_method || paymentMethod),
                     createdAt: data.bill.createdAt || data.bill.created_at || data.bill.orderDetails?.createdAt,
+                    attendedBy: orderAttendees[orderId] || ''
                 })
             } else {
                 showError('Bill Failed', data.error || 'Failed to generate bill')
@@ -787,8 +790,9 @@ export default function KitchenPage() {
                 discountAmount: Number(bill.discount_amount || bill.discountAmount || 0),
                 gstAmount: Number(bill.gst_amount || bill.gstAmount || 0),
                 finalTotal: Number(bill.final_total || bill.finalTotal || 0),
-                paymentMethod: formatPaymentMethod(effectivePayment),
-                createdAt: bill.created_at || bill.createdAt,
+                paymentMethod: formatPaymentMethod(selectedPayment || bill.payment_method || bill.paymentMethod || 'cash'),
+                createdAt: bill.created_at || bill.createdAt || order?.created_at,
+                attendedBy: orderAttendees[orderId] || ''
             })
         } catch (error) {
             console.error(error)
