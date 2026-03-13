@@ -117,6 +117,15 @@ export default function LoginPage() {
 
   return (
     <main className={styles.main}>
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        className={styles.bgVideo}
+      >
+        <source src="/horse-cavalli.mp4" type="video/mp4" />
+      </video>
       <div className={styles.overlay} />
 
       <div className={styles.contentWrapper}>
