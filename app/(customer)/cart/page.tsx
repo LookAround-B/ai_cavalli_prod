@@ -412,7 +412,7 @@ export default function CartPage() {
                                                 onChange={() => setRiderSettlementType('paid_now')}
                                                 style={{ accentColor: 'var(--primary)', width: '16px', height: '16px' }}
                                             />
-                                            Paid now
+                                            Pay now
                                         </label>
                                     </div>
 
