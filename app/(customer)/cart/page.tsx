@@ -222,7 +222,7 @@ export default function CartPage() {
                                                 name: item.name,
                                                 price: item.price
                                             });
-                                            showPopup('Added to cart!');
+                                            showPopup({ type: 'success', title: 'Added to cart!', message: 'Added to cart!' });
                                         }}
                                         style={{
                                             padding: '10px 12px',
@@ -435,7 +435,7 @@ export default function CartPage() {
                                                         name: item.name,
                                                         price: item.price
                                                     });
-                                                    showPopup('Added to cart!');
+                                                    showPopup({ type: 'success', title: 'Added to cart!', message: 'Added to cart!' });
                                                 }}
                                                 style={{
                                                     padding: '10px 12px',
