@@ -2159,7 +2159,12 @@ export default function KitchenPage() {
                                                         type="text"
                                                         inputMode="numeric"
                                                         value={newOrderTable}
-                                                        onChange={(e) => setNewOrderTable(e.target.value.replace(/\D/g, ''))}
+                                                        maxLength={2}
+                                                        onChange={(e) => {
+                                                            // Only allow 2 digits
+                                                            const val = e.target.value.replace(/\D/g, '').slice(0, 2)
+                                                            setNewOrderTable(val)
+                                                        }}
                                                         placeholder="00"
                                                         style={{ width: '100%', padding: '12px 12px 12px 38px', borderRadius: '10px', border: '1.5px solid #E5E7EB', fontSize: '0.95rem', fontWeight: 600, outline: 'none', transition: 'all 0.2s' }}
                                                         onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(169, 30, 34, 0.1)' }}
