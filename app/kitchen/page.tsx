@@ -1063,7 +1063,7 @@ export default function KitchenPage() {
             )}
 
             {/* Daily Specials Section */}
-            {dailySpecials.length > 0 && (
+            {/* {dailySpecials.length > 0 && (
                 <div style={{
                     background: 'linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%)',
                     padding: 'var(--space-4)',
@@ -1121,7 +1121,7 @@ export default function KitchenPage() {
                         ))}
                     </div>
                 </div>
-            )}
+            )} */}
 
             <div style={{ display: 'flex', gap: 'var(--space-4)', marginBottom: 'var(--space-6)', flexWrap: 'wrap', alignItems: 'center' }}>
                 <div style={{
