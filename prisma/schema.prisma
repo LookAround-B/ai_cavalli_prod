@@ -1,6 +1,3 @@
-// Prisma Schema for ai_cavalli
-// Matches the actual production database from backup.sql
-
 generator client {
   provider = "prisma-client-js"
   output   = "../node_modules/.prisma/client"
@@ -10,13 +7,212 @@ datasource db {
   provider = "postgresql"
 }
 
-// ─── Enums ───────────────────────────────────────────────
+model User {
+  id                  String         @id @default(uuid()) @db.Uuid
+  phone               String         @unique
+  pin                 String?        @default("123456")
+  name                String
+  role                UserRole       @default(RIDER)
+  parentName          String?        @map("parent_name")
+  createdAt           DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  authMethod          String?        @default("otp") @map("auth_method")
+  email               String?        @unique
+  pinHash             String?        @map("pin_hash")
+  position            String?
+  failedLoginAttempts Int            @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime?      @map("locked_until") @db.Timestamptz(6)
+  lastLogin           DateTime?      @map("last_login") @db.Timestamptz(6)
+  sessionToken        String?        @map("session_token")
+  sessionExpiresAt    DateTime?      @map("session_expires_at") @db.Timestamptz(6)
+  guestSessions       GuestSession[]
+  orders              Order[]
+
+  @@index([sessionToken], map: "idx_users_session_token")
+  @@map("users")
+}
+
+model Category {
+  id        String     @id @default(uuid()) @db.Uuid
+  name      String
+  sortOrder Int        @default(0) @map("sort_order")
+  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  menuItems MenuItem[]
+
+  @@map("categories")
+}
+
+model MenuItem {
+  id            String         @id @default(uuid()) @db.Uuid
+  categoryId    String?        @map("category_id") @db.Uuid
+  name          String
+  description   String?
+  price         Decimal        @db.Decimal(10, 2)
+  imageUrl      String?        @map("image_url")
+  available     Boolean        @default(true)
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  dailySpecials DailySpecial[]
+  category      Category?      @relation(fields: [categoryId], references: [id])
+  orderItems    OrderItem[]
+
+  @@map("menu_items")
+}
+
+model DailySpecial {
+  id         String        @id @default(uuid()) @db.Uuid
+  date       DateTime      @default(now()) @db.Date
+  period     SpecialPeriod
+  menuItemId String        @map("menu_item_id") @db.Uuid
+  createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  menuItem   MenuItem      @relation(fields: [menuItemId], references: [id])
+
+  @@unique([date, period, menuItemId])
+  @@map("daily_specials")
+}
+
+model Announcement {
+  id          String   @id @default(uuid()) @db.Uuid
+  title       String
+  description String?
+  imageUrl    String?  @map("image_url")
+  link        String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("announcements")
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model Order {
+  id             String        @id @default(uuid()) @db.Uuid
+  userId         String?       @map("user_id") @db.Uuid
+  guestInfo      Json?         @map("guest_info")
+  tableName      String        @map("table_name")
+  status         OrderStatus   @default(pending)
+  total          Decimal       @default(0) @db.Decimal(10, 2)
+  discountAmount Decimal?      @default(0) @map("discount_amount") @db.Decimal(10, 2)
+  readyInMinutes Int?          @map("ready_in_minutes")
+  notes          String?
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  locationType   String?       @default("indoor") @map("location_type")
+  numGuests      Int?          @default(1) @map("num_guests")
+  billed         Boolean       @default(false)
+  sessionId      String?       @map("session_id") @db.Uuid
+  bill           Bill?
+  orderItems     OrderItem[]
+  session        GuestSession? @relation(fields: [sessionId], references: [id])
+  user           User?         @relation(fields: [userId], references: [id])
+
+  @@index([status], map: "idx_orders_status")
+  @@index([userId], map: "idx_orders_user_id")
+  @@index([sessionId], map: "idx_orders_session_id")
+  @@map("orders")
+}
+
+model OrderItem {
+  id         String   @id @default(uuid()) @db.Uuid
+  orderId    String   @map("order_id") @db.Uuid
+  menuItemId String   @map("menu_item_id") @db.Uuid
+  quantity   Int      @default(1)
+  price      Decimal  @db.Decimal(10, 2)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId], map: "idx_order_items_order_id")
+  @@map("order_items")
+}
+
+model GuestSession {
+  id                String    @id @default(uuid()) @db.Uuid
+  guestPhone        String    @map("guest_phone")
+  guestName         String    @map("guest_name")
+  tableName         String    @map("table_name")
+  numGuests         Int?      @map("num_guests")
+  startedAt         DateTime  @default(now()) @map("started_at") @db.Timestamptz(6)
+  endedAt           DateTime? @map("ended_at") @db.Timestamptz(6)
+  totalAmount       Decimal   @default(0) @map("total_amount") @db.Decimal(10, 2)
+  status            String    @default("active")
+  paymentMethod     String?   @map("payment_method")
+  paymentStatus     String    @default("pending") @map("payment_status")
+  upiTransactionId  String?   @map("upi_transaction_id")
+  whatsappSent      Boolean   @default(false) @map("whatsapp_sent")
+  whatsappSentAt    DateTime? @map("whatsapp_sent_at") @db.Timestamptz(6)
+  whatsappMessageId String?   @map("whatsapp_message_id")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  userId            String?   @map("user_id") @db.Uuid
+  guestEmail        String?   @map("guest_email")
+  billRequested     Boolean   @default(false) @map("bill_requested")
+  billRequestedAt   DateTime? @map("bill_requested_at") @db.Timestamptz(6)
+  bills             Bill[]
+  user              User?     @relation(fields: [userId], references: [id])
+  orders            Order[]
+
+  @@index([guestPhone], map: "idx_sessions_phone")
+  @@index([status], map: "idx_sessions_status")
+  @@index([createdAt], map: "idx_sessions_created_at")
+  @@map("guest_sessions")
+}
+
+model Bill {
+  id             String        @id @default(uuid()) @db.Uuid
+  orderId        String?       @unique @map("order_id") @db.Uuid
+  billNumber     String        @unique @map("bill_number")
+  itemsTotal     Decimal       @map("items_total") @db.Decimal(10, 2)
+  gstAmount      Decimal?      @default(0) @map("gst_amount") @db.Decimal(10, 2)
+  discountAmount Decimal?      @default(0) @map("discount_amount") @db.Decimal(10, 2)
+  finalTotal     Decimal       @map("final_total") @db.Decimal(10, 2)
+  paymentMethod  String?       @map("payment_method")
+  paymentStatus  String        @default("pending") @map("payment_status")
+  printedAt      DateTime?     @map("printed_at") @db.Timestamptz(6)
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  sessionId      String?       @map("session_id") @db.Uuid
+  guestName      String?       @map("guest_name")
+  guestPhone     String?       @map("guest_phone")
+  tableName      String?       @map("table_name")
+  billItems      BillItem[]
+  order          Order?        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  session        GuestSession? @relation(fields: [sessionId], references: [id])
+
+  @@index([orderId], map: "idx_bills_order_id")
+  @@index([billNumber], map: "idx_bills_bill_number")
+  @@index([sessionId], map: "idx_bills_session_id")
+  @@map("bills")
+}
+
+model BillItem {
+  id        String   @id @default(uuid()) @db.Uuid
+  billId    String   @map("bill_id") @db.Uuid
+  itemName  String   @map("item_name")
+  quantity  Int
+  price     Decimal  @db.Decimal(10, 2)
+  subtotal  Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  bill      Bill     @relation(fields: [billId], references: [id], onDelete: Cascade)
+
+  @@index([billId], map: "idx_bill_items_bill_id")
+  @@map("bill_items")
+}
+
+model OtpCode {
+  id         String    @id @default(uuid()) @db.Uuid
+  phone      String
+  otpHash    String    @map("otp_hash")
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(6)
+  used       Boolean   @default(false)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  verifiedAt DateTime? @map("verified_at") @db.Timestamptz(6)
+
+  @@index([phone], map: "idx_otp_phone")
+  @@index([expiresAt], map: "idx_otp_expires")
+  @@index([used], map: "idx_otp_used")
+  @@map("otp_codes")
+}
 
 enum UserRole {
   RIDER
-  OUTSIDER
   KITCHEN
   ADMIN
+  OUTSIDER
   STAFF
 
   @@map("user_role")
@@ -37,236 +233,4 @@ enum SpecialPeriod {
   lunch
 
   @@map("special_period")
-}
-
-// ─── Users ───────────────────────────────────────────────
-
-model User {
-  id                  String    @id @default(uuid()) @db.Uuid
-  phone               String    @unique
-  pin                 String?   @default("123456")
-  name                String
-  role                UserRole  @default(RIDER)
-  parentName          String?   @map("parent_name")
-  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  authMethod          String?   @default("otp") @map("auth_method")
-  email               String?   @unique
-  // Auth columns (added by migration for session management)
-  pinHash             String?   @map("pin_hash")
-  position            String?
-  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
-  lockedUntil         DateTime? @map("locked_until") @db.Timestamptz
-  lastLogin           DateTime? @map("last_login") @db.Timestamptz
-  sessionToken        String?   @map("session_token")
-  sessionExpiresAt    DateTime? @map("session_expires_at") @db.Timestamptz
-
-  orders        Order[]
-  guestSessions GuestSession[]
-
-  @@index([sessionToken], name: "idx_users_session_token")
-  @@map("users")
-}
-
-// ─── Categories ──────────────────────────────────────────
-
-model Category {
-  id        String   @id @default(uuid()) @db.Uuid
-  name      String
-  sortOrder Int      @default(0) @map("sort_order")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-
-  menuItems MenuItem[]
-
-  @@map("categories")
-}
-
-// ─── Menu Items ──────────────────────────────────────────
-
-model MenuItem {
-  id          String   @id @default(uuid()) @db.Uuid
-  categoryId  String?  @map("category_id") @db.Uuid
-  name        String
-  description String?
-  price       Decimal  @db.Decimal(10, 2)
-  imageUrl    String?  @map("image_url")
-  available   Boolean  @default(true)
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
-
-  category      Category?      @relation(fields: [categoryId], references: [id])
-  orderItems    OrderItem[]
-  dailySpecials DailySpecial[]
-
-  @@map("menu_items")
-}
-
-// ─── Daily Specials ──────────────────────────────────────
-
-model DailySpecial {
-  id         String        @id @default(uuid()) @db.Uuid
-  date       DateTime      @default(now()) @db.Date
-  period     SpecialPeriod
-  menuItemId String        @map("menu_item_id") @db.Uuid
-  createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz
-
-  menuItem MenuItem @relation(fields: [menuItemId], references: [id])
-
-  @@unique([date, period, menuItemId])
-  @@map("daily_specials")
-}
-
-// ─── Announcements ───────────────────────────────────────
-
-model Announcement {
-  id          String   @id @default(uuid()) @db.Uuid
-  title       String
-  description String?
-  imageUrl    String?  @map("image_url")
-  link        String?
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
-
-  @@map("announcements")
-}
-
-// ─── Orders ──────────────────────────────────────────────
-
-model Order {
-  id             String      @id @default(uuid()) @db.Uuid
-  userId         String?     @map("user_id") @db.Uuid
-  guestInfo      Json?       @map("guest_info") @db.JsonB
-  tableName      String      @map("table_name")
-  status         OrderStatus @default(pending)
-  total          Decimal     @default(0) @db.Decimal(10, 2)
-  discountAmount Decimal?    @default(0) @map("discount_amount") @db.Decimal(10, 2)
-  readyInMinutes Int?        @map("ready_in_minutes")
-  notes          String?
-  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz
-  locationType   String?     @default("indoor") @map("location_type")
-  numGuests      Int?        @default(1) @map("num_guests")
-  billed         Boolean     @default(false)
-  sessionId      String?     @map("session_id") @db.Uuid
-
-  user       User?         @relation(fields: [userId], references: [id])
-  session    GuestSession? @relation(fields: [sessionId], references: [id])
-  orderItems OrderItem[]
-  bill       Bill?
-
-  @@index([status], name: "idx_orders_status")
-  @@index([userId], name: "idx_orders_user_id")
-  @@index([sessionId], name: "idx_orders_session_id")
-  @@map("orders")
-}
-
-// ─── Order Items ─────────────────────────────────────────
-
-model OrderItem {
-  id         String   @id @default(uuid()) @db.Uuid
-  orderId    String   @map("order_id") @db.Uuid
-  menuItemId String   @map("menu_item_id") @db.Uuid
-  quantity   Int      @default(1)
-  price      Decimal  @db.Decimal(10, 2)
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
-
-  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  menuItem MenuItem @relation(fields: [menuItemId], references: [id])
-
-  @@index([orderId], name: "idx_order_items_order_id")
-  @@map("order_items")
-}
-
-// ─── Guest Sessions ──────────────────────────────────────
-
-model GuestSession {
-  id                String    @id @default(uuid()) @db.Uuid
-  guestPhone        String    @map("guest_phone")
-  guestName         String    @map("guest_name")
-  tableName         String    @map("table_name")
-  numGuests         Int?      @map("num_guests")
-  startedAt         DateTime  @default(now()) @map("started_at") @db.Timestamptz
-  endedAt           DateTime? @map("ended_at") @db.Timestamptz
-  totalAmount       Decimal   @default(0) @map("total_amount") @db.Decimal(10, 2)
-  status            String    @default("active")
-  paymentMethod     String?   @map("payment_method")
-  paymentStatus     String    @default("pending") @map("payment_status")
-  upiTransactionId  String?   @map("upi_transaction_id")
-  whatsappSent      Boolean   @default(false) @map("whatsapp_sent")
-  whatsappSentAt    DateTime? @map("whatsapp_sent_at") @db.Timestamptz
-  whatsappMessageId String?   @map("whatsapp_message_id")
-  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  userId            String?   @map("user_id") @db.Uuid
-  guestEmail        String?   @map("guest_email")
-  billRequested     Boolean   @default(false) @map("bill_requested")
-  billRequestedAt   DateTime? @map("bill_requested_at") @db.Timestamptz
-
-  user   User?   @relation(fields: [userId], references: [id])
-  orders Order[]
-  bills  Bill[]
-
-  @@index([guestPhone], name: "idx_sessions_phone")
-  @@index([status], name: "idx_sessions_status")
-  @@index([createdAt], name: "idx_sessions_created_at")
-  @@map("guest_sessions")
-}
-
-// ─── Bills ───────────────────────────────────────────────
-
-model Bill {
-  id             String    @id @default(uuid()) @db.Uuid
-  orderId        String?   @unique @map("order_id") @db.Uuid
-  billNumber     String    @unique @map("bill_number")
-  itemsTotal     Decimal   @map("items_total") @db.Decimal(10, 2)
-  discountAmount Decimal?  @default(0) @map("discount_amount") @db.Decimal(10, 2)
-  gstAmount      Decimal?  @default(0) @map("gst_amount") @db.Decimal(10, 2)
-  finalTotal     Decimal   @map("final_total") @db.Decimal(10, 2)
-  paymentMethod  String?   @map("payment_method")
-  paymentStatus  String    @default("pending") @map("payment_status")
-  printedAt      DateTime? @map("printed_at") @db.Timestamptz
-  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  sessionId      String?   @map("session_id") @db.Uuid
-  guestName      String?   @map("guest_name")
-  guestPhone     String?   @map("guest_phone")
-  tableName      String?   @map("table_name")
-
-  order     Order?        @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  session   GuestSession? @relation(fields: [sessionId], references: [id])
-  billItems BillItem[]
-
-  @@index([orderId], name: "idx_bills_order_id")
-  @@index([billNumber], name: "idx_bills_bill_number")
-  @@index([sessionId], name: "idx_bills_session_id")
-  @@map("bills")
-}
-
-// ─── Bill Items ──────────────────────────────────────────
-
-model BillItem {
-  id        String   @id @default(uuid()) @db.Uuid
-  billId    String   @map("bill_id") @db.Uuid
-  itemName  String   @map("item_name")
-  quantity  Int
-  price     Decimal  @db.Decimal(10, 2)
-  subtotal  Decimal  @db.Decimal(10, 2)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-
-  bill Bill @relation(fields: [billId], references: [id], onDelete: Cascade)
-
-  @@index([billId], name: "idx_bill_items_bill_id")
-  @@map("bill_items")
-}
-
-// ─── OTP Codes ───────────────────────────────────────────
-
-model OtpCode {
-  id         String    @id @default(uuid()) @db.Uuid
-  phone      String
-  otpHash    String    @map("otp_hash")
-  expiresAt  DateTime  @map("expires_at") @db.Timestamptz
-  used       Boolean   @default(false)
-  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  verifiedAt DateTime? @map("verified_at") @db.Timestamptz
-
-  @@index([phone], name: "idx_otp_phone")
-  @@index([expiresAt], name: "idx_otp_expires")
-  @@index([used], name: "idx_otp_used")
-  @@map("otp_codes")
 }

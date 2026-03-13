@@ -118,6 +118,7 @@ export async function POST(request: NextRequest) {
         })
 
         const finalTotal = totalItemsAmount - totalDiscount
+        const gstAmount = Math.round((finalTotal * 0.05) * 100) / 100
 
         // 4. Generate bill number
         let billNumber: string
@@ -137,6 +138,7 @@ export async function POST(request: NextRequest) {
                     orderId: orders[0].id,
                     billNumber,
                     itemsTotal: totalItemsAmount,
+                    gstAmount,
                     discountAmount: totalDiscount,
                     finalTotal,
                     paymentMethod,
