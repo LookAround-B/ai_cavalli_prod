@@ -6,22 +6,39 @@ import { useCart } from '@/lib/context/CartContext'
 import { useAuth } from '@/lib/auth/context'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Trash2, ShoppingBag } from 'lucide-react'
+import { Trash2, ShoppingBag, Plus, Sparkles } from 'lucide-react'
 import Link from 'next/link'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Loading } from '@/components/ui/Loading'
-import { showError } from '@/components/ui/Popup'
+import { showError, showPopup } from '@/components/ui/Popup'
 
 export default function CartPage() {
-    const { items, removeFromCart, updateQuantity, total, clearCart, editingOrderId, setEditingOrderId } = useCart()
+    const { items, addToCart, removeFromCart, updateQuantity, total, clearCart, editingOrderId, setEditingOrderId } = useCart()
     const { user } = useAuth()
     const router = useRouter()
 
     const [loading, setLoading] = useState(false)
+    const [dailySpecials, setDailySpecials] = useState<any[]>([])
 
     const [locationType, setLocationType] = useState<'indoor' | 'outdoor'>('indoor')
     const [notes, setNotes] = useState('')
     const [riderSettlementType, setRiderSettlementType] = useState<'monthly' | 'paid_now'>('monthly')
+
+    // Fetch daily specials
+    useEffect(() => {
+        async function fetchSpecials() {
+            try {
+                const res = await fetch('/api/menu')
+                const json = await res.json()
+                if (json.success) {
+                    setDailySpecials(json.data?.specials || [])
+                }
+            } catch (e) {
+                console.error('fetchSpecials error:', e)
+            }
+        }
+        fetchSpecials()
+    }, [])
 
     // Resolve table name and guests from session/user data
     const getTableInfo = () => {
@@ -185,6 +202,63 @@ export default function CartPage() {
                 <Link href="/menu">
                     <Button size="lg">Discover Our Menu</Button>
                 </Link>
+
+                {/* Specials Section for Guests on Empty Cart */}
+                {(!user || user?.role === 'OUTSIDER') && dailySpecials.length > 0 && (
+                    <div style={{ marginTop: '32px', width: '100%', maxWidth: '400px', padding: '16px', background: 'linear-gradient(135deg, #FFF7ED 0%, #FEF3C7 100%)', borderRadius: '12px', border: '2px solid #FBBF24', textAlign: 'left' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', fontSize: '0.85rem', fontWeight: 800, color: '#92400E', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            ⭐ Today's Specials
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '250px', overflowY: 'auto' }}>
+                            {dailySpecials.map((special) => {
+                                const item = special.menu_item || special;
+                                return (
+                                    <button
+                                        key={special.id}
+                                        type="button"
+                                        onClick={() => {
+                                            addToCart({
+                                                itemId: item.id,
+                                                name: item.name,
+                                                price: item.price
+                                            });
+                                            showPopup('Added to cart!');
+                                        }}
+                                        style={{
+                                            padding: '10px 12px',
+                                            background: 'white',
+                                            border: '1px solid #FBBF24',
+                                            borderRadius: '8px',
+                                            cursor: 'pointer',
+                                            textAlign: 'left',
+                                            fontSize: '0.85rem',
+                                            fontWeight: 600,
+                                            transition: 'all 0.2s',
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            width: '100%'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.background = '#FBBF24'
+                                            e.currentTarget.style.color = 'white'
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.background = 'white'
+                                            e.currentTarget.style.color = 'inherit'
+                                        }}
+                                    >
+                                        <div style={{ textAlign: 'left' }}>
+                                            <div style={{ fontWeight: 700, color: '#92400E', fontSize: '0.95rem' }}>{item.name}</div>
+                                            <div style={{ fontSize: '0.75rem', opacity: 0.7, color: 'inherit', marginTop: '2px' }}>₹{item.price} • {special.period || 'special'}</div>
+                                        </div>
+                                        <Plus size={18} style={{ flexShrink: 0, marginLeft: '8px' }} />
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
             </div>
         )
     }
@@ -341,6 +415,96 @@ export default function CartPage() {
                         top: 'var(--space-6)'
                     }}>
                         <h2 style={{ marginBottom: 'var(--space-6)', fontSize: '1.5rem', fontFamily: 'var(--font-serif)' }}>Order Summary</h2>
+
+                        {/* Specials Section for Guests */}
+                        {(!user || user?.role === 'OUTSIDER') && dailySpecials.length > 0 && (
+                            <div style={{ marginTop: '16px', padding: '16px', background: 'linear-gradient(135deg, #FFF7ED 0%, #FEF3C7 100%)', borderRadius: '12px', border: '2px solid #FBBF24', marginBottom: 'var(--space-6)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', fontSize: '0.75rem', fontWeight: 800, color: '#92400E', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    ⭐ Today's Specials
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '250px', overflowY: 'auto' }}>
+                                    {dailySpecials.map((special) => {
+                                        const item = special.menu_item || special;
+                                        return (
+                                            <button
+                                                key={special.id}
+                                                type="button"
+                                                onClick={() => {
+                                                    addToCart({
+                                                        itemId: item.id,
+                                                        name: item.name,
+                                                        price: item.price
+                                                    });
+                                                    showPopup('Added to cart!');
+                                                }}
+                                                style={{
+                                                    padding: '10px 12px',
+                                                    background: 'white',
+                                                    border: '1px solid #FBBF24',
+                                                    borderRadius: '8px',
+                                                    cursor: 'pointer',
+                                                    textAlign: 'left',
+                                                    fontSize: '0.85rem',
+                                                    fontWeight: 600,
+                                                    transition: 'all 0.2s',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    width: '100%'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.background = '#FBBF24'
+                                                    e.currentTarget.style.color = 'white'
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.background = 'white'
+                                                    e.currentTarget.style.color = 'inherit'
+                                                }}
+                                            >
+                                                <div style={{ textAlign: 'left' }}>
+                                                    <div style={{ fontWeight: 700, color: '#92400E', fontSize: '0.95rem' }}>{item.name}</div>
+                                                    <div style={{ fontSize: '0.75rem', opacity: 0.7, color: 'inherit', marginTop: '2px' }}>₹{item.price} • {special.period || 'special'}</div>
+                                                </div>
+                                                <Plus size={18} style={{ flexShrink: 0, marginLeft: '8px' }} />
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
+                        {(!user || user?.role === 'OUTSIDER') && (
+                            <div style={{
+                                background: 'rgba(var(--primary-rgb), 0.05)',
+                                border: '1px solid rgba(var(--primary-rgb), 0.1)',
+                                padding: 'var(--space-4)',
+                                borderRadius: 'var(--radius)',
+                                marginBottom: 'var(--space-6)',
+                                position: 'relative',
+                                overflow: 'hidden'
+                            }}>
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '-10px',
+                                    right: '-10px',
+                                    fontSize: '2.5rem',
+                                    opacity: 0.05,
+                                    transform: 'rotate(15deg)'
+                                }}>🐎</div>
+                                <p style={{
+                                    margin: 0,
+                                    fontSize: '0.9rem',
+                                    lineHeight: 1.5,
+                                    color: 'var(--primary)',
+                                    fontWeight: 600,
+                                    fontStyle: 'italic',
+                                    position: 'relative',
+                                    zIndex: 1
+                                }}>
+                                    "Freshly made just for you - it'll be ready in about 30 minutes. Take a moment to soak in the Horsey atmosphere."
+                                </p>
+                            </div>
+                        )}
 
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-6)', padding: 'var(--space-4)', background: 'var(--background)', borderRadius: 'var(--radius)' }}>
                             <span style={{ fontWeight: 600, color: 'var(--text-muted)' }}>Total Amount</span>

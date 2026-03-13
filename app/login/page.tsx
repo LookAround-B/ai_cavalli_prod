@@ -183,11 +183,10 @@ export default function LoginPage() {
 
         {(view === "rider" || view === "kitchen") && (
           <div className={`${styles.authCard} animate-slide-up`}>
-            <button onClick={handleBack} className={styles.backArrow}>
-              <ArrowLeft size={20} />
-            </button>
-
             <div className={styles.cardHeader}>
+              <button onClick={handleBack} className={styles.backArrow}>
+                <ArrowLeft size={20} />
+              </button>
               <h2 className={styles.cardTitle}>
                 {view === "kitchen" ? "Staff Login" : "Rider Login"}
               </h2>
@@ -244,11 +243,10 @@ export default function LoginPage() {
 
         {view === "guest" && (
           <div className={`${styles.authCard} animate-slide-up`}>
-            <button onClick={handleBack} className={styles.backArrow}>
-              <ArrowLeft size={20} />
-            </button>
-
             <div className={styles.cardHeader}>
+              <button onClick={handleBack} className={styles.backArrow}>
+                <ArrowLeft size={20} />
+              </button>
               <h2 className={styles.cardTitle}>Guest Check-in</h2>
               <p className={styles.cardSubtitle}>
                 Enter your details to start dining
