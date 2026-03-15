@@ -138,7 +138,7 @@ export default function MenuPage() {
 
     return (
         <>
-            <div className="container fade-in" style={{ paddingTop: 'clamp(1rem, 4vw, 1.5rem)', paddingBottom: 'var(--space-12)' }}>
+            <div className="container fade-in" style={{ paddingTop: 'clamp(1rem, 4vw, 1.5rem)', paddingBottom: 'clamp(200px, 35vw, 240px)' }}>
                 <PageHeader title="Menu" backHref="/home" />
 
                 <div style={{
@@ -223,7 +223,6 @@ export default function MenuPage() {
 
             {/* Floating Category Menu Container */}
             <div 
-                className="hidden-mobile"
                 style={{
                 position: 'fixed',
                 bottom: 'clamp(100px, 18vw, 120px)',
