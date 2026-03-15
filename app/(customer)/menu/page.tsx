@@ -222,7 +222,9 @@ export default function MenuPage() {
             </div>
 
             {/* Floating Category Menu Container */}
-            <div style={{
+            <div 
+                className="hidden-mobile"
+                style={{
                 position: 'fixed',
                 bottom: 'clamp(100px, 18vw, 120px)',
                 left: '50%',

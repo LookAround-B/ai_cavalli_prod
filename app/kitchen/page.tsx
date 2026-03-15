@@ -1014,26 +1014,53 @@ export default function KitchenPage() {
                                     Requested {req.bill_requested_at ? new Date(req.bill_requested_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'just now'}
                                 </p>
                                 {/* Payment Method Dropdown for Session Bills */}
-                                <div style={{ margin: '8px 0' }}>
+                                <div style={{ margin: '8px 0', position: 'relative' }}>
                                     <select
                                         value={orderPaymentMethods[req.id] || 'cash'}
                                         onChange={(e) => setOrderPaymentMethods(prev => ({ ...prev, [req.id]: e.target.value }))}
                                         style={{
                                             width: '100%',
                                             padding: '8px 10px',
-                                            borderRadius: '8px',
-                                            border: '1.5px solid #D1D5DB',
-                                            background: 'white',
+                                            paddingRight: '32px',
+                                            borderRadius: 'var(--radius-sm)',
+                                            border: '1px solid var(--border)',
+                                            background: 'var(--surface)',
                                             fontSize: '0.85rem',
-                                            fontWeight: 700,
-                                            color: '#374151',
+                                            fontWeight: 600,
+                                            fontFamily: 'inherit',
+                                            color: 'var(--text)',
+                                            outline: 'none',
+                                            appearance: 'none',
+                                            WebkitAppearance: 'none',
+                                            MozAppearance: 'none',
+                                            transition: 'all 0.2s',
                                             cursor: 'pointer'
+                                        }}
+                                        onFocus={(e) => {
+                                            e.target.style.borderColor = 'var(--primary)'
+                                            e.target.style.boxShadow = '0 0 0 2px rgba(192, 39, 45, 0.1)'
+                                        }}
+                                        onBlur={(e) => {
+                                            e.target.style.borderColor = 'var(--border)'
+                                            e.target.style.boxShadow = 'none'
                                         }}
                                     >
                                         {PAYMENT_OPTIONS.map(opt => (
                                             <option key={opt.value} value={opt.value}>{opt.label}</option>
                                         ))}
                                     </select>
+                                    <div style={{
+                                        position: 'absolute',
+                                        right: '10px',
+                                        top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        pointerEvents: 'none',
+                                        color: 'var(--text-muted)',
+                                        display: 'flex',
+                                        alignItems: 'center'
+                                    }}>
+                                        <ChevronDown size={14} />
+                                    </div>
                                 </div>
                                 <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
                                     <Button

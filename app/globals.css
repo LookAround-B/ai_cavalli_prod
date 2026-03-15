@@ -148,14 +148,19 @@ h6 {
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
   }
-
   to {
     opacity: 1;
-    transform: none;
   }
 }
+
+/* Hide elements below 768px */
+@media (max-width: 768px) {
+  .hidden-mobile {
+    display: none !important;
+  }
+}
+
 
 /* Respect prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
@@ -170,27 +175,21 @@ h6 {
   }
 }
 
-/* Mobile-First Responsive Grid — base is 1 col, scale up with min-width */
 .menu-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
 }
 
-@media (min-width: 40em) {
-
-  /* 640px */
+@media (min-width: 768px) {
   .menu-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--space-6);
-  }
-}
-
-@media (min-width: 64em) {
-
-  /* 1024px */
-  .menu-grid {
-    grid-template-columns: repeat(3, 1fr);
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 24px;
+    padding: 24px 0;
+    max-width: 1200px;
+    margin: 0 auto;
   }
 }
 

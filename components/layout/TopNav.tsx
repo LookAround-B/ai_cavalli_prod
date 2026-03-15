@@ -226,10 +226,10 @@ export function TopNav({ title, links, accentColor = '#1A1A1A', accentText = '#F
                         position: 'absolute',
                         right: 0,
                         top: 'calc(100% + 8px)',
-                        background: '#fff',
-                        borderRadius: '12px',
-                        boxShadow: '0 8px 30px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.06)',
-                        border: '1px solid #e5e5e5',
+                        background: 'var(--surface)',
+                        borderRadius: 'var(--radius)',
+                        boxShadow: 'var(--shadow-lg)',
+                        border: '1px solid var(--border)',
                         minWidth: '220px',
                         overflow: 'hidden',
                         animation: 'fadeInDown 0.15s ease',
@@ -238,19 +238,19 @@ export function TopNav({ title, links, accentColor = '#1A1A1A', accentText = '#F
                         {/* User info */}
                         <div style={{
                             padding: '0.875rem 1rem',
-                            borderBottom: '1px solid #f0f0f0',
+                            borderBottom: '1px solid var(--border)',
                         }}>
                             <div style={{
                                 fontWeight: 700,
                                 fontSize: '0.9rem',
-                                color: '#1a1a1a',
+                                color: 'var(--text)',
                                 marginBottom: '2px',
                             }}>
                                 {user?.name}
                             </div>
                             <div style={{
                                 fontSize: '0.75rem',
-                                color: '#888',
+                                color: 'var(--text-muted)',
                                 fontWeight: 500,
                             }}>
                                 {roleLabel || user?.role || 'User'}
@@ -271,14 +271,14 @@ export function TopNav({ title, links, accentColor = '#1A1A1A', accentText = '#F
                                 border: 'none',
                                 background: 'transparent',
                                 cursor: loggingOut ? 'wait' : 'pointer',
-                                color: '#dc2626',
+                                color: 'var(--primary)',
                                 fontSize: '0.85rem',
                                 fontWeight: 600,
                                 transition: 'background 0.15s ease',
                                 textAlign: 'left',
                                 opacity: loggingOut ? 0.6 : 1,
                             }}
-                            onMouseEnter={(e) => { if (!loggingOut) e.currentTarget.style.background = '#fef2f2' }}
+                            onMouseEnter={(e) => { if (!loggingOut) e.currentTarget.style.background = 'rgba(var(--primary-rgb), 0.05)' }}
                             onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
                         >
                             <LogOut size={16} />

@@ -24,6 +24,7 @@ import {
   Key,
   UserPlus,
   Filter,
+  ChevronDown,
 } from "lucide-react";
 import { AdminPageHeader } from "@/components/layout/AdminPageHeader";
 
@@ -935,27 +936,28 @@ export default function UserControlPage() {
                       }
                       style={{
                         width: "100%",
-                        padding: "16px 50px 16px 18px", // extra right padding for arrow
-                        borderRadius: "14px",
-                        border: "2px solid rgba(var(--primary-rgb), 0.15)",
-                        background: "#fff",
+                        padding: "0.75rem",
+                        paddingRight: "50px", // extra right padding for arrow
+                        borderRadius: "var(--radius)",
+                        border: "1px solid var(--border)",
+                        background: "var(--surface)",
+                        color: "var(--text)",
+                        fontFamily: "inherit",
                         fontSize: "1rem",
                         fontWeight: 500,
                         outline: "none",
                         appearance: "none",
                         WebkitAppearance: "none",
                         MozAppearance: "none",
-                        transition: "all 0.25s ease",
+                        transition: "all 0.2s",
                         cursor: "pointer",
                       }}
                       onFocus={(e) => {
                         e.target.style.borderColor = "var(--primary)";
-                        e.target.style.boxShadow =
-                          "0 0 0 4px rgba(var(--primary-rgb), 0.08)";
+                        e.target.style.boxShadow = "0 0 0 2px rgba(192, 39, 45, 0.1)";
                       }}
                       onBlur={(e) => {
-                        e.target.style.borderColor =
-                          "rgba(var(--primary-rgb), 0.15)";
+                        e.target.style.borderColor = "var(--border)";
                         e.target.style.boxShadow = "none";
                       }}
                     >
@@ -974,11 +976,13 @@ export default function UserControlPage() {
                         top: "50%",
                         transform: "translateY(-50%)",
                         pointerEvents: "none",
-                        color: "rgba(0,0,0,0.5)",
-                        fontSize: "14px",
+                        color: "var(--text-muted)",
+                        fontSize: "16px",
+                        display: "flex",
+                        alignItems: "center"
                       }}
                     >
-                      ▾
+                      <ChevronDown size={18} />
                     </div>
                   </div>
                 </div>

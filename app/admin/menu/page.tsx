@@ -14,7 +14,8 @@ import {
     Filter,
     Save,
     Trash2,
-    Utensils
+    Utensils,
+    ChevronDown
 } from 'lucide-react'
 import { ImageSelector } from '@/components/ui/ImageSelector'
 import { AdminPageHeader } from '@/components/layout/AdminPageHeader'
@@ -347,33 +348,53 @@ export default function AdminMenuPage() {
                                     }}>
                                         Category
                                     </label>
-                                    <select
-                                        value={categoryId}
-                                        onChange={e => setCategoryId(e.target.value)}
-                                        style={{
-                                            width: '100%',
-                                            padding: '16px 18px',
-                                            borderRadius: '14px',
-                                            border: '2px solid rgba(var(--primary-rgb), 0.15)',
-                                            fontSize: '1rem',
-                                            outline: 'none',
-                                            transition: 'all 0.3s ease',
-                                            background: 'white',
-                                            cursor: 'pointer'
-                                        }}
-                                        onFocus={(e: React.FocusEvent<HTMLSelectElement>) => {
-                                            e.target.style.borderColor = 'var(--primary)'
-                                            e.target.style.boxShadow = '0 0 0 4px rgba(var(--primary-rgb), 0.08)'
-                                        }}
-                                        onBlur={(e: React.FocusEvent<HTMLSelectElement>) => {
-                                            e.target.style.borderColor = 'rgba(var(--primary-rgb), 0.15)'
-                                            e.target.style.boxShadow = 'none'
-                                        }}
-                                    >
-                                        {categories.map(c => (
-                                            <option key={c.id} value={c.id}>{c.name}</option>
-                                        ))}
-                                    </select>
+                                    <div style={{ position: 'relative' }}>
+                                        <select
+                                            value={categoryId}
+                                            onChange={e => setCategoryId(e.target.value)}
+                                            style={{
+                                                width: '100%',
+                                                padding: '0.75rem',
+                                                paddingRight: '40px',
+                                                borderRadius: 'var(--radius)',
+                                                border: '1px solid var(--border)',
+                                                fontFamily: 'inherit',
+                                                fontSize: '1rem',
+                                                outline: 'none',
+                                                appearance: 'none',
+                                                WebkitAppearance: 'none',
+                                                MozAppearance: 'none',
+                                                transition: 'all 0.2s',
+                                                backgroundColor: 'var(--surface)',
+                                                color: 'var(--text)',
+                                                cursor: 'pointer'
+                                            }}
+                                            onFocus={(e: React.FocusEvent<HTMLSelectElement>) => {
+                                                e.target.style.borderColor = 'var(--primary)'
+                                                e.target.style.boxShadow = '0 0 0 2px rgba(192, 39, 45, 0.1)'
+                                            }}
+                                            onBlur={(e: React.FocusEvent<HTMLSelectElement>) => {
+                                                e.target.style.borderColor = 'var(--border)'
+                                                e.target.style.boxShadow = 'none'
+                                            }}
+                                        >
+                                            {categories.map(c => (
+                                                <option key={c.id} value={c.id}>{c.name}</option>
+                                            ))}
+                                        </select>
+                                        <div style={{
+                                            position: 'absolute',
+                                            right: '12px',
+                                            top: '50%',
+                                            transform: 'translateY(-50%)',
+                                            pointerEvents: 'none',
+                                            color: 'var(--text-muted)',
+                                            display: 'flex',
+                                            alignItems: 'center'
+                                        }}>
+                                            <ChevronDown size={18} />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
