@@ -61,20 +61,6 @@ export function MenuItemCard({ item, onAdd }: MenuItemCardProps) {
         <>
             {/* ===== CARD ===== */}
             <div className={`${styles.card} fade-in`} onClick={handleCardClick}>
-                <div className={styles.infoArea}>
-                    <div className={styles.titleRow}>
-                        <h3 className={styles.name}>{item.name}</h3>
-                        <span className={styles.price}>₹{item.price.toFixed(2)}</span>
-                    </div>
-                    {item.description && (
-                        <div className={styles.description}>
-                            {renderDescription(item.description.length > 100
-                                ? item.description.slice(0, 100) + '…'
-                                : item.description)}
-                        </div>
-                    )}
-                </div>
-
                 <div className={styles.imageArea}>
                     {item.image_url && !imgError ? (
                         <img
@@ -89,35 +75,50 @@ export function MenuItemCard({ item, onAdd }: MenuItemCardProps) {
                     )}
                 </div>
 
-                <div className={styles.actionArea} onClick={handleActionClick}>
-                    {quantity === 0 ? (
-                        <button
-                            className={styles.addBtn}
-                            onClick={() => onAdd(item)}
-                            disabled={!item.available}
-                        >
-                            <span className={styles.addDesktopIcon}>+</span> ADD
-                        </button>
-                    ) : (
-                        <div className={styles.qtyRow}>
-                            <button
-                                className={styles.qtyBtn}
-                                onClick={() => updateQuantity(item.id, -1)}
-                                aria-label="Decrease quantity"
-                            >
-                                <Minus size={14} />
-                            </button>
-                            <span className={styles.qtyNum}>{quantity}</span>
-                            <button
-                                className={styles.qtyBtn}
-                                onClick={() => updateQuantity(item.id, 1)}
-                                aria-label="Increase quantity"
-                                disabled={!item.available}
-                            >
-                                <Plus size={14} />
-                            </button>
+                <div className={styles.infoArea}>
+                    <div className={styles.titleRow}>
+                        <h3 className={styles.name}>{item.name}</h3>
+                        <span className={styles.price}>₹{item.price.toFixed(2)}</span>
+                    </div>
+
+                    {item.description && (
+                        <div className={styles.description}>
+                            {renderDescription(item.description.length > 100
+                                ? item.description.slice(0, 100) + '…'
+                                : item.description)}
                         </div>
                     )}
+
+                    <div className={styles.actionArea} onClick={handleActionClick}>
+                        {quantity === 0 ? (
+                            <button
+                                className={styles.addBtn}
+                                onClick={() => onAdd(item)}
+                                disabled={!item.available}
+                            >
+                                <span className={styles.addDesktopIcon}>+</span> ADD
+                            </button>
+                        ) : (
+                            <div className={styles.qtyRow}>
+                                <button
+                                    className={styles.qtyBtn}
+                                    onClick={() => updateQuantity(item.id, -1)}
+                                    aria-label="Decrease quantity"
+                                >
+                                    <Minus size={16} />
+                                </button>
+                                <span className={styles.qtyNum}>{quantity}</span>
+                                <button
+                                    className={styles.qtyBtn}
+                                    onClick={() => updateQuantity(item.id, 1)}
+                                    aria-label="Increase quantity"
+                                    disabled={!item.available}
+                                >
+                                    <Plus size={16} />
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
