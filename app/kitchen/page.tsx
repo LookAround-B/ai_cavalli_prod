@@ -54,6 +54,8 @@ interface OrderItem {
     quantity: number
     notes?: string
     price: number
+    menu_item_id?: string
+    menu_item?: { id: string, name: string, category?: { name: string } }
 }
 
 interface Order {
@@ -162,9 +164,9 @@ export default function KitchenPage() {
             const res = await fetch('/api/orders?status=pending,preparing,ready&all=true')
             const json = await res.json()
             if (json.success && json.data) {
-                // Sort ascending by created_at
+                // Sort descending by created_at (newest first)
                 const sorted = json.data.sort((a: any, b: any) =>
-                    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+                    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
                 )
                 setOrders(sorted)
                 // Initialize payment dropdown for billed orders
@@ -805,6 +807,12 @@ export default function KitchenPage() {
     async function addItemToOrder(orderId: string, menuItemId: string) {
         const menuItem = menuItems.find(m => m.id === menuItemId)
         if (!menuItem) return
+        // Check if order already has this item — increment instead of creating duplicate
+        const order = orders.find(o => o.id === orderId)
+        const existingItem = order?.items?.find((i: any) => i.menu_item_id === menuItemId)
+        if (existingItem) {
+            return updateItemQuantity(existingItem.id, orderId, existingItem.quantity + 1)
+        }
         try {
             const res = await fetch('/api/orders/items', {
                 method: 'POST',
@@ -1539,8 +1547,8 @@ export default function KitchenPage() {
                                 {viewTab === 'active' && (
                                     <div style={{ padding: '20px', background: 'linear-gradient(180deg, #FAFAFA 0%, #F5F5F5 100%)', borderTop: '2px solid #E5E5E5', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
 
-                                        {/* Attendee Dropdown - only before cooking starts */}
-                                        {order.status === 'pending' && (
+                                        {/* Attendee Dropdown - show when no attendee selected */}
+                                        {(order.status === 'pending' || !orderAttendees[order.id]) && (
                                             <div style={{ position: 'relative', marginBottom: '4px' }}>
                                                 <button
                                                     onClick={() => setAttendeeDropdownOpen(attendeeDropdownOpen === order.id ? null : order.id)}
@@ -1548,18 +1556,18 @@ export default function KitchenPage() {
                                                         width: '100%',
                                                         height: '44px',
                                                         borderRadius: '12px',
-                                                        border: '1.5px solid #D1D5DB',
-                                                        background: 'white',
+                                                        border: order.status === 'ready' && !orderAttendees[order.id] ? '2px solid #EF4444' : '1.5px solid #D1D5DB',
+                                                        background: order.status === 'ready' && !orderAttendees[order.id] ? '#FEF2F2' : 'white',
                                                         cursor: 'pointer',
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'space-between',
                                                         padding: '0 14px',
-                                                        color: orderAttendees[order.id] ? 'var(--text)' : '#9CA3AF',
+                                                        color: orderAttendees[order.id] ? 'var(--text)' : order.status === 'ready' ? '#EF4444' : '#9CA3AF',
                                                         fontWeight: 700,
                                                         fontSize: '0.85rem',
                                                         transition: 'all 0.2s',
-                                                        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                                                        boxShadow: order.status === 'ready' && !orderAttendees[order.id] ? '0 0 0 3px rgba(239, 68, 68, 0.1)' : '0 1px 3px rgba(0,0,0,0.05)'
                                                     }}
                                                 >
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1681,25 +1689,40 @@ export default function KitchenPage() {
                                                 </Button>
                                             )}
                                             {order.status === 'ready' && (
-                                                <Button
-                                                    onClick={() => updateStatus(order.id, 'completed')}
-                                                    size="lg"
-                                                    variant="outline"
-                                                    style={{
-                                                        width: '100%',
-                                                        height: '56px',
-                                                        fontWeight: 900,
-                                                        fontSize: '1.05rem',
-                                                        color: 'var(--text)',
-                                                        border: '2px solid #D1D5DB',
-                                                        background: 'white',
-                                                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                                                        letterSpacing: '0.05em',
-                                                        borderRadius: '12px'
-                                                    }}
-                                                >
-                                                    HAND OVER
-                                                </Button>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                    <Button
+                                                        onClick={() => {
+                                                            if (!orderAttendees[order.id]) {
+                                                                showError('Attendee Required', 'Please select who attended this order before handing over')
+                                                                return
+                                                            }
+                                                            updateStatus(order.id, 'completed')
+                                                        }}
+                                                        size="lg"
+                                                        variant="outline"
+                                                        style={{
+                                                            width: '100%',
+                                                            height: '56px',
+                                                            fontWeight: 900,
+                                                            fontSize: '1.05rem',
+                                                            color: !orderAttendees[order.id] ? '#9CA3AF' : 'var(--text)',
+                                                            border: !orderAttendees[order.id] ? '2px dashed #D1D5DB' : '2px solid #D1D5DB',
+                                                            background: !orderAttendees[order.id] ? '#F9FAFB' : 'white',
+                                                            boxShadow: !orderAttendees[order.id] ? 'none' : '0 2px 8px rgba(0,0,0,0.08)',
+                                                            letterSpacing: '0.05em',
+                                                            borderRadius: '12px',
+                                                            opacity: !orderAttendees[order.id] ? 0.7 : 1,
+                                                            cursor: !orderAttendees[order.id] ? 'not-allowed' : 'pointer'
+                                                        }}
+                                                    >
+                                                        HAND OVER
+                                                    </Button>
+                                                    {!orderAttendees[order.id] && (
+                                                        <span style={{ fontSize: '0.7rem', color: '#EF4444', fontWeight: 700, textAlign: 'center' }}>
+                                                            ⚠ Select &quot;Attended by&quot; first
+                                                        </span>
+                                                    )}
+                                                </div>
                                             )}
                                         </div>
 
@@ -2034,19 +2057,34 @@ export default function KitchenPage() {
                 )}
             </div>
 
-            {showMenuSelector && selectedOrderForMenu && (
-                <MenuItemSelector
-                    items={menuItems}
-                    categories={categories}
-                    onSelect={(item) => {
-                        addItemToOrder(selectedOrderForMenu, item.id)
-                    }}
-                    onClose={() => {
-                        setShowMenuSelector(false)
-                        setSelectedOrderForMenu(null)
-                    }}
-                />
-            )}
+            {showMenuSelector && selectedOrderForMenu && (() => {
+                const editOrder = orders.find(o => o.id === selectedOrderForMenu)
+                const editSelectedItems = (editOrder?.items || [])
+                    .filter((i: any) => i.menu_item_id)
+                    .map((i: any) => ({ menuItemId: i.menu_item_id, quantity: i.quantity }))
+                return (
+                    <MenuItemSelector
+                        items={menuItems}
+                        categories={categories}
+                        selectedItems={editSelectedItems}
+                        onSelect={(item) => {
+                            addItemToOrder(selectedOrderForMenu, item.id)
+                        }}
+                        onUpdateQuantity={(menuItemId, quantity) => {
+                            const orderItem = editOrder?.items?.find((i: any) => i.menu_item_id === menuItemId)
+                            if (orderItem) updateItemQuantity(orderItem.id, selectedOrderForMenu, quantity)
+                        }}
+                        onRemoveItem={(menuItemId) => {
+                            const orderItem = editOrder?.items?.find((i: any) => i.menu_item_id === menuItemId)
+                            if (orderItem) deleteOrderItem(orderItem.id, selectedOrderForMenu)
+                        }}
+                        onClose={() => {
+                            setShowMenuSelector(false)
+                            setSelectedOrderForMenu(null)
+                        }}
+                    />
+                )
+            })()}
 
             {billPreview && (
                 <BillPreviewModal
@@ -2381,6 +2419,7 @@ export default function KitchenPage() {
                 <MenuItemSelector
                     items={menuItems}
                     categories={categories}
+                    selectedItems={newOrderItems}
                     onSelect={(item) => {
                         setNewOrderItems(prev => {
                             const existing = prev.find(i => i.menuItemId === item.id)
@@ -2389,6 +2428,12 @@ export default function KitchenPage() {
                             }
                             return [...prev, { menuItemId: item.id, quantity: 1 }]
                         })
+                    }}
+                    onUpdateQuantity={(menuItemId, quantity) => {
+                        setNewOrderItems(prev => prev.map(i => i.menuItemId === menuItemId ? { ...i, quantity } : i))
+                    }}
+                    onRemoveItem={(menuItemId) => {
+                        setNewOrderItems(prev => prev.filter(i => i.menuItemId !== menuItemId))
                     }}
                     onClose={() => setShowNewOrderMenu(false)}
                 />
