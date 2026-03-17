@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth/context";
 import { Button } from "@/components/ui/button";
-import { User, KeyRound, Utensils, ArrowLeft, ShieldCheck } from "lucide-react";
+import { User, KeyRound, Utensils, ArrowLeft, ShieldCheck, Share, PlusSquare, X } from "lucide-react";
 import styles from "./page.module.css";
 
 type LoginView = "roles" | "rider" | "kitchen" | "guest";
@@ -27,6 +27,7 @@ export default function LoginPage() {
   const { login, guestLogin } = useAuth();
 
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  const [showIosInstructions, setShowIosInstructions] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
@@ -67,7 +68,7 @@ export default function LoginPage() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
       if (isIOS) {
-        alert("To install the app on iOS:\n\n1. Tap the Share button at the bottom of the screen.\n2. Select 'Add to Home Screen'.");
+        setShowIosInstructions(true);
       }
       setShowInstallPrompt(false);
       return;
@@ -401,6 +402,25 @@ export default function LoginPage() {
             <button className={styles.dismissBtn} onClick={handleDismissInstall}>
               Dismiss
             </button>
+          </div>
+        </div>
+      )}
+
+      {showIosInstructions && (
+        <div className={styles.installPopup}>
+          <div className={styles.iosInstructionHeader}>
+            <h3 className={styles.installTitle}>Install on iOS</h3>
+            <button className={styles.closeBtn} onClick={() => setShowIosInstructions(false)}>
+              <X size={20} />
+            </button>
+          </div>
+          <div className={styles.iosSteps}>
+            <p>
+              1. Tap the <Share size={16} className={styles.inlineIcon} /> <strong>Share</strong> button.
+            </p>
+            <p>
+              2. Tap <strong>Add to Home Screen</strong> <PlusSquare size={16} className={styles.inlineIcon} />.
+            </p>
           </div>
         </div>
       )}
