@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth/context";
 import { Button } from "@/components/ui/button";
 import { User, KeyRound, Utensils, ArrowLeft, ShieldCheck } from "lucide-react";
@@ -25,6 +25,59 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   const { login, guestLogin } = useAuth();
+
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    const isDismissed = localStorage.getItem("pwaPromptDismissed");
+    const checkMobile = () => window.innerWidth <= 768;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      if (checkMobile() && !isDismissed) {
+        setShowInstallPrompt(true);
+      }
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+
+    // Fallback for iOS/safari or demonstration
+    if (checkMobile() && !isDismissed) {
+      const timer = setTimeout(() => setShowInstallPrompt(true), 1500);
+      return () => {
+        window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+        clearTimeout(timer);
+      };
+    }
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) {
+      alert("To install the app, tap the share button and select 'Add to Home Screen'.");
+      setShowInstallPrompt(false);
+      return;
+    }
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === "accepted") {
+      console.log("User accepted the install prompt");
+    }
+    setDeferredPrompt(null);
+    setShowInstallPrompt(false);
+  };
+
+  const handleDismissInstall = () => {
+    setShowInstallPrompt(false);
+    localStorage.setItem("pwaPromptDismissed", "true");
+  };
 
   const handleRoleSelect = (role: LoginView) => {
     setView(role);
@@ -327,6 +380,20 @@ export default function LoginPage() {
       <div className={styles.loginFooter}>
         Powered by LookAround
       </div>
+
+      {showInstallPrompt && (
+        <div className={styles.installPopup}>
+          <h3 className={styles.installTitle}>Install WebApp</h3>
+          <div className={styles.installActions}>
+            <button className={styles.installBtn} onClick={handleInstallClick}>
+              Add to Home Screen
+            </button>
+            <button className={styles.dismissBtn} onClick={handleDismissInstall}>
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
