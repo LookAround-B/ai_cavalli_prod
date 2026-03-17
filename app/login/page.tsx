@@ -34,6 +34,17 @@ export default function LoginPage() {
     const isDismissed = localStorage.getItem("pwaPromptDismissed");
     const checkMobile = () => window.innerWidth <= 768;
 
+    // Detect iOS and standalone mode (if it is already installed)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
+
+    // Show popup for iOS since it doesn't trigger 'beforeinstallprompt'
+    if (isIOS && !isStandalone && checkMobile() && !isDismissed) {
+      setShowInstallPrompt(true);
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
@@ -53,6 +64,12 @@ export default function LoginPage() {
   const handleInstallClick = async () => {
     if (!deferredPrompt) {
       // Browser doesn't support programmatic install (like iOS) or conditions aren't met
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      if (isIOS) {
+        alert("To install the app on iOS:\n\n1. Tap the Share button at the bottom of the screen.\n2. Select 'Add to Home Screen'.");
+      }
+      setShowInstallPrompt(false);
       return;
     }
     
