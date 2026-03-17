@@ -45,15 +45,6 @@ export default function LoginPage() {
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
 
-    // Fallback for iOS/safari or demonstration
-    if (checkMobile() && !isDismissed) {
-      const timer = setTimeout(() => setShowInstallPrompt(true), 1500);
-      return () => {
-        window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-        clearTimeout(timer);
-      };
-    }
-
     return () => {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     };
@@ -61,15 +52,17 @@ export default function LoginPage() {
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) {
-      alert("To install the app, tap the share button and select 'Add to Home Screen'.");
-      setShowInstallPrompt(false);
+      // Browser doesn't support programmatic install (like iOS) or conditions aren't met
       return;
     }
+    
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
+    
     if (outcome === "accepted") {
       console.log("User accepted the install prompt");
     }
+    
     setDeferredPrompt(null);
     setShowInstallPrompt(false);
   };
