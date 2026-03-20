@@ -3,17 +3,19 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/lib/auth/context'
 import { Button } from '@/components/ui/button'
-import { User, Package, LogOut, MessageSquare, ShieldCheck, Utensils, Receipt, CreditCard, Clock, CheckCircle2, XCircle, ChevronDown } from 'lucide-react'
+import { User, Package, LogOut, MessageSquare, ShieldCheck, Utensils, Receipt, CreditCard, Clock, CheckCircle2, XCircle, ChevronDown, KeyRound } from 'lucide-react'
 import Link from 'next/link'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Loading } from '@/components/ui/Loading'
 import { useCart } from '@/lib/context/CartContext'
 import { showError, showSuccess, showConfirm } from '@/components/ui/Popup'
+import { useRouter } from 'next/navigation'
 
 export default function ProfilePage() {
-    const { logout, user } = useAuth()
+    const { logout, user, login, guestLogin } = useAuth()
     const role = user?.role
     const { clearCart } = useCart()
+    const router = useRouter()
     const [userDetails, setUserDetails] = useState<any>(null)
     const [orders, setOrders] = useState<any[]>([])
     const [loadingOrders, setLoadingOrders] = useState(true)
@@ -362,37 +364,7 @@ export default function ProfilePage() {
                         </div>
                     </>
                 ) : (
-                    <div style={{ textAlign: 'center', padding: 'var(--space-4) 0' }}>
-                        <div style={{
-                            width: '80px',
-                            height: '80px',
-                            borderRadius: '50%',
-                            background: 'rgba(var(--secondary-rgb), 0.1)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: 'var(--secondary)',
-                            margin: '0 auto var(--space-4)'
-                        }}>
-                            <User size={40} />
-                        </div>
-                        <h2 style={{ fontSize: '1.75rem', marginBottom: 'var(--space-2)' }}>Guest Seeker</h2>
-                        <p style={{ color: 'var(--text-muted)', marginBottom: 'var(--space-6)', maxWidth: '400px', margin: '0 auto var(--space-6)' }}>
-                            Sign in to save your favorite dishes and view your full order history.
-                        </p>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)', maxWidth: '500px', margin: '0 auto' }}>
-                            <Link href="/login" style={{ flex: 1, minWidth: '200px' }}>
-                                <Button style={{ width: '100%', height: '48px' }}>Sign In / Register</Button>
-                            </Link>
-                            <Button
-                                onClick={() => window.open('https://wa.me/1234567890', '_blank')}
-                                variant="outline"
-                                style={{ flex: 1, minWidth: '200px', height: '48px' }}
-                            >
-                                Contact Support
-                            </Button>
-                        </div>
-                    </div>
+                    <ProfileLoginSection login={login} guestLogin={guestLogin} router={router} />
                 )}
             </div>
 
@@ -553,4 +525,244 @@ export default function ProfilePage() {
     )
 }
 
+// Myntra-style login section for unauthenticated users on Profile page
+function ProfileLoginSection({ login, guestLogin, router }: { login: any, guestLogin: any, router: any }) {
+    const [loginType, setLoginType] = useState<'guest' | 'staff' | null>(null)
+    const [phone, setPhone] = useState('')
+    const [pin, setPin] = useState('')
+    const [guestName, setGuestName] = useState('')
+    const [guestPhone, setGuestPhone] = useState('')
+    const [tableName, setTableName] = useState('')
+    const [numGuests, setNumGuests] = useState('1')
+    const [error, setError] = useState('')
+    const [loading, setLoading] = useState(false)
 
+    const handleStaffLogin = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setError('')
+        setLoading(true)
+        try {
+            const res = await login({ phone, pin })
+            if (res.success) {
+                const role = res.user?.role
+                if (role === 'KITCHEN' || role === 'ADMIN') {
+                    router.push('/kitchen')
+                } else {
+                    router.push('/home')
+                }
+            } else {
+                setError(res.error || 'Invalid credentials')
+            }
+        } catch {
+            setError('Login failed. Please try again.')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleGuestLogin = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setError('')
+        setLoading(true)
+        try {
+            const res = await guestLogin({
+                name: guestName,
+                phone: guestPhone,
+                table_name: tableName,
+                num_guests: parseInt(numGuests) || 1
+            })
+            if (res.success) {
+                router.push('/home')
+            } else {
+                setError(res.error || 'Login failed')
+            }
+        } catch {
+            setError('Login failed. Please try again.')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    // No login type selected — show the welcome screen (Myntra-style)
+    if (!loginType) {
+        return (
+            <div style={{ textAlign: 'center', padding: 'var(--space-4) 0' }}>
+                <div style={{
+                    width: '80px',
+                    height: '80px',
+                    borderRadius: '50%',
+                    background: 'rgba(var(--primary-rgb), 0.08)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--primary)',
+                    margin: '0 auto var(--space-4)'
+                }}>
+                    <User size={40} />
+                </div>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '4px' }}>Hey there!</h2>
+                <p style={{ color: 'var(--text-muted)', marginBottom: '24px', fontSize: '0.95rem', maxWidth: '320px', margin: '0 auto 24px' }}>
+                    Log in to track your orders, view history, and get the full experience.
+                </p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '320px', margin: '0 auto' }}>
+                    <button
+                        onClick={() => setLoginType('guest')}
+                        style={{
+                            width: '100%',
+                            padding: '14px 20px',
+                            background: 'var(--primary)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '10px',
+                            fontSize: '1rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '10px',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        <User size={20} />
+                        Continue as Guest
+                    </button>
+                    <button
+                        onClick={() => setLoginType('staff')}
+                        style={{
+                            width: '100%',
+                            padding: '14px 20px',
+                            background: 'transparent',
+                            color: 'var(--text)',
+                            border: '1.5px solid var(--border)',
+                            borderRadius: '10px',
+                            fontSize: '1rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '10px',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        <KeyRound size={20} />
+                        Staff / Admin Login
+                    </button>
+                </div>
+            </div>
+        )
+    }
+
+    // Guest login form
+    if (loginType === 'guest') {
+        return (
+            <div>
+                <button
+                    onClick={() => { setLoginType(null); setError('') }}
+                    style={{
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        fontSize: '0.9rem', fontWeight: 600, color: 'var(--primary)',
+                        marginBottom: '16px', padding: 0, display: 'flex', alignItems: 'center', gap: '4px'
+                    }}
+                >
+                    ← Back
+                </button>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '4px' }}>Guest Check-in</h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '20px' }}>Enter your details to start ordering</p>
+
+                {error && (
+                    <div style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', color: '#991B1B', fontSize: '0.9rem' }}>
+                        {error}
+                    </div>
+                )}
+
+                <form onSubmit={handleGuestLogin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div>
+                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Your Name</label>
+                        <input type="text" placeholder="Enter your name" value={guestName} onChange={e => setGuestName(e.target.value)} required
+                            style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--border)', borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box', outline: 'none', transition: 'border 0.2s' }}
+                            onFocus={e => e.currentTarget.style.borderColor = 'var(--primary)'}
+                            onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                        />
+                    </div>
+                    <div>
+                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Phone Number</label>
+                        <input type="tel" placeholder="Enter your phone" value={guestPhone} onChange={e => setGuestPhone(e.target.value)} required
+                            style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--border)', borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box', outline: 'none', transition: 'border 0.2s' }}
+                            onFocus={e => e.currentTarget.style.borderColor = 'var(--primary)'}
+                            onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                        />
+                    </div>
+                    <div>
+                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Table Name</label>
+                        <input type="text" placeholder="e.g., Table 1, Terrace" value={tableName} onChange={e => setTableName(e.target.value)} required
+                            style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--border)', borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box', outline: 'none', transition: 'border 0.2s' }}
+                            onFocus={e => e.currentTarget.style.borderColor = 'var(--primary)'}
+                            onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                        />
+                    </div>
+                    <div>
+                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Number of Guests</label>
+                        <select value={numGuests} onChange={e => setNumGuests(e.target.value)}
+                            style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--border)', borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box', outline: 'none', background: 'white' }}>
+                            {Array.from({ length: 20 }, (_, i) => i + 1).map(n => (
+                                <option key={n} value={n}>{n}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <Button type="submit" isLoading={loading} size="lg" style={{ height: '48px', fontSize: '1rem', marginTop: '4px' }}>
+                        Continue
+                    </Button>
+                </form>
+            </div>
+        )
+    }
+
+    // Staff / Admin login form
+    return (
+        <div>
+            <button
+                onClick={() => { setLoginType(null); setError('') }}
+                style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    fontSize: '0.9rem', fontWeight: 600, color: 'var(--primary)',
+                    marginBottom: '16px', padding: 0, display: 'flex', alignItems: 'center', gap: '4px'
+                }}
+            >
+                ← Back
+            </button>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '4px' }}>Staff Login</h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '20px' }}>For Kitchen, Admin & Staff members</p>
+
+            {error && (
+                <div style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', color: '#991B1B', fontSize: '0.9rem' }}>
+                    {error}
+                </div>
+            )}
+
+            <form onSubmit={handleStaffLogin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Phone Number</label>
+                    <input type="tel" placeholder="Enter your phone" value={phone} onChange={e => setPhone(e.target.value)} required
+                        style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--border)', borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box', outline: 'none', transition: 'border 0.2s' }}
+                        onFocus={e => e.currentTarget.style.borderColor = 'var(--primary)'}
+                        onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                    />
+                </div>
+                <div>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>PIN</label>
+                    <input type="password" placeholder="Enter your PIN" value={pin} onChange={e => setPin(e.target.value)} required maxLength={6}
+                        style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--border)', borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box', outline: 'none', transition: 'border 0.2s', letterSpacing: '0.3em' }}
+                        onFocus={e => e.currentTarget.style.borderColor = 'var(--primary)'}
+                        onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                    />
+                </div>
+                <Button type="submit" isLoading={loading} size="lg" style={{ height: '48px', fontSize: '1rem', marginTop: '4px' }}>
+                    Sign In
+                </Button>
+            </form>
+        </div>
+    )
+}

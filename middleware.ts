@@ -29,7 +29,7 @@ export async function middleware(request: NextRequest) {
     const isPublicRoute = requiredRoles.length === 0
 
     const resolveHome = (role?: UserRole) => {
-        if (!role) return '/login'
+        if (!role) return '/menu'  // Changed from '/login' to '/menu' for guests
         switch (role) {
             case 'OUTSIDER': return '/home'
             case 'KITCHEN': return '/kitchen'
@@ -40,20 +40,25 @@ export async function middleware(request: NextRequest) {
         }
     }
 
-    // 1. Public routes (login, auth callback)
-    if (isPublicRoute) {
+    // 1. Login page — redirect authenticated users to their home
+    if (pathname === '/login' || pathname === '/auth/callback') {
         if (isAuthenticated) {
             return NextResponse.redirect(new URL(resolveHome(authRole), request.url))
         }
         return NextResponse.next()
     }
 
-    // 2. Not authenticated → redirect to login
+    // 2. Public routes — allow everyone through (authenticated or not)
+    if (isPublicRoute) {
+        return NextResponse.next()
+    }
+
+    // 3. Not authenticated → redirect to login for auth-required routes
     if (!isAuthenticated) {
         return NextResponse.redirect(new URL('/login', request.url))
     }
 
-    // 3. Authenticated but wrong role → redirect to their home
+    // 4. Authenticated but wrong role → redirect to their home
     if (authRole && !canAccess(authRole, requiredRoles)) {
         return NextResponse.redirect(new URL(resolveHome(authRole), request.url))
     }

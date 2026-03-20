@@ -19,7 +19,7 @@ interface ProtectedRouteProps {
 /**
  * Protects a page/route by checking user roles
  */
-export function ProtectedRoute({ children, requiredRoles, fallbackPath = '/login' }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, requiredRoles, fallbackPath = '/menu' }: ProtectedRouteProps) {
     const { user, isLoading, hasRole } = useAuth()
     const router = useRouter()
 

@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'Ai Cavalli',
     short_name: 'AiCavalli',
     description: 'Exclusive Dining & Operations',
-    start_url: '/login',
+    start_url: '/menu',
     display: 'standalone',
     background_color: '#080808',
     theme_color: '#080808',

@@ -12,8 +12,9 @@ export default function CustomerHomePage() {
         return <Loading fullScreen message="Loading..." />
     }
 
+    // If no user is logged in, show guest home
     if (!user) {
-        return <Loading fullScreen message="Redirecting..." />
+        return <GuestHome />
     }
 
     // Render role-specific home page

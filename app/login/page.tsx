@@ -114,7 +114,13 @@ export default function LoginPage() {
       });
 
       if (result.success) {
-        window.location.href = "/home";
+        const intent = localStorage.getItem('checkout_intent');
+        if (intent) {
+          localStorage.removeItem('checkout_intent');
+          window.location.href = '/cart';
+        } else {
+          window.location.href = '/home';
+        }
       } else {
         setError(result.error || "Login failed");
       }
@@ -138,7 +144,13 @@ export default function LoginPage() {
 
       if (result.success) {
         // User role will be KITCHEN or ADMIN, redirect appropriately
-        window.location.href = "/kitchen";
+        const intent = localStorage.getItem('checkout_intent');
+        if (intent) {
+          localStorage.removeItem('checkout_intent');
+          window.location.href = '/cart';
+        } else {
+          window.location.href = '/kitchen';
+        }
       } else {
         setError(result.error || "Login failed");
       }
@@ -163,7 +175,13 @@ export default function LoginPage() {
       });
 
       if (result.success) {
-        window.location.href = "/home";
+        const intent = localStorage.getItem('checkout_intent');
+        if (intent) {
+          localStorage.removeItem('checkout_intent');
+          window.location.href = '/cart';
+        } else {
+          window.location.href = '/home';
+        }
       } else {
         setError(result.error || "Login failed");
       }

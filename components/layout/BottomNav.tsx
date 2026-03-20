@@ -6,23 +6,28 @@ import { Home, Menu, ShoppingCart, User, Package } from 'lucide-react'
 import clsx from 'clsx'
 import styles from './BottomNav.module.css'
 import { useCart } from '@/lib/context/CartContext'
+import { useAuth } from '@/lib/auth/context'
 
 const tabs = [
-    { name: 'Home', href: '/home', icon: Home, ariaLabel: 'Go to home page' },
-    { name: 'Menu', href: '/menu', icon: Menu, ariaLabel: 'View menu' },
-    { name: 'Cart', href: '/cart', icon: ShoppingCart, ariaLabel: 'View shopping cart' },
-    { name: 'Orders', href: '/orders', icon: Package, ariaLabel: 'View your orders' },
-    { name: 'Profile', href: '/profile', icon: User, ariaLabel: 'View profile' },
+    { name: 'Home', href: '/home', icon: Home, ariaLabel: 'Go to home page', authOnly: true },
+    { name: 'Menu', href: '/menu', icon: Menu, ariaLabel: 'View menu', authOnly: false },
+    { name: 'Cart', href: '/cart', icon: ShoppingCart, ariaLabel: 'View shopping cart', authOnly: false },
+    { name: 'Orders', href: '/orders', icon: Package, ariaLabel: 'View your orders', authOnly: false },
+    { name: 'Profile', href: '/profile', icon: User, ariaLabel: 'View profile', authOnly: false },
 ]
 
 export function BottomNav() {
     const pathname = usePathname()
     const { items } = useCart()
+    const { user } = useAuth()
     const cartCount = items.length
+    const isAuthenticated = Boolean(user)
+
+    const visibleTabs = tabs.filter(tab => !tab.authOnly || isAuthenticated)
 
     return (
         <nav className={styles.nav} role="navigation" aria-label="Main navigation">
-            {tabs.map((tab) => {
+            {visibleTabs.map((tab) => {
                 const Icon = tab.icon
                 const isActive = pathname.startsWith(tab.href)
                 return (

@@ -176,14 +176,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             localStorage.removeItem('guest_num_guests')
             localStorage.removeItem('guest_orders')
             localStorage.removeItem('is_guest_active')
-            localStorage.removeItem('cart')
+            // Keep cart in localStorage so it persists across sessions
 
             // Clear auth cookies
             setAuthCookie(null)
 
             setUser(null)
             setSessionToken(null)
-            router.push('/login')
+            router.push('/menu')
         }
     }, [router])
 

@@ -16,12 +16,10 @@ export default function CustomerLayout({
 
     useEffect(() => {
         if (!isLoading) {
-            if (!user) {
-                router.push('/login')
-            } else if (user.role === 'KITCHEN' || user.role === 'ADMIN') {
+            if (user && (user.role === 'KITCHEN' || user.role === 'ADMIN')) {
                 router.push('/kitchen')
             }
-            // RIDER and OUTSIDER can both access customer portal
+            // Allow unauthenticated users (guests) to browse menu/home
         }
     }, [user, isLoading, router])
 
@@ -36,8 +34,8 @@ export default function CustomerLayout({
         }}>Loading...</div>
     }
 
-    // Render for RIDER and OUTSIDER roles
-    if (!user || user.role === 'KITCHEN' || user.role === 'ADMIN') {
+    // Redirect KITCHEN/ADMIN to their portal
+    if (user && (user.role === 'KITCHEN' || user.role === 'ADMIN')) {
         return null
     }
 

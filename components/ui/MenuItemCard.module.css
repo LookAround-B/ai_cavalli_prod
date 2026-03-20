@@ -101,23 +101,25 @@
 
 .addBtn {
     width: 100%;
-    background: var(--primary);
-    color: #fff;
-    border: none;
+    background: transparent;
+    color: var(--primary);
+    border: 1px solid var(--primary);
     border-radius: 8px;
     font-size: 0.85rem;
-    font-weight: 600;
+    font-weight: 700;
     padding: 6px 0;
     cursor: pointer;
     letter-spacing: 0.02em;
     min-height: 34px;
-    transition: background 0.15s, transform 0.1s;
+    transition: background 0.15s, transform 0.1s, color 0.15s;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .addBtn:active {
+    background: var(--primary);
+    color: white;
     transform: scale(0.96);
 }
 
@@ -125,6 +127,8 @@
     opacity: 0.4;
     cursor: not-allowed;
     transform: none;
+    background: transparent;
+    color: var(--primary);
 }
 
 .addDesktopIcon {

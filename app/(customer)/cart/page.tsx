@@ -19,7 +19,6 @@ export default function CartPage() {
 
     const [loading, setLoading] = useState(false)
     const [dailySpecials, setDailySpecials] = useState<any[]>([])
-
     const [locationType, setLocationType] = useState<'indoor' | 'outdoor'>('indoor')
     const [notes, setNotes] = useState('')
     const [riderSettlementType, setRiderSettlementType] = useState<'monthly' | 'paid_now'>('monthly')
@@ -62,6 +61,13 @@ export default function CartPage() {
 
     const handleCheckout = async (e: React.FormEvent) => {
         e.preventDefault()
+
+        // Check if user is authenticated — save intent and redirect to login
+        if (!user) {
+            localStorage.setItem('checkout_intent', 'true')
+            router.push('/login')
+            return
+        }
 
         setLoading(true)
 
@@ -691,5 +697,4 @@ export default function CartPage() {
         </div>
     )
 }
-
 

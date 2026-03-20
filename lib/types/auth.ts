@@ -134,13 +134,17 @@ export const routeAccess: Record<string, UserRole[]> = {
     // Public routes (no auth required)
     '/login': [],
     '/auth/callback': [],
+    '/home': [],
+    '/menu': [],
 
-    // RIDER/Staff and Guest/Outsider routes
-    '/home': ['RIDER', 'STAFF', 'OUTSIDER'],
-    '/menu': ['RIDER', 'STAFF', 'OUTSIDER'],
-    '/cart': ['RIDER', 'STAFF', 'OUTSIDER'],
-    '/orders': ['RIDER', 'STAFF', 'OUTSIDER'],
-    '/profile': ['RIDER', 'STAFF', 'OUTSIDER'],
+    // Public customer routes (accessible without auth)
+    '/cart': [],
+    '/orders': [],
+
+    // Profile requires auth — unauthenticated users go to /login
+    '/profile': ['RIDER', 'STAFF', 'OUTSIDER', 'KITCHEN', 'ADMIN'],
+
+    // Protected customer routes (need auth)
     '/status': ['OUTSIDER', 'RIDER', 'STAFF'],
 
     // Kitchen routes
