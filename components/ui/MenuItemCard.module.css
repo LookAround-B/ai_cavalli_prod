@@ -139,7 +139,8 @@
 .qtyRow {
     display: flex;
     align-items: center;
-    background: var(--primary);
+    background: transparent;
+    border: 1px solid var(--primary);
     border-radius: 8px;
     overflow: hidden;
     min-height: 34px;
@@ -155,13 +156,13 @@
     justify-content: center;
     background: transparent;
     border: none;
-    color: #fff;
+    color: var(--primary);
     cursor: pointer;
     transition: background 0.15s;
 }
 
 .qtyBtn:active {
-    background: rgba(0,0,0,0.1);
+    background: rgba(192, 39, 45, 0.1);
 }
 
 .qtyBtn:disabled {
@@ -173,7 +174,7 @@
     min-width: 20px;
     text-align: center;
     font-weight: 700;
-    color: #fff;
+    color: var(--primary);
     font-size: 0.9rem;
 }
 
