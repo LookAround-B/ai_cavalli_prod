@@ -9,7 +9,7 @@ import { useCart } from '@/lib/context/CartContext'
 import { useAuth } from '@/lib/auth/context'
 
 const tabs = [
-    { name: 'Home', href: '/home', icon: Home, ariaLabel: 'Go to home page', authOnly: true },
+    { name: 'Home', href: '/home', icon: Home, ariaLabel: 'Go to home page', authOnly: false },
     { name: 'Menu', href: '/menu', icon: Menu, ariaLabel: 'View menu', authOnly: false },
     { name: 'Cart', href: '/cart', icon: ShoppingCart, ariaLabel: 'View shopping cart', authOnly: false },
     { name: 'Orders', href: '/orders', icon: Package, ariaLabel: 'View your orders', authOnly: false },
