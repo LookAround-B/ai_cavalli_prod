@@ -45,7 +45,11 @@ export default function GuestHome() {
         }
 
         fetchNews()
-        if (user?.email || user?.phone) fetchActiveSession()
+        if (user?.email || user?.phone) {
+            fetchActiveSession()
+        } else {
+            setLoadingSession(false)
+        }
     }, [user?.id, user?.email])
 
     if (loadingSession) {
