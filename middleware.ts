@@ -29,7 +29,7 @@ export async function middleware(request: NextRequest) {
     const isPublicRoute = requiredRoles.length === 0
 
     const resolveHome = (role?: UserRole) => {
-        if (!role) return '/menu'  // Changed from '/login' to '/menu' for guests
+        if (!role) return '/home'  // Redirect unauthenticated users to guest home
         switch (role) {
             case 'OUTSIDER': return '/home'
             case 'KITCHEN': return '/kitchen'
