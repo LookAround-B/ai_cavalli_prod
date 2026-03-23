@@ -299,7 +299,7 @@ export default function GuestHome() {
                             fontWeight: 500,
                         }}
                     >
-                        Il Giornale
+                        Eirs Chronicle
                     </h2>
                     <p style={{ color: '#666', fontSize: 'clamp(0.9rem, 2.5vw, 1.1rem)', fontStyle: 'italic', maxWidth: '500px', padding: '0 1rem' }}>
                         Today's specials and dining highlights
