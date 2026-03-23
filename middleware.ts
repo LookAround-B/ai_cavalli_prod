@@ -55,7 +55,7 @@ export async function middleware(request: NextRequest) {
 
     // 3. Not authenticated → redirect to login for auth-required routes
     if (!isAuthenticated) {
-        return NextResponse.redirect(new URL('/login', request.url))
+        return NextResponse.redirect(new URL('/home', request.url))
     }
 
     // 4. Authenticated but wrong role → redirect to their home
