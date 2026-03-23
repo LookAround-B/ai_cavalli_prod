@@ -11,6 +11,7 @@ import Link from 'next/link'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Loading } from '@/components/ui/Loading'
 import { showError, showPopup } from '@/components/ui/Popup'
+import { LoginRequiredModal } from '@/components/ui/LoginRequiredModal'
 
 export default function CartPage() {
     const { items, addToCart, removeFromCart, updateQuantity, total, clearCart, editingOrderId, setEditingOrderId } = useCart()
@@ -22,6 +23,7 @@ export default function CartPage() {
     const [locationType, setLocationType] = useState<'indoor' | 'outdoor'>('indoor')
     const [notes, setNotes] = useState('')
     const [riderSettlementType, setRiderSettlementType] = useState<'monthly' | 'paid_now'>('monthly')
+    const [showLoginModal, setShowLoginModal] = useState(false)
 
     // Fetch daily specials
     useEffect(() => {
@@ -62,10 +64,10 @@ export default function CartPage() {
     const handleCheckout = async (e: React.FormEvent) => {
         e.preventDefault()
 
-        // Check if user is authenticated — save intent and redirect to login
+        // Check if user is authenticated — show login modal
         if (!user) {
             localStorage.setItem('checkout_intent', 'true')
-            router.push('/login')
+            setShowLoginModal(true)
             return
         }
 
@@ -694,6 +696,13 @@ export default function CartPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Login Required Modal */}
+            <LoginRequiredModal 
+                isOpen={showLoginModal}
+                onClose={() => setShowLoginModal(false)}
+                message="You need to login before placing an order"
+            />
         </div>
     )
 }

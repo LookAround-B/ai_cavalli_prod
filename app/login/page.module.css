@@ -363,6 +363,30 @@
     text-transform: none;
     z-index: 10;
 }
+/* Back to Cart */
+.backToCartBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    margin-top: 1.5rem;
+    padding: 0.85rem;
+    background: rgba(169, 30, 34, 0.08);
+    border: 1px solid rgba(169, 30, 34, 0.25);
+    color: #FDFBF7;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.backToCartBtn:hover {
+    background: rgba(169, 30, 34, 0.2);
+    border-color: #A91E22;
+}
+
 /* Install PWA Popup */
 .installPopup {
     position: fixed;

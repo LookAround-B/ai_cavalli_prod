@@ -140,9 +140,7 @@ export const routeAccess: Record<string, UserRole[]> = {
     // Public customer routes (accessible without auth)
     '/cart': [],
     '/orders': [],
-
-    // Profile requires auth — unauthenticated users go to /login
-    '/profile': ['RIDER', 'STAFF', 'OUTSIDER', 'KITCHEN', 'ADMIN'],
+    '/profile': [],  // Public route - shows "not logged in" page for unauthenticated users
 
     // Protected customer routes (need auth)
     '/status': ['OUTSIDER', 'RIDER', 'STAFF'],

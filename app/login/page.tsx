@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth/context";
 import { Button } from "@/components/ui/button";
-import { User, KeyRound, Utensils, ArrowLeft, ShieldCheck, Share, PlusSquare, X } from "lucide-react";
+import { User, KeyRound, Utensils, ArrowLeft, ShieldCheck, Share, PlusSquare, X, ShoppingCart } from "lucide-react";
 import styles from "./page.module.css";
 
 type LoginView = "roles" | "rider" | "kitchen" | "guest";
@@ -26,10 +26,15 @@ export default function LoginPage() {
 
   const { login, guestLogin } = useAuth();
 
+  const [hasCheckoutIntent, setHasCheckoutIntent] = useState(false);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const [showIosInstructions, setShowIosInstructions] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    setHasCheckoutIntent(!!localStorage.getItem('checkout_intent'));
+  }, []);
 
   useEffect(() => {
     const isDismissed = localStorage.getItem("pwaPromptDismissed");
@@ -250,6 +255,19 @@ export default function LoginPage() {
                 </div>
               </button>
             </div>
+
+            {hasCheckoutIntent && (
+              <button
+                className={styles.backToCartBtn}
+                onClick={() => {
+                  localStorage.removeItem('checkout_intent');
+                  window.location.href = '/cart';
+                }}
+              >
+                <ShoppingCart size={18} />
+                <span>Back to Cart</span>
+              </button>
+            )}
 
             <footer className={styles.selectFooter}>
               <div className={styles.divider}>

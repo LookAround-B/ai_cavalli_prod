@@ -12,7 +12,7 @@ import { showError, showSuccess, showConfirm } from '@/components/ui/Popup'
 import { useRouter } from 'next/navigation'
 
 export default function ProfilePage() {
-    const { logout, user, login, guestLogin } = useAuth()
+    const { logout, user, login, guestLogin, isLoading: authLoading } = useAuth()
     const role = user?.role
     const { clearCart } = useCart()
     const router = useRouter()
@@ -153,6 +153,10 @@ export default function ProfilePage() {
         } finally {
             setEndingSession(false)
         }
+    }
+
+    if (authLoading) {
+        return <Loading fullScreen message="Loading..." />
     }
 
     return (
@@ -583,39 +587,78 @@ function ProfileLoginSection({ login, guestLogin, router }: { login: any, guestL
         }
     }
 
-    // No login type selected — show the welcome screen (Myntra-style)
+    // No login type selected — show the welcome screen
     if (!loginType) {
         return (
-            <div style={{ textAlign: 'center', padding: 'var(--space-4) 0' }}>
+            <div style={{ textAlign: 'center', padding: 'var(--space-6) 0 var(--space-4)' }}>
                 <div style={{
-                    width: '80px',
-                    height: '80px',
+                    width: '88px',
+                    height: '88px',
                     borderRadius: '50%',
                     background: 'rgba(var(--primary-rgb), 0.08)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: 'var(--primary)',
-                    margin: '0 auto var(--space-4)'
+                    margin: '0 auto 20px'
                 }}>
-                    <User size={40} />
+                    <User size={44} strokeWidth={1.5} />
                 </div>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '4px' }}>Hey there!</h2>
-                <p style={{ color: 'var(--text-muted)', marginBottom: '24px', fontSize: '0.95rem', maxWidth: '320px', margin: '0 auto 24px' }}>
-                    Log in to track your orders, view history, and get the full experience.
+                <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '6px', fontFamily: 'var(--font-serif)' }}>Welcome!</h2>
+                <p style={{ color: 'var(--text-muted)', marginBottom: '28px', fontSize: '0.95rem', maxWidth: '320px', margin: '0 auto 28px', lineHeight: 1.5 }}>
+                    Sign in to track your orders, view history, and enjoy the full Ai Cavalli experience.
                 </p>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '320px', margin: '0 auto' }}>
+                    <button
+                        onClick={() => router.push('/login')}
+                        style={{
+                            width: '100%',
+                            padding: '15px 20px',
+                            background: 'var(--primary)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '12px',
+                            fontSize: '1rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '10px',
+                            transition: 'all 0.2s',
+                            boxShadow: '0 2px 8px rgba(var(--primary-rgb), 0.25)'
+                        }}
+                    >
+                        <LogOut size={20} style={{ transform: 'scaleX(-1)' }} />
+                        Go to Login
+                    </button>
+
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        margin: '4px 0',
+                        color: 'var(--text-muted)',
+                        fontSize: '0.75rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '1px'
+                    }}>
+                        <span style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+                        <span>or sign in here</span>
+                        <span style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+                    </div>
+
                     <button
                         onClick={() => setLoginType('guest')}
                         style={{
                             width: '100%',
                             padding: '14px 20px',
-                            background: 'var(--primary)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '10px',
-                            fontSize: '1rem',
+                            background: 'transparent',
+                            color: 'var(--text)',
+                            border: '1.5px solid var(--border)',
+                            borderRadius: '12px',
+                            fontSize: '0.95rem',
                             fontWeight: 700,
                             cursor: 'pointer',
                             display: 'flex',
@@ -625,8 +668,8 @@ function ProfileLoginSection({ login, guestLogin, router }: { login: any, guestL
                             transition: 'all 0.2s'
                         }}
                     >
-                        <User size={20} />
-                        Continue as Guest
+                        <Utensils size={18} />
+                        Quick Guest Check-in
                     </button>
                     <button
                         onClick={() => setLoginType('staff')}
@@ -636,8 +679,8 @@ function ProfileLoginSection({ login, guestLogin, router }: { login: any, guestL
                             background: 'transparent',
                             color: 'var(--text)',
                             border: '1.5px solid var(--border)',
-                            borderRadius: '10px',
-                            fontSize: '1rem',
+                            borderRadius: '12px',
+                            fontSize: '0.95rem',
                             fontWeight: 700,
                             cursor: 'pointer',
                             display: 'flex',
@@ -647,7 +690,7 @@ function ProfileLoginSection({ login, guestLogin, router }: { login: any, guestL
                             transition: 'all 0.2s'
                         }}
                     >
-                        <KeyRound size={20} />
+                        <KeyRound size={18} />
                         Staff / Admin Login
                     </button>
                 </div>
@@ -681,39 +724,37 @@ function ProfileLoginSection({ login, guestLogin, router }: { login: any, guestL
                 <form onSubmit={handleGuestLogin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     <div>
                         <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Your Name</label>
-                        <input type="text" placeholder="Enter your name" value={guestName} onChange={e => setGuestName(e.target.value)} required
-                            style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--border)', borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box', outline: 'none', transition: 'border 0.2s' }}
-                            onFocus={e => e.currentTarget.style.borderColor = 'var(--primary)'}
-                            onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                        <input type="text" placeholder="Enter your name" value={guestName} 
+                            onChange={e => setGuestName(e.target.value.replace(/[^a-zA-Z\s]/g, ''))} required
+                            style={{ width: '100%', padding: '14px 16px', border: '1.5px solid var(--border)', borderRadius: '12px', fontSize: '1rem', boxSizing: 'border-box', outline: 'none', transition: 'all 0.2s', background: 'var(--background)' }}
+                            onFocus={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.boxShadow = '0 0 0 4px rgba(var(--primary-rgb), 0.1)' }}
+                            onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none' }}
                         />
                     </div>
                     <div>
                         <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Phone Number</label>
-                        <input type="tel" placeholder="Enter your phone" value={guestPhone} onChange={e => setGuestPhone(e.target.value)} required
-                            style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--border)', borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box', outline: 'none', transition: 'border 0.2s' }}
-                            onFocus={e => e.currentTarget.style.borderColor = 'var(--primary)'}
-                            onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'}
-                        />
-                    </div>
-                    <div>
-                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Table Name</label>
-                        <input type="text" placeholder="e.g., Table 1, Terrace" value={tableName} onChange={e => setTableName(e.target.value)} required
-                            style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--border)', borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box', outline: 'none', transition: 'border 0.2s' }}
-                            onFocus={e => e.currentTarget.style.borderColor = 'var(--primary)'}
-                            onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                        <input type="tel" placeholder="Enter your phone" value={guestPhone} 
+                            onChange={e => setGuestPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} required
+                            maxLength={10}
+                            style={{ width: '100%', padding: '14px 16px', border: '1.5px solid var(--border)', borderRadius: '12px', fontSize: '1rem', boxSizing: 'border-box', outline: 'none', transition: 'all 0.2s', background: 'var(--background)' }}
+                            onFocus={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.boxShadow = '0 0 0 4px rgba(var(--primary-rgb), 0.1)' }}
+                            onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none' }}
                         />
                     </div>
                     <div>
                         <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Number of Guests</label>
                         <select value={numGuests} onChange={e => setNumGuests(e.target.value)}
-                            style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--border)', borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box', outline: 'none', background: 'white' }}>
+                            style={{ width: '100%', padding: '14px 16px', border: '1.5px solid var(--border)', borderRadius: '12px', fontSize: '1rem', boxSizing: 'border-box', outline: 'none', transition: 'all 0.2s', background: 'var(--background)', cursor: 'pointer' }}
+                            onFocus={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.boxShadow = '0 0 0 4px rgba(var(--primary-rgb), 0.1)' }}
+                            onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none' }}
+                        >
                             {Array.from({ length: 20 }, (_, i) => i + 1).map(n => (
                                 <option key={n} value={n}>{n}</option>
                             ))}
                         </select>
                     </div>
-                    <Button type="submit" isLoading={loading} size="lg" style={{ height: '48px', fontSize: '1rem', marginTop: '4px' }}>
-                        Continue
+                    <Button type="submit" isLoading={loading} size="lg" style={{ height: '52px', fontSize: '1rem', marginTop: '8px', borderRadius: '12px' }}>
+                        Start Dining
                     </Button>
                 </form>
             </div>
@@ -745,21 +786,24 @@ function ProfileLoginSection({ login, guestLogin, router }: { login: any, guestL
             <form onSubmit={handleStaffLogin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
                     <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Phone Number</label>
-                    <input type="tel" placeholder="Enter your phone" value={phone} onChange={e => setPhone(e.target.value)} required
-                        style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--border)', borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box', outline: 'none', transition: 'border 0.2s' }}
-                        onFocus={e => e.currentTarget.style.borderColor = 'var(--primary)'}
-                        onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                    <input type="tel" placeholder="Enter your phone" value={phone} 
+                        onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} required
+                        maxLength={10}
+                        style={{ width: '100%', padding: '14px 16px', border: '1.5px solid var(--border)', borderRadius: '12px', fontSize: '1rem', boxSizing: 'border-box', outline: 'none', transition: 'all 0.2s', background: 'var(--background)' }}
+                        onFocus={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.boxShadow = '0 0 0 4px rgba(var(--primary-rgb), 0.1)' }}
+                        onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none' }}
                     />
                 </div>
                 <div>
                     <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>PIN</label>
-                    <input type="password" placeholder="Enter your PIN" value={pin} onChange={e => setPin(e.target.value)} required maxLength={6}
-                        style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--border)', borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box', outline: 'none', transition: 'border 0.2s', letterSpacing: '0.3em' }}
-                        onFocus={e => e.currentTarget.style.borderColor = 'var(--primary)'}
-                        onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                    <input type="password" placeholder="Enter your PIN" value={pin} 
+                        onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))} required maxLength={6}
+                        style={{ width: '100%', padding: '14px 16px', border: '1.5px solid var(--border)', borderRadius: '12px', fontSize: '1rem', boxSizing: 'border-box', outline: 'none', transition: 'all 0.2s', letterSpacing: '0.3em', background: 'var(--background)' }}
+                        onFocus={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.boxShadow = '0 0 0 4px rgba(var(--primary-rgb), 0.1)' }}
+                        onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none' }}
                     />
                 </div>
-                <Button type="submit" isLoading={loading} size="lg" style={{ height: '48px', fontSize: '1rem', marginTop: '4px' }}>
+                <Button type="submit" isLoading={loading} size="lg" style={{ height: '52px', fontSize: '1rem', marginTop: '8px', borderRadius: '12px' }}>
                     Sign In
                 </Button>
             </form>
