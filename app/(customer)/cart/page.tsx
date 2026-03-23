@@ -304,7 +304,7 @@ export default function CartPage() {
                     alignItems: 'center',
                     gap: '10px',
                 }}>
-                    <span style={{ fontSize: '18px' }}>✏️</span>
+                    <Sparkles size={20} style={{ color: '#92400E' }} />
                     <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#92400E' }}>Editing Existing Order</div>
                         <div style={{ fontSize: '0.8rem', color: '#A16207' }}>Modify items below and confirm to update your order</div>
@@ -343,12 +343,34 @@ export default function CartPage() {
                     }
                     @media (max-width: 768px) {
                         div[data-cart-item] {
-                            flex-direction: column !important;
-                            align-items: stretch !important;
-                            gap: 12px !important;
+                            flex-direction: row !important;
+                            align-items: center !important;
+                            gap: 8px !important;
+                            padding: 8px 12px !important;
+                        }
+                        div[data-cart-item] h3 {
+                            font-size: 0.95rem !important;
+                            white-space: normal !important;
+                            display: -webkit-box !important;
+                            -webkit-line-clamp: 2 !important;
+                            -webkit-box-orient: vertical !important;
+                        }
+                        div[data-cart-item] p {
+                            font-size: 0.9rem !important;
                         }
                         div[data-cart-item-controls] {
-                            justify-content: space-between !important;
+                            gap: 6px !important;
+                            margin-top: 0 !important;
+                            flex-wrap: nowrap !important;
+                            justify-content: flex-end !important;
+                        }
+                        div[data-cart-item-controls] button {
+                            width: 28px !important;
+                            height: 28px !important;
+                        }
+                        div[data-cart-item-controls] span {
+                            min-width: 24px !important;
+                            font-size: 0.9rem !important;
                         }
                         div[data-order-summary] {
                             padding: 1rem !important;

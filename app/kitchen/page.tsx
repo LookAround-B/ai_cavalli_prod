@@ -1350,8 +1350,8 @@ export default function KitchenPage() {
                                                     fontVariantNumeric: 'tabular-nums'
                                                 }}>
                                                     {overdue
-                                                        ? `⚠ OVERDUE +${formatTimer(elapsed - COOKING_TIME_LIMIT)}`
-                                                        : `⏱ ${formatTimer(remaining)} remaining`
+                                                        ? `OVERDUE +${formatTimer(elapsed - COOKING_TIME_LIMIT)}`
+                                                        : `${formatTimer(remaining)} remaining`
                                                     }
                                                 </span>
                                                 {overdue && (
