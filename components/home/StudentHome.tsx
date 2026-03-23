@@ -150,7 +150,7 @@ export default function StudentHome() {
                             fontWeight: 500,
                         }}
                     >
-                        Il Giornale
+                        Eirs Chronicle
                     </h2>
                     <p style={{ color: '#666', fontSize: 'clamp(0.9rem, 2.5vw, 1.1rem)', fontStyle: 'italic', maxWidth: '500px', padding: '0 1rem' }}>
                         Notes on seasonal ingredients, private gatherings, and the art of dining.
