@@ -21,9 +21,23 @@ export default function CartPage() {
     const [loading, setLoading] = useState(false)
     const [dailySpecials, setDailySpecials] = useState<any[]>([])
     const [locationType, setLocationType] = useState<'indoor' | 'outdoor'>('indoor')
-    const [notes, setNotes] = useState('')
+    const [notes, setNotes] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('cart_notes') || ''
+        }
+        return ''
+    })
     const [riderSettlementType, setRiderSettlementType] = useState<'monthly' | 'paid_now'>('monthly')
     const [showLoginModal, setShowLoginModal] = useState(false)
+
+    // Persist notes to localStorage
+    useEffect(() => {
+        if (notes) {
+            localStorage.setItem('cart_notes', notes)
+        } else {
+            localStorage.removeItem('cart_notes')
+        }
+    }, [notes])
 
     // Fetch daily specials
     useEffect(() => {
@@ -164,6 +178,7 @@ export default function CartPage() {
             }
 
             // Success!
+            localStorage.removeItem('cart_notes')
             clearCart()
 
             // Redirect

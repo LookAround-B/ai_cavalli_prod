@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useAuth } from '@/lib/auth/context'
 
 import { useSearchParams, useRouter } from 'next/navigation'
-import { ChevronLeft, Package, Clock, CheckCircle2, XCircle, ChevronDown, LogOut, RefreshCw } from 'lucide-react'
+import { ChevronLeft, Package, Clock, CheckCircle2, XCircle, ChevronDown, LogOut, RefreshCw, Timer } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Loading } from '@/components/ui/Loading'
@@ -492,10 +492,9 @@ export default function OrdersPage() {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            fontSize: '16px',
                             flexShrink: 0,
                         }}>
-                            ⏰
+                            <Timer size={16} />
                         </div>
                         <div style={{ flex: 1 }}>
                             <div style={{ fontWeight: '600', marginBottom: '4px' }}>
