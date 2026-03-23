@@ -198,7 +198,9 @@ export default function CartPage() {
     if (items.length === 0) {
         return (
             <div className="container fade-in" style={{
-                paddingTop: '20vh',
+                paddingTop: 'clamp(3rem, 15vh, 20vh)',
+                paddingLeft: 'clamp(1rem, 4vw, 2rem)',
+                paddingRight: 'clamp(1rem, 4vw, 2rem)',
                 textAlign: 'center',
                 display: 'flex',
                 flexDirection: 'column',
@@ -206,8 +208,8 @@ export default function CartPage() {
                 gap: 'var(--space-6)'
             }}>
                 <div style={{
-                    width: '100px',
-                    height: '100px',
+                    width: 'clamp(72px, 20vw, 100px)',
+                    height: 'clamp(72px, 20vw, 100px)',
                     borderRadius: '50%',
                     background: 'rgba(var(--primary-rgb), 0.1)',
                     display: 'flex',
@@ -216,10 +218,10 @@ export default function CartPage() {
                     color: 'var(--primary)',
                     marginBottom: 'var(--space-2)'
                 }}>
-                    <ShoppingBag size={48} />
+                    <ShoppingBag style={{ width: 'clamp(36px, 12vw, 48px)', height: 'clamp(36px, 12vw, 48px)' }} />
                 </div>
-                <h1 style={{ fontSize: '2rem' }}>Your Cart is Empty</h1>
-                <p style={{ color: 'var(--text-muted)', fontSize: '1.125rem', maxWidth: '300px' }}>
+                <h1 style={{ fontSize: 'clamp(1.5rem, 5vw, 2rem)' }}>Your Cart is Empty</h1>
+                <p style={{ color: 'var(--text-muted)', fontSize: 'clamp(0.95rem, 3vw, 1.125rem)', maxWidth: '300px' }}>
                     Looks like you haven't added anything to your cart yet.
                 </p>
                 <Link href="/menu">
@@ -332,11 +334,29 @@ export default function CartPage() {
                 gap: 'var(--space-8)',
                 alignItems: 'start'
             }}>
-                {/* Desktop layout: Side by side if possible */}
+                {/* Responsive layout */}
                 <style jsx>{`
                     @media (min-width: 1024px) {
                         div[data-checkout-container] {
                             grid-template-columns: 1fr 400px !important;
+                        }
+                    }
+                    @media (max-width: 768px) {
+                        div[data-cart-item] {
+                            flex-direction: column !important;
+                            align-items: stretch !important;
+                            gap: 12px !important;
+                        }
+                        div[data-cart-item-controls] {
+                            justify-content: space-between !important;
+                        }
+                        div[data-order-summary] {
+                            padding: 1rem !important;
+                            position: relative !important;
+                            top: auto !important;
+                        }
+                        div[data-checkout-container] {
+                            gap: 1.5rem !important;
                         }
                     }
                 `}</style>
@@ -346,12 +366,12 @@ export default function CartPage() {
                         <h2 style={{ marginBottom: 'var(--space-4)', fontSize: '1.25rem', opacity: 0.8 }}>Your Items</h2>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
                             {items.map(item => (
-                                <div key={item.itemId} className="hover-lift" style={{
+                                <div key={item.itemId} data-cart-item className="hover-lift" style={{
                                     display: 'flex',
                                     justifyContent: 'space-between',
                                     alignItems: 'center',
                                     background: 'var(--surface)',
-                                    padding: 'var(--space-4)',
+                                    padding: 'clamp(0.75rem, 3vw, 1rem)',
                                     borderRadius: 'var(--radius)',
                                     border: '1px solid var(--border)',
                                     boxShadow: 'var(--shadow-sm)'
@@ -361,7 +381,7 @@ export default function CartPage() {
                                         <p style={{ color: 'var(--primary)', fontWeight: 700 }}>₹{(item.price * item.quantity).toFixed(2)}</p>
                                     </div>
 
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(0.5rem, 2vw, 1rem)', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                    <div data-cart-item-controls style={{ display: 'flex', alignItems: 'center', gap: 'clamp(0.5rem, 2vw, 1rem)', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                                         <div style={{
                                             display: 'flex',
                                             alignItems: 'center',
@@ -428,16 +448,16 @@ export default function CartPage() {
                         </div>
                     </div>
 
-                    <div style={{
+                    <div data-order-summary style={{
                         background: 'var(--surface)',
-                        padding: 'var(--space-6)',
+                        padding: 'clamp(1rem, 4vw, 1.5rem)',
                         borderRadius: 'var(--radius-lg)',
                         border: '1px solid var(--border)',
                         boxShadow: 'var(--shadow-lg)',
                         position: 'sticky',
                         top: 'var(--space-6)'
                     }}>
-                        <h2 style={{ marginBottom: 'var(--space-6)', fontSize: '1.5rem', fontFamily: 'var(--font-serif)' }}>Order Summary</h2>
+                        <h2 style={{ marginBottom: 'var(--space-6)', fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', fontFamily: 'var(--font-serif)' }}>Order Summary</h2>
 
                         {/* Specials Section for Guests */}
                         {(!user || user?.role === 'OUTSIDER') && dailySpecials.length > 0 && (
@@ -529,9 +549,9 @@ export default function CartPage() {
                             </div>
                         )}
 
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-6)', padding: 'var(--space-4)', background: 'var(--background)', borderRadius: 'var(--radius)' }}>
-                            <span style={{ fontWeight: 600, color: 'var(--text-muted)' }}>Total Amount</span>
-                            <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--primary)' }}>₹{total.toFixed(2)}</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', padding: 'clamp(0.75rem, 3vw, 1rem)', background: 'var(--background)', borderRadius: 'var(--radius)' }}>
+                            <span style={{ fontWeight: 600, color: 'var(--text-muted)', fontSize: 'clamp(0.875rem, 3vw, 1rem)' }}>Total Amount</span>
+                            <span style={{ fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', fontWeight: 800, color: 'var(--primary)' }}>₹{total.toFixed(2)}</span>
                         </div>
 
                         <form onSubmit={handleCheckout} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
@@ -704,7 +724,7 @@ export default function CartPage() {
                                 </div>
                             )}
 
-                            <Button type="submit" isLoading={loading} size="lg" style={{ marginTop: 'var(--space-4)', height: '56px', fontSize: '1.125rem' }}>
+                            <Button type="submit" isLoading={loading} size="lg" style={{ marginTop: 'var(--space-4)', height: 'clamp(48px, 10vw, 56px)', fontSize: 'clamp(1rem, 3vw, 1.125rem)', width: '100%' }}>
                                 {editingOrderId ? 'Update Order' : 'Confirm Order'}
                             </Button>
                         </form>
