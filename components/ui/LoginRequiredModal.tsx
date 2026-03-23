@@ -59,8 +59,9 @@ export function LoginRequiredModal({
                         Cancel
                     </button>
                     <button
-                        className={`${styles.popupBtn} ${styles.btnPrimary}`}
+                        className={`${styles.popupBtn} ${styles.btnPrimary} ${styles.fullWidth}`}
                         onClick={handleProceed}
+                        style={{ whiteSpace: 'nowrap', flex: 1.5 }}
                     >
                         Proceed to Login
                     </button>
