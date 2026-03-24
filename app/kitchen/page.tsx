@@ -126,6 +126,10 @@ export default function KitchenPage() {
     // Track which orders have already triggered the overdue alarm
     const overdueAlerted = useRef<Set<string>>(new Set())
     const alarmAudioRef = useRef<HTMLAudioElement | null>(null)
+    // Notification sound for new incoming orders
+    const notificationAudioRef = useRef<HTMLAudioElement | null>(null)
+    // Track known order IDs to detect newly arrived orders
+    const knownOrderIdsRef = useRef<Set<string> | null>(null)
     // Attendee assignment per order (orderId -> attendee name)
     const [orderAttendees, setOrderAttendees] = useState<Record<string, string>>({})
     const [attendeeDropdownOpen, setAttendeeDropdownOpen] = useState<string | null>(null)
@@ -177,6 +181,19 @@ export default function KitchenPage() {
                 if (Object.keys(billedPayments).length > 0) {
                     setOrderPaymentMethods(prev => ({ ...billedPayments, ...prev }))
                 }
+
+                // Detect new orders and play notification sound
+                const incomingIds = new Set<string>(sorted.map((o: any) => o.id as string))
+                if (knownOrderIdsRef.current === null) {
+                    // First load — just record the known IDs, don't play sound
+                } else {
+                    const hasNew = sorted.some((o: any) => !knownOrderIdsRef.current!.has(o.id))
+                    if (hasNew && notificationAudioRef.current) {
+                        notificationAudioRef.current.currentTime = 0
+                        notificationAudioRef.current.play().catch(() => { })
+                    }
+                }
+                knownOrderIdsRef.current = incomingIds
             }
         } catch (e) { console.error('fetchOrders error:', e) }
         setLoading(false)
@@ -319,6 +336,9 @@ export default function KitchenPage() {
         alarmAudioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2870/2870-preview.mp3')
         alarmAudioRef.current.loop = true
         alarmAudioRef.current.load()
+        // Preload new-order notification sound
+        notificationAudioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3')
+        notificationAudioRef.current.load()
     }, [])
 
     // Tick every second to update elapsed times and check for overdue orders
