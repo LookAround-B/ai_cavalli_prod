@@ -563,108 +563,8 @@ export default function OrdersPage() {
 
             <div style={{ maxWidth: '600px', margin: '0 auto', padding: '0 clamp(1rem, 4vw, 1.5rem)' }}>
 
-                {/* Cooldown Notification */}
-                {showCooldown && (
-                    <div style={{
-                        marginTop: '-10px',
-                        marginBottom: '12px',
-                        background: '#fff3cd',
-                        border: '1px solid #ffeaa7',
-                        borderRadius: '12px',
-                        padding: '10px 12px',
-                    }}>
-                        <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '10px',
-                            fontSize: '13px',
-                            color: '#856404',
-                        }}>
-                            <div style={{
-                                width: '24px',
-                                height: '24px',
-                                borderRadius: '6px',
-                                background: '#fbbf24',
-                                color: 'white',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                flexShrink: 0,
-                            }}>
-                                <Timer size={14} />
-                            </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontWeight: '600', fontSize: '12px' }}>
-                                    Order Edit Window
-                                </div>
-                                <div style={{ fontSize: '11px', lineHeight: 1.3 }}>
-                                    Please ensure that any changes to the order are communicated within {formatCooldownTime(cooldownTime)}.
-                                </div>
-                            </div>
-                            <button
-                                onClick={handleEditOrder}
-                                style={{
-                                    background: '#10B981',
-                                    color: 'white',
-                                    border: 'none',
-                                    padding: '6px 12px',
-                                    borderRadius: '8px',
-                                    fontSize: '11px',
-                                    fontWeight: '600',
-                                    cursor: 'pointer',
-                                    whiteSpace: 'nowrap',
-                                }}
-                            >
-                                Edit Order
-                            </button>
-                        </div>
-                        {/* Status Summary Pills inside cooldown banner */}
-                        {orders.length > 0 && (
-                            <div style={{
-                                display: 'flex',
-                                gap: '8px',
-                                marginTop: '10px',
-                                paddingTop: '10px',
-                                borderTop: '1px solid #ffeaa7',
-                                overflowX: 'auto',
-                                msOverflowStyle: 'none',
-                                scrollbarWidth: 'none',
-                            }}>
-                                <style>{`div::-webkit-scrollbar { display: none; }`}</style>
-                                {[
-                                    { key: 'pending', label: 'Preparing', color: '#F59E0B', bg: '#FFFBEB', icon: Clock },
-                                    { key: 'ready', label: 'Ready', color: 'var(--primary)', bg: '#FEF2F2', icon: CheckCircle2 },
-                                    { key: 'completed', label: 'Done', color: '#10B981', bg: '#ECFDF5', icon: CheckCircle2 },
-                                ].map(s => {
-                                    const count = orders.filter((o: any) => o.status === s.key).length
-                                    if (count === 0) return null
-                                    const SIcon = s.icon
-                                    return (
-                                        <div key={s.key} style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '6px',
-                                            background: s.bg,
-                                            border: `1.5px solid ${s.color}20`,
-                                            borderRadius: '20px',
-                                            padding: '6px 12px',
-                                            fontSize: '0.75rem',
-                                            fontWeight: 700,
-                                            color: s.color,
-                                            whiteSpace: 'nowrap',
-                                        }}>
-                                            <SIcon size={12} />
-                                            {count} {s.label}
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {/* Status Summary Pills (standalone when no cooldown) */}
-                {!showCooldown && orders.length > 0 && (
+                {/* Status Summary Pills */}
+                {orders.length > 0 && (
                     <div style={{
                         display: 'flex',
                         gap: '8px',
@@ -709,7 +609,7 @@ export default function OrdersPage() {
                     </div>
                 )}
 
-                {/* Get The Bill Card */}
+                {/* Finalize Your Meal / Get The Bill Card */}
                 {user && (
                     <div style={{
                         marginBottom: '24px',
@@ -758,6 +658,57 @@ export default function OrdersPage() {
                                 <Receipt size={22} color={orders.length > 0 ? 'white' : '#10B981'} />
                             </div>
                         </div>
+                        {/* Edit Window inside the card */}
+                        {showCooldown && (
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px',
+                                background: 'rgba(255,255,255,0.15)',
+                                borderRadius: '12px',
+                                padding: '10px 12px',
+                                marginBottom: '14px',
+                                position: 'relative',
+                                zIndex: 1,
+                            }}>
+                                <div style={{
+                                    width: '28px',
+                                    height: '28px',
+                                    borderRadius: '8px',
+                                    background: 'rgba(255,255,255,0.25)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexShrink: 0,
+                                }}>
+                                    <Timer size={14} color="white" />
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontWeight: 700, fontSize: '0.75rem', color: 'rgba(255,255,255,0.95)' }}>
+                                        Edit Window · {formatCooldownTime(cooldownTime)}
+                                    </div>
+                                    <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.8)', lineHeight: 1.3 }}>
+                                        You can still modify your order
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={handleEditOrder}
+                                    style={{
+                                        background: 'white',
+                                        color: '#059669',
+                                        border: 'none',
+                                        padding: '6px 14px',
+                                        borderRadius: '8px',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 700,
+                                        cursor: 'pointer',
+                                        whiteSpace: 'nowrap',
+                                    }}
+                                >
+                                    Edit Order
+                                </button>
+                            </div>
+                        )}
                         <button
                             onClick={handleGetBill}
                             disabled={endingSession}
@@ -1112,35 +1063,7 @@ export default function OrdersPage() {
                 )}
             </div>
 
-            {/* Sign Out Button for riders, staff, and guests */}
-            {isAutoLogoutRole && (
-                <div style={{ marginTop: '24px', textAlign: 'center' }}>
-                    <button
-                        onClick={() => {
-                            clearCart()
-                            logout()
-                        }}
-                        style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            background: 'white',
-                            color: '#EF4444',
-                            border: '1.5px solid #FCA5A5',
-                            padding: '12px 28px',
-                            borderRadius: '14px',
-                            fontWeight: 700,
-                            fontSize: '0.9rem',
-                            cursor: 'pointer',
-                            boxShadow: '0 2px 8px rgba(239,68,68,0.12)',
-                            transition: 'all 0.2s ease',
-                        }}
-                    >
-                        <LogOut size={18} />
-                        Sign Out
-                    </button>
-                </div>
-            )}
+
 
             {/* Animations for notification and pulse */}
             <style>{`
