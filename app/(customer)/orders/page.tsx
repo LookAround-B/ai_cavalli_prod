@@ -459,70 +459,8 @@ export default function OrdersPage() {
             minHeight: '100vh',
             background: 'var(--background)',
             paddingBottom: '120px',
-        }}>            {/* Cooldown Notification */}
-            {showCooldown && (
-                <div style={{
-                    position: 'fixed',
-                    top: 'min(20px, 4vw)',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: 'calc(100% - 32px)',
-                    maxWidth: '450px',
-                    background: '#fff3cd',
-                    border: '1px solid #ffeaa7',
-                    borderRadius: '16px',
-                    padding: '12px 16px',
-                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
-                    zIndex: 1000,
-                    animation: 'slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                }}>
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        fontSize: '14px',
-                        color: '#856404',
-                    }}>
-                        <div style={{
-                            width: '28px',
-                            height: '28px',
-                            borderRadius: '8px',
-                            background: '#fbbf24',
-                            color: 'white',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                        }}>
-                            <Timer size={16} />
-                        </div>
-                        <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: '600', marginBottom: '4px' }}>
-                                Order Edit Window
-                            </div>
-                            <div style={{ lineHeight: 1.4 }}>
-                                Please ensure that any changes to the order are communicated within  {formatCooldownTime(cooldownTime)}.
-                            </div>
-                        </div>
-                        <button
-                            onClick={handleEditOrder}
-                            style={{
-                                background: '#10B981',
-                                color: 'white',
-                                border: 'none',
-                                padding: '8px 16px',
-                                borderRadius: '8px',
-                                fontSize: '12px',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                whiteSpace: 'nowrap',
-                            }}
-                        >
-                            Edit Order
-                        </button>
-                    </div>
-                </div>
-            )}
+        }}>
+
             {/* Bill Preview Modal */}
             {billPreview && (
                 <BillPreviewModal
@@ -625,8 +563,108 @@ export default function OrdersPage() {
 
             <div style={{ maxWidth: '600px', margin: '0 auto', padding: '0 clamp(1rem, 4vw, 1.5rem)' }}>
 
-                {/* Status Summary Pills */}
-                {orders.length > 0 && (
+                {/* Cooldown Notification */}
+                {showCooldown && (
+                    <div style={{
+                        marginTop: '-10px',
+                        marginBottom: '12px',
+                        background: '#fff3cd',
+                        border: '1px solid #ffeaa7',
+                        borderRadius: '12px',
+                        padding: '10px 12px',
+                    }}>
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            fontSize: '13px',
+                            color: '#856404',
+                        }}>
+                            <div style={{
+                                width: '24px',
+                                height: '24px',
+                                borderRadius: '6px',
+                                background: '#fbbf24',
+                                color: 'white',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0,
+                            }}>
+                                <Timer size={14} />
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: '600', fontSize: '12px' }}>
+                                    Order Edit Window
+                                </div>
+                                <div style={{ fontSize: '11px', lineHeight: 1.3 }}>
+                                    Please ensure that any changes to the order are communicated within {formatCooldownTime(cooldownTime)}.
+                                </div>
+                            </div>
+                            <button
+                                onClick={handleEditOrder}
+                                style={{
+                                    background: '#10B981',
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '6px 12px',
+                                    borderRadius: '8px',
+                                    fontSize: '11px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    whiteSpace: 'nowrap',
+                                }}
+                            >
+                                Edit Order
+                            </button>
+                        </div>
+                        {/* Status Summary Pills inside cooldown banner */}
+                        {orders.length > 0 && (
+                            <div style={{
+                                display: 'flex',
+                                gap: '8px',
+                                marginTop: '10px',
+                                paddingTop: '10px',
+                                borderTop: '1px solid #ffeaa7',
+                                overflowX: 'auto',
+                                msOverflowStyle: 'none',
+                                scrollbarWidth: 'none',
+                            }}>
+                                <style>{`div::-webkit-scrollbar { display: none; }`}</style>
+                                {[
+                                    { key: 'pending', label: 'Preparing', color: '#F59E0B', bg: '#FFFBEB', icon: Clock },
+                                    { key: 'ready', label: 'Ready', color: 'var(--primary)', bg: '#FEF2F2', icon: CheckCircle2 },
+                                    { key: 'completed', label: 'Done', color: '#10B981', bg: '#ECFDF5', icon: CheckCircle2 },
+                                ].map(s => {
+                                    const count = orders.filter((o: any) => o.status === s.key).length
+                                    if (count === 0) return null
+                                    const SIcon = s.icon
+                                    return (
+                                        <div key={s.key} style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            background: s.bg,
+                                            border: `1.5px solid ${s.color}20`,
+                                            borderRadius: '20px',
+                                            padding: '6px 12px',
+                                            fontSize: '0.75rem',
+                                            fontWeight: 700,
+                                            color: s.color,
+                                            whiteSpace: 'nowrap',
+                                        }}>
+                                            <SIcon size={12} />
+                                            {count} {s.label}
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Status Summary Pills (standalone when no cooldown) */}
+                {!showCooldown && orders.length > 0 && (
                     <div style={{
                         display: 'flex',
                         gap: '8px',
