@@ -714,12 +714,12 @@ export default function OrdersPage() {
                             disabled={endingSession}
                             style={{
                                 width: '100%',
-                                height: '48px',
-                                borderRadius: '14px',
+                                height: '38px',
+                                borderRadius: '10px',
                                 background: orders.length > 0 ? 'white' : 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
                                 color: orders.length > 0 ? '#059669' : 'white',
-                                fontWeight: 800,
-                                fontSize: '0.95rem',
+                                fontWeight: 700,
+                                fontSize: '0.8rem',
                                 border: 'none',
                                 cursor: endingSession ? 'not-allowed' : 'pointer',
                                 letterSpacing: '0.02em',
