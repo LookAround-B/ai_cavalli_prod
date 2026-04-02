@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/database/prisma'
 import { Prisma } from '@prisma/client'
+import { sanitizeId } from '@/lib/validation/sanitize'
 
 /**
  * Generate User Bill API
@@ -9,7 +10,9 @@ import { Prisma } from '@prisma/client'
  */
 export async function POST(request: NextRequest) {
     try {
-        const { userId, paymentMethod = 'cash' } = await request.json()
+        const body = await request.json()
+        const userId = sanitizeId(body.userId || '')
+        const paymentMethod = body.paymentMethod || 'cash'
 
         if (!userId) {
             return NextResponse.json(

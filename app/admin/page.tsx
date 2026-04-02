@@ -38,6 +38,7 @@ import {
     Line
 } from 'recharts'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Loading } from '@/components/ui/Loading'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth/context'
@@ -260,14 +261,14 @@ export default function AdminDashboard() {
                                 minWidth: '280px'
                             }}>
                                 <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#64748b' }}>STATS</span>
-                                <input
+                                <Input
                                     type="date"
                                     value={startDate}
                                     onChange={(e) => setStartDate(e.target.value)}
                                     style={{ background: 'transparent', border: 'none', color: '#1f2937', fontWeight: '600', outline: 'none', fontSize: '0.85rem', width: 'auto' }}
                                 />
                                 <span style={{ color: '#cbd5e1' }}>to</span>
-                                <input
+                                <Input
                                     type="date"
                                     value={endDate}
                                     onChange={(e) => setEndDate(e.target.value)}
@@ -290,14 +291,14 @@ export default function AdminDashboard() {
                                 flexWrap: 'wrap'
                             }}>
                                 <span style={{ fontSize: '0.7rem', fontWeight: '800', color: 'var(--primary)', letterSpacing: '0.05em' }}>EXPORT</span>
-                                <input
+                                <Input
                                     type="date"
                                     value={exportStartDate}
                                     onChange={(e) => setExportStartDate(e.target.value)}
                                     style={{ background: 'transparent', border: 'none', color: '#1f2937', fontWeight: '600', outline: 'none', fontSize: '0.85rem' }}
                                 />
                                 <span style={{ color: '#cbd5e1' }}>|</span>
-                                <input
+                                <Input
                                     type="date"
                                     value={exportEndDate}
                                     onChange={(e) => setExportEndDate(e.target.value)}

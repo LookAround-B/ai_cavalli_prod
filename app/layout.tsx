@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import { Inter, Playfair_Display } from 'next/font/google'
+import { Inter, Playfair_Display, Geist } from 'next/font/google'
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
+const geist = Geist({subsets:['latin'],variable:'--font-sans'})
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-serif' })
 
 export const metadata: Metadata = {
@@ -26,6 +26,7 @@ export const metadata: Metadata = {
 
 import { AuthProvider } from '@/lib/auth/context'
 import { CartProvider } from '@/lib/context/CartContext'
+import { cn } from "@/lib/utils";
 
 export default function RootLayout({
   children,
@@ -33,8 +34,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className={`${inter.variable} ${playfair.variable}`}>
+    <html lang="en" className={cn("font-sans", geist.variable)}>
+      <body className={`${geist.variable} ${playfair.variable}`}>
         <AuthProvider>
           <CartProvider>
             <div className="texture-overlay" />

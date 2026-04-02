@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/database/prisma'
+import { sanitizeId, sanitizeIdList, sanitizeString } from '@/lib/validation/sanitize'
 
 // Lookup bills by session, order, or user
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const sessionId = searchParams.get('sessionId')
-    const orderId = searchParams.get('orderId')
-    const orderIds = searchParams.get('orderIds') // comma-separated
-    const guestName = searchParams.get('guestName')
+    const sessionId = sanitizeId(searchParams.get('sessionId') || '')
+    const orderId = sanitizeId(searchParams.get('orderId') || '')
+    const orderIds = sanitizeIdList(searchParams.get('orderIds') || '')
+    const guestName = sanitizeString(searchParams.get('guestName') || '').slice(0, 50)
 
     let bills: any[] = []
 
@@ -23,8 +24,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Strategy 2: by order IDs (direct lookup only)
-    if (bills.length === 0 && (orderId || orderIds)) {
-      const ids = orderId ? [orderId] : (orderIds?.split(',') || [])
+    if (bills.length === 0 && (orderId || orderIds.length > 0)) {
+      const ids = orderId ? [orderId] : orderIds
       bills = await prisma.bill.findMany({
         where: { orderId: { in: ids } },
         include: { billItems: true },

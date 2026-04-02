@@ -11,6 +11,7 @@ import {
     generateSessionToken,
 } from '@/lib/auth/utils'
 import { sanitizePhone } from '@/lib/utils/phone'
+import { sanitizeString, sanitizePin } from '@/lib/validation/sanitize'
 
 /**
  * Unified Login Endpoint
@@ -44,7 +45,8 @@ export async function POST(request: NextRequest) {
 
         // ─── FLOW 1: PIN-based login (RIDER / Kitchen / Admin) ───
         if (login_type === 'rider' || login_type === 'kitchen' || login_type === 'staff') {
-            if (!pin || pin.length < 6) {
+            const sanitizedPin = sanitizePin(pin)
+            if (!sanitizedPin || sanitizedPin.length < 6) {
                 return NextResponse.json({ success: false, error: 'PIN is required (6 digits)' }, { status: 400 })
             }
 
@@ -66,7 +68,7 @@ export async function POST(request: NextRequest) {
                 )
             }
 
-            const pinValid = await verifyPin(pin, user)
+            const pinValid = await verifyPin(sanitizedPin, user)
             if (!pinValid) {
                 await recordFailedLogin(sanitizedPhone, 'Invalid PIN')
                 return NextResponse.json({ success: false, error: 'Invalid phone or PIN' }, { status: 401 })
@@ -98,10 +100,12 @@ export async function POST(request: NextRequest) {
 
         // ─── FLOW 2: Guest check-in (no PIN needed) ───
         if (login_type === 'guest' || login_type === 'outsider') {
-            if (!name?.trim()) {
+            const sanitizedName = sanitizeString(name || '')
+            if (!sanitizedName) {
                 return NextResponse.json({ success: false, error: 'Name is required' }, { status: 400 })
             }
-            const finalTableName = table_name?.trim() || 'Walk-in'
+            const finalTableName = sanitizeString(table_name || '') || 'Walk-in'
+            const sanitizedNumGuests = Math.min(Math.max(parseInt(num_guests) || 1, 1), 50)
 
             // Check if phone belongs to staff
             const staffUser = await prisma.user.findUnique({ where: { phone: sanitizedPhone } })
@@ -125,10 +129,10 @@ export async function POST(request: NextRequest) {
                 const existingGuest = await prisma.user.findUnique({ where: { phone: sanitizedPhone } })
                 if (existingGuest) {
                     guestUser = existingGuest
-                    if (existingGuest.name !== name.trim()) {
+                    if (existingGuest.name !== sanitizedName) {
                         await prisma.user.update({
                             where: { id: existingGuest.id },
-                            data: { name: name.trim() },
+                            data: { name: sanitizedName },
                         })
                     }
                 }
@@ -140,7 +144,7 @@ export async function POST(request: NextRequest) {
                     data: {
                         email: guestEmail,
                         phone: sanitizedPhone,
-                        name: name.trim(),
+                        name: sanitizedName,
                         role: 'OUTSIDER',
                     },
                 })
@@ -158,8 +162,8 @@ export async function POST(request: NextRequest) {
                         where: { id: existingSession.id },
                         data: {
                             tableName: finalTableName,
-                            numGuests: parseInt(num_guests || '1'),
-                            guestName: name.trim(),
+                            numGuests: sanitizedNumGuests,
+                            guestName: sanitizedName,
                             userId: guestUser.id,
                         },
                     })
@@ -167,10 +171,10 @@ export async function POST(request: NextRequest) {
                     session = await prisma.guestSession.create({
                         data: {
                             userId: guestUser.id,
-                            guestName: name.trim(),
+                            guestName: sanitizedName,
                             guestPhone: sanitizedPhone,
                             tableName: finalTableName,
-                            numGuests: parseInt(num_guests || '1'),
+                            numGuests: sanitizedNumGuests,
                             status: 'active',
                             totalAmount: 0,
                         },
@@ -182,13 +186,13 @@ export async function POST(request: NextRequest) {
 
             const sessionToken = generateSessionToken()
             await updateSessionToken(guestUser.id, sessionToken, 24)
-            await logAuthAction(guestUser.id, 'guest_login', { table_name: finalTableName, num_guests })
+            await logAuthAction(guestUser.id, 'guest_login', { table_name: finalTableName, num_guests: sanitizedNumGuests })
 
             const safeUser = {
                 id: guestUser.id,
                 email: guestUser.email,
                 phone: guestUser.phone || sanitizedPhone,
-                name: name.trim(),
+                name: sanitizedName,
                 role: 'OUTSIDER',
                 created_at: guestUser.createdAt
             }

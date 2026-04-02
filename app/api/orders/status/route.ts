@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/database/prisma'
+import { validateBody, updateOrderStatusSchema } from '@/lib/validation/schemas'
 
 export async function PATCH(request: NextRequest) {
   try {
-    const { orderId, status } = await request.json()
-    if (!orderId || !status) {
-      return NextResponse.json({ success: false, error: 'orderId and status required' }, { status: 400 })
+    const parsed = await validateBody(request, updateOrderStatusSchema)
+    if (!parsed.success) {
+      return NextResponse.json({ success: false, error: parsed.error }, { status: 400 })
     }
+
+    const { orderId, status } = parsed.data
 
     await prisma.order.update({
       where: { id: orderId },
@@ -14,8 +17,9 @@ export async function PATCH(request: NextRequest) {
     })
 
     return NextResponse.json({ success: true })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to update status'
     console.error('Order status update error:', error)
-    return NextResponse.json({ success: false, error: error.message || 'Failed to update status' }, { status: 500 })
+    return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 }

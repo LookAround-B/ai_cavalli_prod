@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/database/prisma'
 import { Prisma } from '@prisma/client'
+import { sanitizeId } from '@/lib/validation/sanitize'
 
 /**
  * Generate Session Bill API
@@ -9,7 +10,9 @@ import { Prisma } from '@prisma/client'
  */
 export async function POST(request: NextRequest) {
     try {
-        const { sessionId, paymentMethod = 'cash' } = await request.json()
+        const body = await request.json()
+        const sessionId = sanitizeId(body.sessionId || '')
+        const paymentMethod = body.paymentMethod || 'cash'
 
         if (!sessionId) {
             return NextResponse.json(
@@ -260,11 +263,14 @@ export async function POST(request: NextRequest) {
                 }
             }
         })
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Session bill generation error:', error)
-        const message = error?.code === 'P2002' 
-            ? 'A bill already exists for one of the orders in this session' 
-            : (error?.message || 'Internal server error')
+        let message = 'Internal server error'
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+            message = 'A bill already exists for one of the orders in this session'
+        } else if (error instanceof Error) {
+            message = error.message
+        }
         return NextResponse.json(
             { success: false, error: message },
             { status: 500 }

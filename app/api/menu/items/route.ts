@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/database/prisma'
+import { validateBody, createMenuItemSchema, updateMenuItemSchema, toggleMenuItemSchema } from '@/lib/validation/schemas'
+import { sanitizeId } from '@/lib/validation/sanitize'
 
 // GET: fetch all menu items with categories (admin, includes unavailable)
 // POST: create menu item
@@ -36,23 +38,21 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { name, description, price, category_id, image_url, available } = body
-
-    // Validate price
-    const parsedPrice = parseFloat(String(price))
-    if (isNaN(parsedPrice) || parsedPrice < 0) {
-      return NextResponse.json({ success: false, error: 'Invalid price value' }, { status: 400 })
+    const parsed = await validateBody(request, createMenuItemSchema)
+    if (!parsed.success) {
+      return NextResponse.json({ success: false, error: parsed.error }, { status: 400 })
     }
+
+    const { name, description, price, category_id, image_url, available } = parsed.data
 
     const item = await prisma.menuItem.create({
       data: {
         name,
         description: description || null,
-        price: parsedPrice.toFixed(2),
+        price: price.toFixed(2),
         categoryId: category_id,
         imageUrl: image_url || null,
-        available: available !== false
+        available
       }
     })
 
@@ -64,31 +64,28 @@ export async function POST(request: NextRequest) {
         image_url: item.imageUrl, available: item.available
       }
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to create item'
     console.error('Menu item create error:', error)
-    return NextResponse.json({ success: false, error: error.message || 'Failed to create item' }, { status: 500 })
+    return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 }
 
 export async function PUT(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { id, name, description, price, category_id, image_url, available } = body
-
-    if (!id) return NextResponse.json({ success: false, error: 'ID required' }, { status: 400 })
-
-    // Validate price
-    const parsedPrice = parseFloat(String(price))
-    if (isNaN(parsedPrice) || parsedPrice < 0) {
-      return NextResponse.json({ success: false, error: 'Invalid price value' }, { status: 400 })
+    const parsed = await validateBody(request, updateMenuItemSchema)
+    if (!parsed.success) {
+      return NextResponse.json({ success: false, error: parsed.error }, { status: 400 })
     }
+
+    const { id, name, description, price, category_id, image_url, available } = parsed.data
 
     const item = await prisma.menuItem.update({
       where: { id },
       data: {
         name,
         description: description || null,
-        price: parsedPrice.toFixed(2),
+        price: price.toFixed(2),
         categoryId: category_id,
         imageUrl: image_url || null,
         available
@@ -96,33 +93,37 @@ export async function PUT(request: NextRequest) {
     })
 
     return NextResponse.json({ success: true, data: { id: item.id } })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to update item'
     console.error('Menu item update error:', error)
-    return NextResponse.json({ success: false, error: error.message || 'Failed to update item' }, { status: 500 })
+    return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 }
 
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const id = searchParams.get('id')
+    const id = sanitizeId(searchParams.get('id') || '')
 
     if (!id) return NextResponse.json({ success: false, error: 'ID required' }, { status: 400 })
 
     await prisma.menuItem.delete({ where: { id } })
     return NextResponse.json({ success: true })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to delete item'
     console.error('Menu item delete error:', error)
-    return NextResponse.json({ success: false, error: error.message || 'Failed to delete item' }, { status: 500 })
+    return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 }
 
 export async function PATCH(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { id, available } = body
+    const parsed = await validateBody(request, toggleMenuItemSchema)
+    if (!parsed.success) {
+      return NextResponse.json({ success: false, error: parsed.error }, { status: 400 })
+    }
 
-    if (!id) return NextResponse.json({ success: false, error: 'ID required' }, { status: 400 })
+    const { id, available } = parsed.data
 
     await prisma.menuItem.update({
       where: { id },
@@ -130,8 +131,9 @@ export async function PATCH(request: NextRequest) {
     })
 
     return NextResponse.json({ success: true })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to toggle availability'
     console.error('Menu item toggle error:', error)
-    return NextResponse.json({ success: false, error: error.message || 'Failed to toggle availability' }, { status: 500 })
+    return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 }

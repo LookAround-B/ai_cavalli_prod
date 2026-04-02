@@ -4,6 +4,8 @@ import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { useAuth } from '@/lib/auth/context'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 import {
     ChevronRight,
     LogOut,
@@ -1043,52 +1045,14 @@ export default function KitchenPage() {
                                 </p>
                                 {/* Payment Method Dropdown for Session Bills */}
                                 <div style={{ margin: '8px 0', position: 'relative' }}>
-                                    <select
+                                    <Select
                                         value={orderPaymentMethods[req.id] || 'cash'}
                                         onChange={(e) => setOrderPaymentMethods(prev => ({ ...prev, [req.id]: e.target.value }))}
-                                        style={{
-                                            width: '100%',
-                                            padding: '8px 10px',
-                                            paddingRight: '32px',
-                                            borderRadius: 'var(--radius-sm)',
-                                            border: '1px solid var(--border)',
-                                            background: 'var(--surface)',
-                                            fontSize: '0.85rem',
-                                            fontWeight: 600,
-                                            fontFamily: 'inherit',
-                                            color: 'var(--text)',
-                                            outline: 'none',
-                                            appearance: 'none',
-                                            WebkitAppearance: 'none',
-                                            MozAppearance: 'none',
-                                            transition: 'all 0.2s',
-                                            cursor: 'pointer'
-                                        }}
-                                        onFocus={(e) => {
-                                            e.target.style.borderColor = 'var(--primary)'
-                                            e.target.style.boxShadow = '0 0 0 2px rgba(192, 39, 45, 0.1)'
-                                        }}
-                                        onBlur={(e) => {
-                                            e.target.style.borderColor = 'var(--border)'
-                                            e.target.style.boxShadow = 'none'
-                                        }}
                                     >
                                         {PAYMENT_OPTIONS.map(opt => (
                                             <option key={opt.value} value={opt.value}>{opt.label}</option>
                                         ))}
-                                    </select>
-                                    <div style={{
-                                        position: 'absolute',
-                                        right: '10px',
-                                        top: '50%',
-                                        transform: 'translateY(-50%)',
-                                        pointerEvents: 'none',
-                                        color: 'var(--text-muted)',
-                                        display: 'flex',
-                                        alignItems: 'center'
-                                    }}>
-                                        <ChevronDown size={14} />
-                                    </div>
+                                    </Select>
                                 </div>
                                 <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
                                     <Button
@@ -2201,38 +2165,27 @@ export default function KitchenPage() {
                                         <h3 style={{ margin: '0 0 16px', fontSize: '0.9rem', fontWeight: 800, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Customer Info</h3>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                             <div>
-                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#6B7280', marginBottom: '6px' }}>CUSTOMER NAME *</label>
-                                                <div style={{ position: 'relative' }}>
-                                                    <User size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
-                                                    <input
-                                                        type="text"
-                                                        value={newOrderName}
-                                                        onChange={(e) => setNewOrderName(e.target.value.replace(/[^a-zA-Z\s]/g, ''))}
-                                                        placeholder="Enter customer name"
-                                                        style={{ width: '100%', padding: '12px 12px 12px 38px', borderRadius: '10px', border: '1.5px solid #E5E7EB', fontSize: '0.95rem', fontWeight: 600, outline: 'none', transition: 'all 0.2s' }}
-                                                        onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(169, 30, 34, 0.1)' }}
-                                                        onBlur={(e) => { e.currentTarget.style.borderColor = '#E5E7EB'; e.currentTarget.style.boxShadow = 'none' }}
-                                                    />
-                                                </div>
+                                                <Input
+                                                    label="Customer Name *"
+                                                    type="text"
+                                                    value={newOrderName}
+                                                    onChange={(e) => setNewOrderName(e.target.value.replace(/[^a-zA-Z\s]/g, ''))}
+                                                    placeholder="Enter customer name"
+                                                    maxLength={50}
+                                                />
                                             </div>
                                             <div>
-                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#6B7280', marginBottom: '6px' }}>PHONE NUMBER *</label>
-                                                <div style={{ position: 'relative' }}>
-                                                    <Phone size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
-                                                    <input
-                                                        type="tel"
-                                                        value={newOrderPhone}
-                                                        onChange={(e) => {
-                                                            const val = e.target.value.replace(/\D/g, '');
-                                                            if (val.length <= 10) setNewOrderPhone(val);
-                                                        }}
-                                                        placeholder="10-digit phone number"
-                                                        maxLength={10}
-                                                        style={{ width: '100%', padding: '12px 12px 12px 38px', borderRadius: '10px', border: '1.5px solid #E5E7EB', fontSize: '0.95rem', fontWeight: 600, outline: 'none', transition: 'all 0.2s' }}
-                                                        onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(169, 30, 34, 0.1)' }}
-                                                        onBlur={(e) => { e.currentTarget.style.borderColor = '#E5E7EB'; e.currentTarget.style.boxShadow = 'none' }}
-                                                    />
-                                                </div>
+                                                <Input
+                                                    label="Phone Number *"
+                                                    type="tel"
+                                                    value={newOrderPhone}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value.replace(/\D/g, '');
+                                                        if (val.length <= 10) setNewOrderPhone(val);
+                                                    }}
+                                                    placeholder="10-digit phone number"
+                                                    maxLength={10}
+                                                />
                                             </div>
                                         </div>
                                     </div>
@@ -2241,25 +2194,18 @@ export default function KitchenPage() {
                                         <h3 style={{ margin: '0 0 16px', fontSize: '0.9rem', fontWeight: 800, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Seating Details</h3>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                             <div>
-                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#6B7280', marginBottom: '6px' }}>TABLE NUMBER *</label>
-                                                <div style={{ position: 'relative' }}>
-                                                    <MapPin size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
-                                                    <input
-                                                        type="text"
-                                                        inputMode="numeric"
-                                                        value={newOrderTable}
-                                                        maxLength={2}
-                                                        onChange={(e) => {
-                                                            // Only allow 2 digits
-                                                            const val = e.target.value.replace(/\D/g, '').slice(0, 2)
-                                                            setNewOrderTable(val)
-                                                        }}
-                                                        placeholder="00"
-                                                        style={{ width: '100%', padding: '12px 12px 12px 38px', borderRadius: '10px', border: '1.5px solid #E5E7EB', fontSize: '0.95rem', fontWeight: 600, outline: 'none', transition: 'all 0.2s' }}
-                                                        onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(169, 30, 34, 0.1)' }}
-                                                        onBlur={(e) => { e.currentTarget.style.borderColor = '#E5E7EB'; e.currentTarget.style.boxShadow = 'none' }}
-                                                    />
-                                                </div>
+                                                <Input
+                                                    label="Table Number *"
+                                                    type="text"
+                                                    inputMode="numeric"
+                                                    value={newOrderTable}
+                                                    maxLength={2}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value.replace(/\D/g, '').slice(0, 2)
+                                                        setNewOrderTable(val)
+                                                    }}
+                                                    placeholder="00"
+                                                />
                                             </div>
                                             <div style={{ display: 'flex', gap: '16px' }}>
                                                 <div style={{ flex: 1 }}>

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/database/prisma'
 import { requireRoles } from '@/lib/auth/api-middleware'
 import type { UserRole } from '@/lib/types/auth'
+import { validateBody, generateBillSchema, updateBillPaymentSchema } from '@/lib/validation/schemas'
+import { sanitizeId } from '@/lib/validation/sanitize'
 
 function normalizeRole(role: string): UserRole {
     const raw = (role || '').toUpperCase()
@@ -12,11 +14,12 @@ const BILL_ROLES: UserRole[] = ['STAFF', 'KITCHEN', 'ADMIN']
 
 export async function POST(request: NextRequest) {
     try {
-        const { orderId, paymentMethod = 'cash', userId } = await request.json()
-
-        if (!orderId) {
-            return NextResponse.json({ success: false, error: 'Order ID is required' }, { status: 400 })
+        const parsed = await validateBody(request, generateBillSchema)
+        if (!parsed.success) {
+            return NextResponse.json({ success: false, error: parsed.error }, { status: 400 })
         }
+
+        const { orderId, paymentMethod, userId } = parsed.data
 
         // AUTH GUARD
         const { authorized } = await requireRoles(request, BILL_ROLES)
@@ -169,14 +172,12 @@ export async function POST(request: NextRequest) {
 // PATCH: Update bill payment method
 export async function PATCH(request: NextRequest) {
     try {
-        const { billId, paymentMethod } = await request.json()
-
-        if (!billId || !paymentMethod) {
-            return NextResponse.json(
-                { success: false, error: 'billId and paymentMethod are required' },
-                { status: 400 }
-            )
+        const parsed = await validateBody(request, updateBillPaymentSchema)
+        if (!parsed.success) {
+            return NextResponse.json({ success: false, error: parsed.error }, { status: 400 })
         }
+
+        const { billId, paymentMethod } = parsed.data
 
         const bill = await prisma.bill.update({
             where: { id: billId },

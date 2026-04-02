@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/database/prisma'
+import { sanitizeId } from '@/lib/validation/sanitize'
 
 /**
  * Request Bill API
@@ -8,7 +9,9 @@ import prisma from '@/lib/database/prisma'
  */
 export async function POST(request: NextRequest) {
     try {
-        const { sessionId, userId } = await request.json()
+        const body = await request.json()
+        const sessionId = sanitizeId(body.sessionId || '')
+        const userId = body.userId ? sanitizeId(body.userId) : undefined
 
         if (!sessionId) {
             return NextResponse.json(

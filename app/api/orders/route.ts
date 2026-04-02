@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/database/prisma'
+import { sanitizeId, sanitizeOrderStatus, sanitizeLimit, sanitizeDate } from '@/lib/validation/sanitize'
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
-    const orderId = searchParams.get('orderId')
-    const status = searchParams.get('status') // comma-separated: pending,preparing,ready
-    const limit = parseInt(searchParams.get('limit') || '100')
+    const userId = sanitizeId(searchParams.get('userId') || '')
+    const orderId = sanitizeId(searchParams.get('orderId') || '')
+    const status = sanitizeOrderStatus(searchParams.get('status') || '')
+    const limit = sanitizeLimit(searchParams.get('limit') || '100')
     const includeAll = searchParams.get('all') === 'true' // for admin/kitchen
-    const startDate = searchParams.get('startDate')
-    const endDate = searchParams.get('endDate')
+    const startDate = sanitizeDate(searchParams.get('startDate') || '')
+    const endDate = sanitizeDate(searchParams.get('endDate') || '')
 
     const where: any = {}
 
@@ -20,8 +21,8 @@ export async function GET(request: NextRequest) {
       where.userId = userId
     }
 
-    if (status) {
-      where.status = { in: status.split(',') }
+    if (status.length > 0) {
+      where.status = { in: status }
     }
 
     if (startDate) {

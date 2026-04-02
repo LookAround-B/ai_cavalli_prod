@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/database/prisma'
+import { sanitizeId, sanitizePhone } from '@/lib/validation/sanitize'
 
 /**
  * Get Active Session API
@@ -19,13 +20,14 @@ export async function GET(request: NextRequest) {
             )
         }
 
-        const sanitizedPhone = phone?.replace(/\D/g, '').slice(0, 10)
+        const sanitizedPhone = sanitizePhone(phone || '')
+        const sanitizedUserId = userId ? sanitizeId(userId) : ''
 
         const where: any = { status: 'active' }
         if (sanitizedPhone) {
             where.guestPhone = sanitizedPhone
-        } else if (userId) {
-            where.userId = userId
+        } else if (sanitizedUserId) {
+            where.userId = sanitizedUserId
         }
 
         const session = await prisma.guestSession.findFirst({

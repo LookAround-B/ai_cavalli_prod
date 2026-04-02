@@ -1,19 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/database/prisma";
 import { validateSessionToken } from "@/lib/auth/utils";
+import { sanitizeId, sanitizeString, sanitizeNotes } from "@/lib/validation/sanitize";
 
 export async function POST(request: NextRequest) {
   try {
+    const body = await request.json();
     const {
-      userId,
+      userId: rawUserId,
       phone,
       items,
-      tableName,
+      tableName: rawTableName,
       numGuests,
       locationType,
-      notes,
-      sessionId,
-    } = await request.json();
+      notes: rawNotes,
+      sessionId: rawSessionId,
+    } = body;
+
+    // Sanitize all string inputs
+    const userId = sanitizeId(rawUserId || '');
+    const sessionId = rawSessionId ? sanitizeId(rawSessionId) : undefined;
+    const tableName = sanitizeString(rawTableName || '') || 'N/A';
+    const notes = sanitizeNotes(rawNotes || '');
+    const sanitizedNumGuests = Math.min(Math.max(parseInt(numGuests) || 1, 1), 50);
 
     const hasRegularStaffMeal = notes === "REGULAR_STAFF_MEAL";
 
@@ -115,7 +124,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Fetch current prices for all items
-    const itemIds = Array.isArray(items) ? items.map((item: any) => item.itemId) : [];
+    const itemIds = Array.isArray(items) ? items.map((item: any) => sanitizeId(item.itemId || '')) : [];
     let menuItems: any[] = [];
 
     if (itemIds.length > 0) {
@@ -130,26 +139,28 @@ export async function POST(request: NextRequest) {
     const validatedOrderItems = [];
 
     for (const item of Array.isArray(items) ? items : []) {
-      const menuItem = menuItems.find((m) => m.id === item.itemId);
+      const sanitizedItemId = sanitizeId(item.itemId || '');
+      const menuItem = menuItems.find((m) => m.id === sanitizedItemId);
       if (!menuItem) {
         return NextResponse.json(
-          { success: false, error: `Item ${item.itemId} not found` },
+          { success: false, error: `Item ${sanitizedItemId} not found` },
           { status: 400 }
         );
       }
       if (!menuItem.available) {
         return NextResponse.json(
-          { success: false, error: `Item ${item.itemId} is currently unavailable` },
+          { success: false, error: `Item ${sanitizedItemId} is currently unavailable` },
           { status: 400 }
         );
       }
 
-      const itemTotal = Number(menuItem.price) * item.quantity;
+      const safeQuantity = Math.min(Math.max(parseInt(item.quantity) || 1, 1), 100);
+      const itemTotal = Number(menuItem.price) * safeQuantity;
       serverTotal += itemTotal;
 
       validatedOrderItems.push({
-        menuItemId: item.itemId,
-        quantity: item.quantity,
+        menuItemId: sanitizedItemId,
+        quantity: safeQuantity,
         price: Number(menuItem.price),
       });
     }
@@ -161,9 +172,9 @@ export async function POST(request: NextRequest) {
         guestInfo: normalizedRole === "OUTSIDER"
           ? { name: userData.name, email: userData.email }
           : undefined,
-        tableName: tableName || "N/A",
-        locationType,
-        numGuests,
+        tableName,
+        locationType: locationType === 'indoor' || locationType === 'outdoor' ? locationType : undefined,
+        numGuests: sanitizedNumGuests,
         total: serverTotal,
         notes,
         sessionId: sessionId || undefined,
@@ -210,10 +221,11 @@ export async function POST(request: NextRequest) {
       total: serverTotal,
       message: "Order created successfully",
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Internal server error';
     console.error("Secure order API error:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Internal server error" },
+      { success: false, error: message },
       { status: 500 }
     );
   }

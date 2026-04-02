@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/database/prisma'
+import { validateBody, guestLoginSchema } from '@/lib/validation/schemas'
 
 /**
  * Guest Login API
@@ -8,20 +9,12 @@ import prisma from '@/lib/database/prisma'
  */
 export async function POST(request: NextRequest) {
     try {
-        const { name, phone, tableName, numGuests } = await request.json()
-
-        if (!name?.trim()) {
-            return NextResponse.json({ success: false, error: 'Name is required.' }, { status: 400 })
+        const parsed = await validateBody(request, guestLoginSchema)
+        if (!parsed.success) {
+            return NextResponse.json({ success: false, error: parsed.error }, { status: 400 })
         }
 
-        const sanitizedPhone = phone?.replace(/\D/g, '').slice(0, 10)
-        if (!sanitizedPhone || sanitizedPhone.length < 10) {
-            return NextResponse.json({ success: false, error: 'Valid 10-digit phone number is required.' }, { status: 400 })
-        }
-
-        if (!tableName?.trim()) {
-            return NextResponse.json({ success: false, error: 'Table number is required.' }, { status: 400 })
-        }
+        const { name, phone: sanitizedPhone, table_name: tableName, num_guests: numGuests } = parsed.data
 
         // Check if phone belongs to Staff or Rider
         const staffOrRider = await prisma.user.findFirst({
@@ -43,15 +36,15 @@ export async function POST(request: NextRequest) {
         })
 
         if (user) {
-            if (user.name !== name.trim()) {
-                await prisma.user.update({ where: { id: user.id }, data: { name: name.trim() } })
-                user = { ...user, name: name.trim() }
+            if (user.name !== name) {
+                await prisma.user.update({ where: { id: user.id }, data: { name } })
+                user = { ...user, name }
             }
         } else {
             const guestEmail = `guest_${sanitizedPhone}@aicavalli.local`
             user = await prisma.user.create({
                 data: {
-                    name: name.trim(),
+                    name,
                     phone: sanitizedPhone,
                     email: guestEmail,
                     role: 'OUTSIDER',
@@ -68,14 +61,14 @@ export async function POST(request: NextRequest) {
         let session = existingSession
 
         if (existingSession) {
-            if (existingSession.tableName !== tableName.trim() ||
-                existingSession.numGuests !== parseInt(numGuests || '1')) {
+            if (existingSession.tableName !== tableName ||
+                existingSession.numGuests !== numGuests) {
                 session = await prisma.guestSession.update({
                     where: { id: existingSession.id },
                     data: {
-                        tableName: tableName.trim(),
-                        numGuests: parseInt(numGuests || '1'),
-                        guestName: name.trim(),
+                        tableName,
+                        numGuests,
+                        guestName: name,
                         userId: user.id,
                     },
                 })
@@ -83,10 +76,10 @@ export async function POST(request: NextRequest) {
         } else {
             session = await prisma.guestSession.create({
                 data: {
-                    guestName: name.trim(),
+                    guestName: name,
                     guestPhone: sanitizedPhone,
-                    tableName: tableName.trim(),
-                    numGuests: parseInt(numGuests || '1'),
+                    tableName,
+                    numGuests,
                     userId: user.id,
                     status: 'active',
                     totalAmount: 0,
@@ -106,7 +99,7 @@ export async function POST(request: NextRequest) {
             },
             message: existingSession ? 'Welcome back! Your session is active.' : 'Session started. Enjoy your meal!'
         })
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('Guest login error:', error)
         return NextResponse.json({ success: false, error: 'Internal server error. Please try again.' }, { status: 500 })
     }

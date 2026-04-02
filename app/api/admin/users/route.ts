@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/database/prisma'
 import type { UserRole } from '@/lib/types/auth'
+import { validateBody, adminUserActionSchema, createUserSchema, updateUserSchema, deleteUserSchema } from '@/lib/validation/schemas'
 
 const ADMIN_ROLES = ['ADMIN', 'KITCHEN']
 
@@ -87,10 +88,11 @@ export async function GET(request: NextRequest) {
         }))
 
         return NextResponse.json({ success: true, data })
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error'
         console.error('Fetch users error:', error)
         return NextResponse.json(
-            { success: false, error: error.message || 'Internal server error' },
+            { success: false, error: message },
             { status: 500 }
         )
     }
@@ -101,7 +103,11 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
     try {
-        const { action, userData } = await request.json()
+        // Step 1: Validate action wrapper
+        const actionParsed = await validateBody(request, adminUserActionSchema)
+        if (!actionParsed.success) {
+            return NextResponse.json({ success: false, error: actionParsed.error }, { status: 400 })
+        }
 
         const auth = await authenticateAdmin(request)
         if (!auth.authenticated) {
@@ -109,8 +115,17 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: false, error: auth.error }, { status })
         }
 
+        const { action, userData } = actionParsed.data
+
         if (action === 'create') {
-            const { name, phone, email, pin, role, parent_name } = userData
+            // Step 2: Validate user creation data
+            const createResult = createUserSchema.safeParse(userData)
+            if (!createResult.success) {
+                const errors = createResult.error.issues.map((e: { path: (string | number)[]; message: string }) => `${e.path.join('.')}: ${e.message}`).join(', ')
+                return NextResponse.json({ success: false, error: `Validation failed: ${errors}` }, { status: 400 })
+            }
+
+            const { name, phone, email, pin, role, parent_name } = createResult.data
             const userEmail = email || (phone ? `${phone}@aicavalli.local` : `user_${Date.now()}@aicavalli.local`)
 
             await prisma.user.create({
@@ -127,7 +142,13 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: true, message: 'User created successfully' })
 
         } else if (action === 'update') {
-            const { id, name, phone, email, pin, role, parent_name } = userData
+            const updateResult = updateUserSchema.safeParse(userData)
+            if (!updateResult.success) {
+                const errors = updateResult.error.issues.map((e: { path: (string | number)[]; message: string }) => `${e.path.join('.')}: ${e.message}`).join(', ')
+                return NextResponse.json({ success: false, error: `Validation failed: ${errors}` }, { status: 400 })
+            }
+
+            const { id, name, phone, email, pin, role, parent_name } = updateResult.data
 
             const data: any = {
                 name,
@@ -143,7 +164,12 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: true, message: 'User updated successfully' })
 
         } else if (action === 'delete') {
-            const { id } = userData
+            const deleteResult = deleteUserSchema.safeParse(userData)
+            if (!deleteResult.success) {
+                return NextResponse.json({ success: false, error: 'User id is required' }, { status: 400 })
+            }
+
+            const { id } = deleteResult.data
 
             await prisma.$transaction(async (tx) => {
                 // Remove related records (foreign key constraints)
@@ -165,10 +191,11 @@ export async function POST(request: NextRequest) {
         }
 
         return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 })
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error'
         console.error('Admin user operation error:', error)
         return NextResponse.json(
-            { success: false, error: error.message || 'Internal server error' },
+            { success: false, error: message },
             { status: 500 }
         )
     }

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { useAuth } from '@/lib/auth/context'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Loading } from '@/components/ui/Loading'
 import {
     Trash2,
@@ -239,7 +240,7 @@ export default function CMSPage() {
                                 }}>
                                     Description
                                 </label>
-                                <textarea
+                                <Textarea
                                     value={desc}
                                     onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDesc(e.target.value)}
                                     placeholder="Describe the event or announcement..."
@@ -417,7 +418,7 @@ function ItalianFormField({ label, icon, ...props }: React.InputHTMLAttributes<H
                 {icon}
                 {label}
             </label>
-            <input
+            <Input
                 {...props}
                 style={{
                     width: '100%',

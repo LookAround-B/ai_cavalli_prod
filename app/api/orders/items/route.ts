@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/database/prisma'
+import { validateBody, addOrderItemSchema, updateOrderItemSchema } from '@/lib/validation/schemas'
+import { sanitizeId } from '@/lib/validation/sanitize'
 
 // POST: Add item to order
 export async function POST(request: NextRequest) {
   try {
-    const { orderId, menuItemId, quantity, price } = await request.json()
-    if (!orderId || !menuItemId) {
-      return NextResponse.json({ success: false, error: 'orderId and menuItemId required' }, { status: 400 })
+    const parsed = await validateBody(request, addOrderItemSchema)
+    if (!parsed.success) {
+      return NextResponse.json({ success: false, error: parsed.error }, { status: 400 })
     }
+
+    const { orderId, menuItemId, quantity, price } = parsed.data
 
     const menuItem = await prisma.menuItem.findUnique({ where: { id: menuItemId } })
     if (!menuItem) {
@@ -18,8 +22,8 @@ export async function POST(request: NextRequest) {
       data: {
         orderId,
         menuItemId,
-        quantity: quantity || 1,
-        price: price || menuItem.price
+        quantity,
+        price: price ?? menuItem.price
       }
     })
 
@@ -29,19 +33,22 @@ export async function POST(request: NextRequest) {
     await prisma.order.update({ where: { id: orderId }, data: { total } })
 
     return NextResponse.json({ success: true })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to add item'
     console.error('Add order item error:', error)
-    return NextResponse.json({ success: false, error: error.message || 'Failed to add item' }, { status: 500 })
+    return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 }
 
 // PUT: Update item quantity
 export async function PUT(request: NextRequest) {
   try {
-    const { orderItemId, quantity } = await request.json()
-    if (!orderItemId || quantity < 1) {
-      return NextResponse.json({ success: false, error: 'orderItemId and quantity >= 1 required' }, { status: 400 })
+    const parsed = await validateBody(request, updateOrderItemSchema)
+    if (!parsed.success) {
+      return NextResponse.json({ success: false, error: parsed.error }, { status: 400 })
     }
+
+    const { orderItemId, quantity } = parsed.data
 
     const item = await prisma.orderItem.update({
       where: { id: orderItemId },
@@ -54,9 +61,10 @@ export async function PUT(request: NextRequest) {
     await prisma.order.update({ where: { id: item.orderId }, data: { total } })
 
     return NextResponse.json({ success: true })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to update item'
     console.error('Update order item error:', error)
-    return NextResponse.json({ success: false, error: error.message || 'Failed to update item' }, { status: 500 })
+    return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 }
 
@@ -64,7 +72,7 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const orderItemId = searchParams.get('id')
+    const orderItemId = sanitizeId(searchParams.get('id') || '')
     if (!orderItemId) {
       return NextResponse.json({ success: false, error: 'id required' }, { status: 400 })
     }
@@ -77,8 +85,9 @@ export async function DELETE(request: NextRequest) {
     await prisma.order.update({ where: { id: item.orderId }, data: { total } })
 
     return NextResponse.json({ success: true })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to delete item'
     console.error('Delete order item error:', error)
-    return NextResponse.json({ success: false, error: error.message || 'Failed to delete item' }, { status: 500 })
+    return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 }

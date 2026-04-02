@@ -2,19 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/database/prisma";
 import { requireRoles } from "@/lib/auth/api-middleware";
 import type { UserRole } from "@/lib/types/auth";
+import { validateBody, printBillSchema } from "@/lib/validation/schemas";
 
 const BILL_ROLES: UserRole[] = ["STAFF", "KITCHEN", "ADMIN"];
 
 export async function POST(request: NextRequest) {
   try {
-    const { billId, userId } = await request.json();
-
-    if (!billId) {
+    const parsed = await validateBody(request, printBillSchema);
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: "Bill ID is required" },
+        { success: false, error: parsed.error },
         { status: 400 },
       );
     }
+
+    const { billId, userId } = parsed.data;
 
     // AUTH GUARD
     const { authorized } = await requireRoles(request, BILL_ROLES);

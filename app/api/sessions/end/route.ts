@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/database/prisma'
+import { sanitizeId, sanitizePaymentMethod } from '@/lib/validation/sanitize'
 
 /**
  * End Session API
@@ -7,7 +8,13 @@ import prisma from '@/lib/database/prisma'
  */
 export async function POST(request: NextRequest) {
     try {
-        const { sessionId, paymentMethod = 'upi' } = await request.json()
+        const body = await request.json()
+        const sessionId = sanitizeId(body.sessionId || '')
+        const paymentMethod = sanitizePaymentMethod(body.paymentMethod)
+
+        if (!sessionId) {
+            return NextResponse.json({ success: false, error: 'Valid session ID is required' }, { status: 400 })
+        }
 
         // AUTH GUARD: Verify requester via session token
         const authHeader = request.headers.get('Authorization')

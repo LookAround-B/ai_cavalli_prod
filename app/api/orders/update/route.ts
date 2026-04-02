@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/database/prisma";
 import { validateSessionToken } from "@/lib/auth/utils";
+import { sanitizeId, sanitizeNotes } from "@/lib/validation/sanitize";
 
 export async function PUT(request: NextRequest) {
   try {
-    const { orderId, userId, items, notes } = await request.json();
+    const body = await request.json();
+    const orderId = sanitizeId(body.orderId || '');
+    const userId = sanitizeId(body.userId || '');
+    const items = Array.isArray(body.items) ? body.items : [];
+    const notes = body.notes !== undefined ? sanitizeNotes(body.notes || '') : undefined;
 
-    if (!orderId || !userId || !items || items.length === 0) {
+    if (!orderId || !userId || items.length === 0) {
       return NextResponse.json(
         { success: false, error: "Missing required fields: orderId, userId, and at least one item" },
         { status: 400 }
@@ -86,7 +91,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Fetch current prices
-    const itemIds = items.map((item: any) => item.itemId);
+    const itemIds = items.map((item: any) => sanitizeId(item.itemId || ''));
     const menuItems = await prisma.menuItem.findMany({
       where: { id: { in: itemIds } },
       select: { id: true, name: true, price: true, available: true },
@@ -97,20 +102,22 @@ export async function PUT(request: NextRequest) {
     const validatedOrderItems = [];
 
     for (const item of items) {
-      const menuItem = menuItems.find((m: any) => m.id === item.itemId);
+      const sanitizedItemId = sanitizeId(item.itemId || '');
+      const menuItem = menuItems.find((m: any) => m.id === sanitizedItemId);
       if (!menuItem) {
-        return NextResponse.json({ success: false, error: `Item ${item.itemId} not found` }, { status: 400 });
+        return NextResponse.json({ success: false, error: `Item ${sanitizedItemId} not found` }, { status: 400 });
       }
       if (!menuItem.available) {
         return NextResponse.json({ success: false, error: `${menuItem.name} is currently unavailable` }, { status: 400 });
       }
 
-      const itemTotal = Number(menuItem.price) * item.quantity;
+      const safeQuantity = Math.min(Math.max(parseInt(item.quantity) || 1, 1), 100);
+      const itemTotal = Number(menuItem.price) * safeQuantity;
       serverTotal += itemTotal;
       validatedOrderItems.push({
         orderId,
-        menuItemId: item.itemId,
-        quantity: item.quantity,
+        menuItemId: sanitizedItemId,
+        quantity: safeQuantity,
         price: Number(menuItem.price),
       });
     }
@@ -131,10 +138,11 @@ export async function PUT(request: NextRequest) {
       total: serverTotal,
       message: "Order updated successfully",
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Internal server error';
     console.error("Order update API error:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Internal server error" },
+      { success: false, error: message },
       { status: 500 }
     );
   }

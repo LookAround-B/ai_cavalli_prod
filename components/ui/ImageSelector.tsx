@@ -15,12 +15,21 @@ export function ImageSelector({ value, onChange, label = "Image" }: ImageSelecto
     const [error, setError] = useState<string | null>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+    const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
+
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (!file) return
 
+        // Validate file type
+        if (!ALLOWED_TYPES.includes(file.type)) {
+            setError('Only JPEG, PNG, GIF, and WebP images are allowed.')
+            return
+        }
+
         // 2MB Limit
-        if (file.size > 2 * 1024 * 1024) {
+        if (file.size > MAX_FILE_SIZE) {
             setError('File size exceeds 2MB limit.')
             return
         }
@@ -32,6 +41,20 @@ export function ImageSelector({ value, onChange, label = "Image" }: ImageSelecto
             setError(null)
         }
         reader.readAsDataURL(file)
+    }
+
+    const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value.trim()
+        if (!val) { onChange(''); return }
+        try {
+            const url = new URL(val)
+            if (['http:', 'https:'].includes(url.protocol)) {
+                onChange(val)
+            }
+        } catch {
+            // Allow typing - only set if it could become a valid URL
+            onChange(val)
+        }
     }
 
     return (
@@ -106,9 +129,9 @@ export function ImageSelector({ value, onChange, label = "Image" }: ImageSelecto
                     {mode === 'url' ? (
                         <div style={{ position: 'relative' }}>
                             <input
-                                type="text"
+                                type="url"
                                 value={value.startsWith('data:') ? '' : value}
-                                onChange={(e) => onChange(e.target.value)}
+                                onChange={handleUrlChange}
                                 placeholder="Paste image URL here..."
                                 style={{
                                     width: '100%',
@@ -131,7 +154,7 @@ export function ImageSelector({ value, onChange, label = "Image" }: ImageSelecto
                                 type="file"
                                 ref={fileInputRef}
                                 onChange={handleFileChange}
-                                accept="image/*"
+                                accept=".jpg,.jpeg,.png,.gif,.webp"
                                 style={{ display: 'none' }}
                             />
                             <div

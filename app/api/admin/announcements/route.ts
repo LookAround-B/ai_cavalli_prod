@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/database/prisma'
+import { validateBody, adminAnnouncementActionSchema, createAnnouncementSchema, deleteAnnouncementSchema } from '@/lib/validation/schemas'
 
 const ADMIN_ROLES = ['ADMIN', 'KITCHEN']
 
@@ -82,22 +83,31 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: false, error: auth.error }, { status })
         }
 
-        const { action, payload } = await request.json()
+        // Step 1: Validate the action wrapper
+        const actionParsed = await validateBody(request, adminAnnouncementActionSchema)
+        if (!actionParsed.success) {
+            return NextResponse.json({ success: false, error: actionParsed.error }, { status: 400 })
+        }
+
+        const { action, payload } = actionParsed.data
 
         if (action === 'create') {
-            const { title, description, link, image_url, active = true } = payload || {}
-
-            if (!title || !String(title).trim()) {
-                return NextResponse.json({ success: false, error: 'Title is required' }, { status: 400 })
+            // Step 2: Validate the creation payload
+            const createResult = createAnnouncementSchema.safeParse(payload)
+            if (!createResult.success) {
+                const errors = createResult.error.issues.map((e: { path: (string | number)[]; message: string }) => `${e.path.join('.')}: ${e.message}`).join(', ')
+                return NextResponse.json({ success: false, error: `Validation failed: ${errors}` }, { status: 400 })
             }
+
+            const { title, description, link, image_url, active } = createResult.data
 
             await prisma.announcement.create({
                 data: {
-                    title: String(title).trim(),
+                    title,
                     description: description || null,
                     link: link || null,
                     imageUrl: image_url || null,
-                    active: Boolean(active),
+                    active,
                 }
             })
 
@@ -105,12 +115,12 @@ export async function POST(request: NextRequest) {
         }
 
         if (action === 'delete') {
-            const { id } = payload || {}
-            if (!id) {
+            const deleteResult = deleteAnnouncementSchema.safeParse(payload)
+            if (!deleteResult.success) {
                 return NextResponse.json({ success: false, error: 'Announcement id is required' }, { status: 400 })
             }
 
-            await prisma.announcement.delete({ where: { id } })
+            await prisma.announcement.delete({ where: { id: deleteResult.data.id } })
 
             return NextResponse.json({ success: true, message: 'Announcement deleted successfully' })
         }

@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/lib/auth/context'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 import { User, Package, LogOut, MessageSquare, ShieldCheck, Utensils, Receipt, CreditCard, Clock, CheckCircle2, XCircle, ChevronDown, KeyRound } from 'lucide-react'
 import Link from 'next/link'
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -723,35 +725,37 @@ function ProfileLoginSection({ login, guestLogin, router }: { login: any, guestL
 
                 <form onSubmit={handleGuestLogin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     <div>
-                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Your Name</label>
-                        <input type="text" placeholder="Enter your name" value={guestName} 
-                            onChange={e => setGuestName(e.target.value.replace(/[^a-zA-Z\s]/g, ''))} required
-                            style={{ width: '100%', padding: '14px 16px', border: '1.5px solid var(--border)', borderRadius: '12px', fontSize: '1rem', boxSizing: 'border-box', outline: 'none', transition: 'all 0.2s', background: 'var(--background)' }}
-                            onFocus={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.boxShadow = '0 0 0 4px rgba(var(--primary-rgb), 0.1)' }}
-                            onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none' }}
+                        <Input
+                            label="Your Name"
+                            type="text"
+                            placeholder="Enter your name"
+                            value={guestName}
+                            onChange={e => setGuestName(e.target.value.replace(/[^a-zA-Z\s]/g, ''))}
+                            required
+                            maxLength={50}
                         />
                     </div>
                     <div>
-                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Phone Number</label>
-                        <input type="tel" placeholder="Enter your phone" value={guestPhone} 
-                            onChange={e => setGuestPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} required
+                        <Input
+                            label="Phone Number"
+                            type="tel"
+                            placeholder="Enter your phone"
+                            value={guestPhone}
+                            onChange={e => setGuestPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                            required
                             maxLength={10}
-                            style={{ width: '100%', padding: '14px 16px', border: '1.5px solid var(--border)', borderRadius: '12px', fontSize: '1rem', boxSizing: 'border-box', outline: 'none', transition: 'all 0.2s', background: 'var(--background)' }}
-                            onFocus={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.boxShadow = '0 0 0 4px rgba(var(--primary-rgb), 0.1)' }}
-                            onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none' }}
                         />
                     </div>
                     <div>
-                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Number of Guests</label>
-                        <select value={numGuests} onChange={e => setNumGuests(e.target.value)}
-                            style={{ width: '100%', padding: '14px 16px', border: '1.5px solid var(--border)', borderRadius: '12px', fontSize: '1rem', boxSizing: 'border-box', outline: 'none', transition: 'all 0.2s', background: 'var(--background)', cursor: 'pointer' }}
-                            onFocus={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.boxShadow = '0 0 0 4px rgba(var(--primary-rgb), 0.1)' }}
-                            onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none' }}
+                        <Select
+                            label="Number of Guests"
+                            value={numGuests}
+                            onChange={e => setNumGuests(e.target.value)}
                         >
                             {Array.from({ length: 20 }, (_, i) => i + 1).map(n => (
                                 <option key={n} value={n}>{n}</option>
                             ))}
-                        </select>
+                        </Select>
                     </div>
                     <Button type="submit" isLoading={loading} size="lg" style={{ height: '52px', fontSize: '1rem', marginTop: '8px', borderRadius: '12px' }}>
                         Start Dining
@@ -785,22 +789,25 @@ function ProfileLoginSection({ login, guestLogin, router }: { login: any, guestL
 
             <form onSubmit={handleStaffLogin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Phone Number</label>
-                    <input type="tel" placeholder="Enter your phone" value={phone} 
-                        onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} required
+                    <Input
+                        label="Phone Number"
+                        type="tel"
+                        placeholder="Enter your phone"
+                        value={phone}
+                        onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                        required
                         maxLength={10}
-                        style={{ width: '100%', padding: '14px 16px', border: '1.5px solid var(--border)', borderRadius: '12px', fontSize: '1rem', boxSizing: 'border-box', outline: 'none', transition: 'all 0.2s', background: 'var(--background)' }}
-                        onFocus={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.boxShadow = '0 0 0 4px rgba(var(--primary-rgb), 0.1)' }}
-                        onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none' }}
                     />
                 </div>
                 <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>PIN</label>
-                    <input type="password" placeholder="Enter your PIN" value={pin} 
-                        onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))} required maxLength={6}
-                        style={{ width: '100%', padding: '14px 16px', border: '1.5px solid var(--border)', borderRadius: '12px', fontSize: '1rem', boxSizing: 'border-box', outline: 'none', transition: 'all 0.2s', letterSpacing: '0.3em', background: 'var(--background)' }}
-                        onFocus={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.boxShadow = '0 0 0 4px rgba(var(--primary-rgb), 0.1)' }}
-                        onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none' }}
+                    <Input
+                        label="PIN"
+                        type="password"
+                        placeholder="Enter your PIN"
+                        value={pin}
+                        onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        required
+                        maxLength={6}
                     />
                 </div>
                 <Button type="submit" isLoading={loading} size="lg" style={{ height: '52px', fontSize: '1rem', marginTop: '8px', borderRadius: '12px' }}>

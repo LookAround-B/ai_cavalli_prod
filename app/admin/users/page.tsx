@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth/context";
 import { sanitizePhone } from "@/lib/utils/phone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Loading } from "@/components/ui/Loading";
 import { showError, showSuccess, showConfirm } from "@/components/ui/Popup";
 import {
@@ -419,7 +420,7 @@ export default function UserControlPage() {
                 }}
                 size={20}
               />
-              <input
+              <Input
                 type="text"
                 placeholder="Search..."
                 value={searchQuery}
@@ -911,80 +912,19 @@ export default function UserControlPage() {
                   </div>
                 )}
                 <div style={{ flex: 1, minWidth: "200px" }}>
-                  <label
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "10px",
-                      marginBottom: "12px",
-                      fontSize: "0.75rem",
-                      fontWeight: "700",
-                      color: "var(--text-muted)",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.1em",
-                    }}
+                  <Select
+                    label="Role"
+                    value={formData.role}
+                    onChange={(e) =>
+                      setFormData({ ...formData, role: e.target.value })
+                    }
                   >
-                    <Shield size={14} />
-                    Role
-                  </label>
-
-                  <div style={{ position: "relative" }}>
-                    <select
-                      value={formData.role}
-                      onChange={(e) =>
-                        setFormData({ ...formData, role: e.target.value })
-                      }
-                      style={{
-                        width: "100%",
-                        padding: "0.75rem",
-                        paddingRight: "50px", // extra right padding for arrow
-                        borderRadius: "var(--radius)",
-                        border: "1px solid var(--border)",
-                        background: "var(--surface)",
-                        color: "var(--text)",
-                        fontFamily: "inherit",
-                        fontSize: "1rem",
-                        fontWeight: 500,
-                        outline: "none",
-                        appearance: "none",
-                        WebkitAppearance: "none",
-                        MozAppearance: "none",
-                        transition: "all 0.2s",
-                        cursor: "pointer",
-                      }}
-                      onFocus={(e) => {
-                        e.target.style.borderColor = "var(--primary)";
-                        e.target.style.boxShadow = "0 0 0 2px rgba(192, 39, 45, 0.1)";
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = "var(--border)";
-                        e.target.style.boxShadow = "none";
-                      }}
-                    >
-                      <option value="RIDER">RIDER</option>
-                      <option value="STAFF">Staff</option>
-                      <option value="KITCHEN">Kitchen Manager</option>
-                      <option value="ADMIN">Admin</option>
-                      <option value="OUTSIDER">Guest</option>
-                    </select>
-
-                    {/* Custom dropdown arrow */}
-                    <div
-                      style={{
-                        position: "absolute",
-                        right: "18px",
-                        top: "50%",
-                        transform: "translateY(-50%)",
-                        pointerEvents: "none",
-                        color: "var(--text-muted)",
-                        fontSize: "16px",
-                        display: "flex",
-                        alignItems: "center"
-                      }}
-                    >
-                      <ChevronDown size={18} />
-                    </div>
-                  </div>
+                    <option value="RIDER">RIDER</option>
+                    <option value="STAFF">Staff</option>
+                    <option value="KITCHEN">Kitchen Manager</option>
+                    <option value="ADMIN">Admin</option>
+                    <option value="OUTSIDER">Guest</option>
+                  </Select>
                 </div>
               </div>
 
@@ -1156,7 +1096,7 @@ function ItalianFormField({
         {icon}
         {label}
       </label>
-      <input
+      <Input
         {...props}
         style={{
           width: "100%",
@@ -1180,3 +1120,4 @@ function ItalianFormField({
     </div>
   );
 }
+

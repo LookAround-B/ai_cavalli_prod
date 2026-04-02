@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth/context";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { User, KeyRound, Utensils, ArrowLeft, ShieldCheck, Share, PlusSquare, X, ShoppingCart } from "lucide-react";
 import styles from "./page.module.css";
 
@@ -312,7 +313,7 @@ export default function LoginPage() {
             >
               <div className={styles.inputGroup}>
                 <label>PHONE NUMBER</label>
-                <input
+                <Input
                   type="tel"
                   placeholder="0123456789"
                   value={phone}
@@ -325,7 +326,7 @@ export default function LoginPage() {
               </div>
               <div className={styles.inputGroup}>
                 <label>ACCESS PIN</label>
-                <input
+                <Input
                   type="password"
                   placeholder="000000"
                   value={pin}
@@ -367,13 +368,13 @@ export default function LoginPage() {
             <form className={styles.premiumForm} onSubmit={handleGuestLogin}>
               <div className={styles.inputGroup}>
                 <label>YOUR NAME</label>
-                <input
+                <Input
                   type="text"
                   placeholder="Enter your name"
                   value={guestName}
                   onChange={(e) => {
                     const value = e.target.value
-                      .replace(/[^A-Za-z\s]/g, "") // allow letters + spaces only
+                      .replace(/[^A-Za-z\s]/g, "")
                       .slice(0, 20);
                     setGuestName(value);
                   }}
@@ -384,7 +385,7 @@ export default function LoginPage() {
               </div>
               <div className={styles.inputGroup}>
                 <label>PHONE NUMBER</label>
-                <input
+                <Input
                   type="tel"
                   placeholder="0123456789"
                   value={guestPhone}
@@ -399,7 +400,7 @@ export default function LoginPage() {
 
               <div className={styles.inputGroup}>
                 <label>GUESTS</label>
-                <input
+                <Input
                   type="number"
                   min="1"
                   max="20"

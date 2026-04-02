@@ -3,6 +3,8 @@
 import { useEffect, useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Select } from '@/components/ui/select'
 import { Loading } from '@/components/ui/Loading'
 import {
     Edit2,
@@ -281,44 +283,16 @@ export default function AdminMenuPage() {
                                 required
                             />
 
-                            <div>
-                                <label style={{
-                                    display: 'block',
-                                    marginBottom: '12px',
-                                    fontSize: '0.75rem',
-                                    fontWeight: '700',
-                                    color: 'var(--text-muted)',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.1em',
-                                }}>
-                                    Description
-                                </label>
-                                <textarea
-                                    value={desc}
-                                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDesc(e.target.value)}
-                                    placeholder="Describe the ingredients and preparation..."
-                                    style={{
-                                        width: '100%',
-                                        padding: '16px 18px',
-                                        borderRadius: '14px',
-                                        border: '2px solid rgba(var(--primary-rgb), 0.15)',
-                                        minHeight: '120px',
-                                        fontSize: '1rem',
-                                        resize: 'vertical',
-                                        outline: 'none',
-                                        transition: 'all 0.3s ease',
-                                        background: 'white'
-                                    }}
-                                    onFocus={(e: React.FocusEvent<HTMLTextAreaElement>) => {
-                                        e.target.style.borderColor = 'var(--primary)'
-                                        e.target.style.boxShadow = '0 0 0 4px rgba(var(--primary-rgb), 0.08)'
-                                    }}
-                                    onBlur={(e: React.FocusEvent<HTMLTextAreaElement>) => {
-                                        e.target.style.borderColor = 'rgba(var(--primary-rgb), 0.15)'
-                                        e.target.style.boxShadow = 'none'
-                                    }}
-                                />
-                            </div>
+                            <Textarea
+                                label="Description"
+                                value={desc}
+                                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDesc(e.target.value)}
+                                placeholder="Describe the ingredients and preparation..."
+                                style={{
+                                    minHeight: '120px',
+                                    resize: 'vertical',
+                                }}
+                            />
 
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                                 <ItalianFormField
@@ -336,66 +310,15 @@ export default function AdminMenuPage() {
                                     placeholder="0.00"
                                     required
                                 />
-                                <div>
-                                    <label style={{
-                                        display: 'block',
-                                        marginBottom: '12px',
-                                        fontSize: '0.75rem',
-                                        fontWeight: '700',
-                                        color: 'var(--text-muted)',
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '0.1em',
-                                    }}>
-                                        Category
-                                    </label>
-                                    <div style={{ position: 'relative' }}>
-                                        <select
-                                            value={categoryId}
-                                            onChange={e => setCategoryId(e.target.value)}
-                                            style={{
-                                                width: '100%',
-                                                padding: '0.75rem',
-                                                paddingRight: '40px',
-                                                borderRadius: 'var(--radius)',
-                                                border: '1px solid var(--border)',
-                                                fontFamily: 'inherit',
-                                                fontSize: '1rem',
-                                                outline: 'none',
-                                                appearance: 'none',
-                                                WebkitAppearance: 'none',
-                                                MozAppearance: 'none',
-                                                transition: 'all 0.2s',
-                                                backgroundColor: 'var(--surface)',
-                                                color: 'var(--text)',
-                                                cursor: 'pointer'
-                                            }}
-                                            onFocus={(e: React.FocusEvent<HTMLSelectElement>) => {
-                                                e.target.style.borderColor = 'var(--primary)'
-                                                e.target.style.boxShadow = '0 0 0 2px rgba(192, 39, 45, 0.1)'
-                                            }}
-                                            onBlur={(e: React.FocusEvent<HTMLSelectElement>) => {
-                                                e.target.style.borderColor = 'var(--border)'
-                                                e.target.style.boxShadow = 'none'
-                                            }}
-                                        >
-                                            {categories.map(c => (
-                                                <option key={c.id} value={c.id}>{c.name}</option>
-                                            ))}
-                                        </select>
-                                        <div style={{
-                                            position: 'absolute',
-                                            right: '12px',
-                                            top: '50%',
-                                            transform: 'translateY(-50%)',
-                                            pointerEvents: 'none',
-                                            color: 'var(--text-muted)',
-                                            display: 'flex',
-                                            alignItems: 'center'
-                                        }}>
-                                            <ChevronDown size={18} />
-                                        </div>
-                                    </div>
-                                </div>
+                                <Select
+                                    label="Category"
+                                    value={categoryId}
+                                    onChange={e => setCategoryId(e.target.value)}
+                                >
+                                    {categories.map(c => (
+                                        <option key={c.id} value={c.id}>{c.name}</option>
+                                    ))}
+                                </Select>
                             </div>
 
                             <ImageSelector
@@ -525,30 +448,16 @@ export default function AdminMenuPage() {
                             <div style={{ position: 'relative' }}>
                                 <Search
                                     size={20}
-                                    style={{ position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}
+                                    style={{ position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', zIndex: 1 }}
                                 />
-                                <input
+                                <Input
                                     placeholder="Search menu items..."
                                     value={searchQuery}
-                                    onChange={e => setSearchQuery(e.target.value)}
+                                    onChange={e => setSearchQuery(e.target.value.replace(/<[^>]*>/g, '').slice(0, 200))}
+                                    maxLength={200}
                                     style={{
-                                        width: '100%',
-                                        padding: '16px 16px 16px 52px',
+                                        paddingLeft: '52px',
                                         borderRadius: '18px',
-                                        border: '2px solid rgba(var(--primary-rgb), 0.1)',
-                                        background: 'white',
-                                        fontSize: '1rem',
-                                        boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
-                                        outline: 'none',
-                                        transition: 'all 0.3s ease'
-                                    }}
-                                    onFocus={(e) => {
-                                        e.target.style.borderColor = 'var(--primary)'
-                                        e.target.style.boxShadow = '0 4px 16px rgba(var(--primary-rgb), 0.1)'
-                                    }}
-                                    onBlur={(e) => {
-                                        e.target.style.borderColor = 'rgba(var(--primary-rgb), 0.1)'
-                                        e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.03)'
                                     }}
                                 />
                             </div>
@@ -672,27 +581,7 @@ function ItalianFormField({ label, icon, ...props }: { label: React.ReactNode; i
                 {icon}
                 {label}
             </label>
-            <input
-                {...props}
-                style={{
-                    width: '100%',
-                    padding: '16px 18px',
-                    borderRadius: '14px',
-                    border: '2px solid rgba(var(--primary-rgb), 0.15)',
-                    fontSize: '1rem',
-                    transition: 'all 0.3s ease',
-                    outline: 'none',
-                    background: 'white',
-                }}
-                onFocus={(e: React.FocusEvent<HTMLInputElement>) => {
-                    e.target.style.borderColor = 'var(--primary)'
-                    e.target.style.boxShadow = '0 0 0 4px rgba(var(--primary-rgb), 0.08)'
-                }}
-                onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
-                    e.target.style.borderColor = 'rgba(var(--primary-rgb), 0.15)'
-                    e.target.style.boxShadow = 'none'
-                }}
-            />
+            <Input {...props} />
         </div>
     )
 }
