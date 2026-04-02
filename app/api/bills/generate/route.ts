@@ -51,17 +51,16 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: false, error: 'Order not found' }, { status: 404 })
         }
 
-        // 2. Check if bill already exists
+        // 2. Check if bill already exists — delete old bill to regenerate
         const existingBill = await prisma.bill.findUnique({
             where: { orderId },
             select: { id: true, billNumber: true },
         })
 
         if (existingBill) {
-            return NextResponse.json(
-                { success: false, error: 'Bill already exists for this order', billNumber: existingBill.billNumber },
-                { status: 400 }
-            )
+            // Delete old bill items and bill so we can regenerate with current order items
+            await prisma.billItem.deleteMany({ where: { billId: existingBill.id } })
+            await prisma.bill.delete({ where: { id: existingBill.id } })
         }
 
         // 3. Calculate totals
@@ -97,13 +96,25 @@ export async function POST(request: NextRequest) {
         }
 
         // 5. Create bill with items in transaction
-        // Build bill items - include staff meal label if applicable
-        const billItemsData = order.orderItems.map((item) => ({
-            itemName: item.menuItem?.name || 'Unknown Item',
-            quantity: item.quantity,
-            price: Number(item.price),
-            subtotal: item.quantity * Number(item.price),
-        }))
+        // Build bill items - group by item name
+        const itemMap = new Map<string, { itemName: string; quantity: number; price: number; subtotal: number }>()
+        order.orderItems.forEach((item) => {
+            const name = item.menuItem?.name || 'Unknown Item'
+            const price = Number(item.price)
+            const existing = itemMap.get(name)
+            if (existing) {
+                existing.quantity += item.quantity
+                existing.subtotal += item.quantity * price
+            } else {
+                itemMap.set(name, {
+                    itemName: name,
+                    quantity: item.quantity,
+                    price,
+                    subtotal: item.quantity * price,
+                })
+            }
+        })
+        const billItemsData = Array.from(itemMap.values())
 
         // Prepend "Standard Regular Staff Meal" for staff meal orders
         if (order.notes === 'REGULAR_STAFF_MEAL') {

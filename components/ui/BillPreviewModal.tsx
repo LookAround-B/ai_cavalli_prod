@@ -104,7 +104,18 @@ export function BillPreviewModal({
 
   // Build the receipt HTML for print/PDF
   const buildPrintHTML = useCallback(() => {
-    const itemsHTML = bill.items
+    // Group items by name for print
+    const groupedItems = bill.items.reduce((acc: { item_name: string; quantity: number; subtotal: number }[], item) => {
+      const existing = acc.find(g => g.item_name === item.item_name)
+      if (existing) {
+        existing.quantity += item.quantity
+        existing.subtotal += (item.subtotal || 0)
+      } else {
+        acc.push({ item_name: item.item_name, quantity: item.quantity, subtotal: item.subtotal || 0 })
+      }
+      return acc
+    }, [])
+    const itemsHTML = groupedItems
       .map(
         (item) => `
             <tr>
@@ -481,8 +492,17 @@ export function BillPreviewModal({
               <span>Amt</span>
             </div>
 
-            {/* Items */}
-            {bill.items.map((item, index) => (
+            {/* Items - grouped by name */}
+            {bill.items.reduce((acc: { item_name: string; quantity: number; subtotal: number }[], item) => {
+              const existing = acc.find(g => g.item_name === item.item_name)
+              if (existing) {
+                existing.quantity += item.quantity
+                existing.subtotal += (item.subtotal || 0)
+              } else {
+                acc.push({ item_name: item.item_name, quantity: item.quantity, subtotal: item.subtotal || 0 })
+              }
+              return acc
+            }, []).map((item, index) => (
               <div key={index} className={styles.itemRow}>
                 <span>{item.item_name}</span>
                 <span>{item.quantity}</span>

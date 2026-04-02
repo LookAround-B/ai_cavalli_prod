@@ -43,7 +43,8 @@ import {
     Smartphone,
     CreditCard,
     Bike,
-    Briefcase
+    Briefcase,
+    Trash2
 } from 'lucide-react'
 import { Loading } from '@/components/ui/Loading'
 import { MenuItemSelector } from '@/components/kitchen/MenuItemSelector'
@@ -772,55 +773,50 @@ export default function KitchenPage() {
     async function handleReprintBill(orderId: string) {
         setReprintingBill(orderId)
         try {
-            // Fetch the bill associated with this order
-            const res = await fetch(`/api/bills/lookup?orderId=${orderId}`)
-            const json = await res.json()
-
-            if (!json.success || !json.data) {
-                showError('Bill Not Found', 'Could not find a bill for this order.')
-                return
-            }
-
-            const bill = json.data
+            // Regenerate the bill from current order items
             const order = [...orders, ...completedOrders].find(o => o.id === orderId)
-
-            // Use the currently selected payment method from the dropdown (if changed)
-            const selectedPayment = orderPaymentMethods[orderId]
-            const currentBillPayment = bill.payment_method || bill.paymentMethod || 'cash'
-            const effectivePayment = selectedPayment || currentBillPayment
-
-            // If user picked a different payment, persist it to the DB
-            if (selectedPayment && selectedPayment !== currentBillPayment && bill.id) {
-                fetch('/api/bills/generate', {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ billId: bill.id, paymentMethod: selectedPayment })
-                }).catch(err => console.error('Failed to update payment method:', err))
-            }
-
-            // Show bill preview modal for reprinting — always use the dropdown value
-            setBillPreview({
-                id: bill.id,
-                billNumber: bill.bill_number || '',
-                tableName: bill.table_name || order?.table_name || '',
-                guestName: bill.guest_name || (order ? getOrderDisplayName(order) : ''),
-                items: (bill.bill_items || []).map((i: any) => ({
-                    item_name: i.item_name || i.itemName || i.name || '',
-                    quantity: i.quantity,
-                    price: Number(i.price || 0),
-                    subtotal: Number(i.subtotal) || (i.quantity * Number(i.price || 0))
-                })),
-                itemsTotal: Number(bill.items_total || bill.itemsTotal || 0),
-                discountAmount: Number(bill.discount_amount || bill.discountAmount || 0),
-                gstAmount: Number(bill.gst_amount || bill.gstAmount || 0),
-                finalTotal: Number(bill.final_total || bill.finalTotal || 0),
-                paymentMethod: formatPaymentMethod(selectedPayment || bill.payment_method || bill.paymentMethod || 'cash'),
-                createdAt: bill.created_at || bill.createdAt || order?.created_at,
-                attendedBy: orderAttendees[orderId] || ''
+            const paymentMethod = orderPaymentMethods[orderId] || 'cash'
+            
+            const sessionToken = localStorage.getItem('session_token') || ''
+            const response = await fetch('/api/bills/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${sessionToken}`
+                },
+                body: JSON.stringify({ orderId, paymentMethod, userId: user?.id })
             })
+            const data = await response.json()
+
+            if (data.success) {
+                setBillData(data.bill)
+                await fetchOrders()
+                await fetchCompletedOrders()
+                setBillPreview({
+                    id: data.bill.id,
+                    billNumber: data.bill.billNumber || '',
+                    tableName: data.bill.orderDetails?.tableName || order?.table_name || '',
+                    guestName: data.bill.guestName || (order ? getOrderDisplayName(order) : ''),
+                    items: (data.bill.items || []).map((i: any) => ({
+                        item_name: i.item_name || i.itemName || i.name || '',
+                        quantity: i.quantity,
+                        price: Number(i.price),
+                        subtotal: Number(i.subtotal) || (i.quantity * Number(i.price))
+                    })),
+                    itemsTotal: Number(data.bill.itemsTotal || data.bill.items_total || 0),
+                    discountAmount: Number(data.bill.discountAmount || data.bill.discount_amount || 0),
+                    gstAmount: Number(data.bill.gstAmount || data.bill.gst_amount || 0),
+                    finalTotal: Number(data.bill.finalTotal || data.bill.final_total || 0),
+                    paymentMethod: formatPaymentMethod(data.bill.paymentMethod || data.bill.payment_method || paymentMethod),
+                    createdAt: data.bill.createdAt || data.bill.created_at || data.bill.orderDetails?.createdAt,
+                    attendedBy: orderAttendees[orderId] || ''
+                })
+            } else {
+                showError('Reprint Failed', data.error || 'Failed to regenerate bill')
+            }
         } catch (error) {
             console.error(error)
-            showError('Error', 'Failed to fetch bill for reprinting')
+            showError('Error', 'Failed to reprint bill')
         } finally {
             setReprintingBill(null)
         }
@@ -1294,9 +1290,14 @@ export default function KitchenPage() {
                                         <span style={{ fontSize: '0.8rem', fontWeight: 900, color: 'white', letterSpacing: '0.08em' }}>{sc.label}</span>
                                         {sc.pulse && <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'white', animation: 'pulse 1.5s infinite', boxShadow: '0 0 8px white' }} />}
                                     </div>
-                                    <span style={{ fontWeight: 900, fontSize: '1.25rem', color: 'white', textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
-                                        {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                        <span style={{ fontWeight: 900, fontSize: '1.25rem', color: 'white', textShadow: '0 1px 2px rgba(0,0,0,0.2)', lineHeight: 1.1 }}>
+                                            {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.85)', letterSpacing: '0.03em' }}>
+                                            {new Date(order.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                        </span>
+                                    </div>
                                 </div>
 
                                 {/* Cooking Timer Display */}
@@ -1425,17 +1426,45 @@ export default function KitchenPage() {
                                                             </div>
                                                         </div>
                                                     )}
-                                                    {order.items?.map((item: any) => (
-                                                        <div key={item.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'white', borderRadius: '10px', border: '1.5px solid #E7E5E4', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                                                            <span style={{ flex: 1, fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)' }}>{item.menu_item?.name}</span>
+                                                    {(() => {
+                                                        // Group items by menu_item_id for edit mode
+                                                        const grouped = (order.items || []).reduce((acc: any[], item: any) => {
+                                                            const existing = acc.find(g => g.menu_item_id === item.menu_item_id)
+                                                            if (existing) {
+                                                                existing.totalQuantity += item.quantity
+                                                                existing.allIds.push(item.id)
+                                                                existing.allItems.push(item)
+                                                            } else {
+                                                                acc.push({ ...item, totalQuantity: item.quantity, allIds: [item.id], allItems: [item] })
+                                                            }
+                                                            return acc
+                                                        }, [])
+                                                        return grouped.map((group: any) => (
+                                                        <div key={group.menu_item_id || group.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'white', borderRadius: '10px', border: '1.5px solid #E7E5E4', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                                                            <span style={{ flex: 1, fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)' }}>{group.menu_item?.name}</span>
                                                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                                <button onClick={() => updateItemQuantity(item.id, order.id, item.quantity - 1)} disabled={item.quantity <= 1} style={{ width: '36px', height: '36px', borderRadius: '8px', border: '1.5px solid #D6D3D1', background: 'white', cursor: item.quantity <= 1 ? 'not-allowed' : 'pointer', fontWeight: 800, fontSize: '1.1rem', opacity: item.quantity <= 1 ? 0.5 : 1, transition: 'all 0.2s' }}>-</button>
-                                                                <span style={{ minWidth: '32px', textAlign: 'center', fontWeight: 900, fontSize: '1rem' }}>{item.quantity}</span>
-                                                                <button onClick={() => updateItemQuantity(item.id, order.id, item.quantity + 1)} style={{ width: '36px', height: '36px', borderRadius: '8px', border: '1.5px solid #D6D3D1', background: 'white', cursor: 'pointer', fontWeight: 800, fontSize: '1.1rem', transition: 'all 0.2s' }}>+</button>
-                                                                <button onClick={() => deleteOrderItem(item.id, order.id)} style={{ width: '36px', height: '36px', borderRadius: '8px', border: '1.5px solid #DC2626', background: '#FEE2E2', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', transition: 'all 0.2s' }}>🗑️</button>
+                                                                <button onClick={() => {
+                                                                    if (group.totalQuantity <= 1) return
+                                                                    // Decrease: prefer reducing first item, or delete a duplicate
+                                                                    const firstItem = group.allItems[0]
+                                                                    if (firstItem.quantity > 1) {
+                                                                        updateItemQuantity(firstItem.id, order.id, firstItem.quantity - 1)
+                                                                    } else if (group.allItems.length > 1) {
+                                                                        deleteOrderItem(group.allItems[group.allItems.length - 1].id, order.id)
+                                                                    }
+                                                                }} disabled={group.totalQuantity <= 1} style={{ width: '36px', height: '36px', borderRadius: '8px', border: '1.5px solid #D6D3D1', background: 'white', cursor: group.totalQuantity <= 1 ? 'not-allowed' : 'pointer', fontWeight: 800, fontSize: '1.1rem', opacity: group.totalQuantity <= 1 ? 0.5 : 1, transition: 'all 0.2s' }}>-</button>
+                                                                <span style={{ minWidth: '32px', textAlign: 'center', fontWeight: 900, fontSize: '1rem' }}>{group.totalQuantity}</span>
+                                                                <button onClick={() => updateItemQuantity(group.allItems[0].id, order.id, group.allItems[0].quantity + 1)} style={{ width: '36px', height: '36px', borderRadius: '8px', border: '1.5px solid #D6D3D1', background: 'white', cursor: 'pointer', fontWeight: 800, fontSize: '1.1rem', transition: 'all 0.2s' }}>+</button>
+                                                                <button onClick={async () => {
+                                                                    // Delete all items in this group
+                                                                    for (const itemId of group.allIds) {
+                                                                        await deleteOrderItem(itemId, order.id)
+                                                                    }
+                                                                }} style={{ width: '36px', height: '36px', borderRadius: '8px', border: '1.5px solid #DC2626', background: '#FEE2E2', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', transition: 'all 0.2s' }}><Trash2 size={16} strokeWidth={2.5} /></button>
                                                             </div>
                                                         </div>
-                                                    ))}
+                                                        ))
+                                                    })()}
                                                     <button
                                                         onClick={() => {
                                                             setSelectedOrderForMenu(order.id)
@@ -1478,12 +1507,24 @@ export default function KitchenPage() {
                                                             </div>
                                                         </div>
                                                     )}
-                                                    {order.items?.map((item: any, idx: number) => (
-                                                        <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '1rem', fontWeight: 700, padding: '10px 0', borderBottom: idx < (order.items?.length || 0) - 1 ? '1px solid #E7E5E4' : 'none' }}>
-                                                            <span style={{ color: 'var(--text)' }}>{item.menu_item?.name}</span>
-                                                            <span style={{ color: 'var(--primary)', fontSize: '1.05rem', fontWeight: 900 }}>x{item.quantity}</span>
-                                                        </div>
-                                                    ))}
+                                                    {(() => {
+                                                        // Group items by menu_item_id, sum quantities
+                                                        const grouped = (order.items || []).reduce((acc: any[], item: any) => {
+                                                            const existing = acc.find(g => g.menu_item_id === item.menu_item_id)
+                                                            if (existing) {
+                                                                existing.quantity += item.quantity
+                                                            } else {
+                                                                acc.push({ ...item, quantity: item.quantity })
+                                                            }
+                                                            return acc
+                                                        }, [])
+                                                        return grouped.map((item: any, idx: number) => (
+                                                            <div key={item.menu_item_id || item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '1rem', fontWeight: 700, padding: '10px 0', borderBottom: idx < grouped.length - 1 ? '1px solid #E7E5E4' : 'none' }}>
+                                                                <span style={{ color: 'var(--text)' }}>{item.menu_item?.name}</span>
+                                                                <span style={{ color: 'var(--primary)', fontSize: '1.05rem', fontWeight: 900 }}>x{item.quantity}</span>
+                                                            </div>
+                                                        ))
+                                                    })()}
                                                 </>
                                             )}
                                         </div>
@@ -1504,7 +1545,9 @@ export default function KitchenPage() {
                                         {(() => {
                                             const itemsTotal = order.items?.reduce((sum, item: any) => sum + (item.price * item.quantity), 0) || 0
                                             const discountAmount = order.discount_amount > 0 ? itemsTotal * (order.discount_amount / 100) : 0
-                                            const finalTotal = itemsTotal - discountAmount
+                                            const afterDiscount = itemsTotal - discountAmount
+                                            const gstAmount = Math.round((afterDiscount * 0.05) * 100) / 100
+                                            const finalTotal = Math.round((afterDiscount + gstAmount) * 100) / 100
                                             return (
                                                 <>
                                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '8px' }}>
@@ -1517,6 +1560,10 @@ export default function KitchenPage() {
                                                             <span>-₹{discountAmount.toFixed(2)}</span>
                                                         </div>
                                                     )}
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.9rem', color: '#059669', fontWeight: 700, marginBottom: '8px' }}>
+                                                        <span>GST (5%)</span>
+                                                        <span>+₹{gstAmount.toFixed(2)}</span>
+                                                    </div>
                                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '1.15rem', fontWeight: 900, marginTop: '12px', paddingTop: '12px', borderTop: '2px solid #D6D3D1' }}>
                                                         <span style={{ color: 'var(--text)' }}>Final Total</span>
                                                         <span style={{ color: 'var(--primary)', fontSize: '1.35rem' }}>₹{finalTotal.toFixed(2)}</span>
@@ -1758,33 +1805,31 @@ export default function KitchenPage() {
                                                 style={{
                                                     height: '46px',
                                                     borderRadius: '12px',
-                                                    border: '1.5px solid #D1D5DB',
-                                                    background: 'white',
+                                                    border: '1.5px solid #7C3AED',
+                                                    background: 'linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)',
                                                     cursor: 'pointer',
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     gap: '6px',
-                                                    color: '#6B7280',
+                                                    color: '#7C3AED',
                                                     fontWeight: 700,
                                                     fontSize: '0.85rem',
                                                     transition: 'all 0.2s',
-                                                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                                                    boxShadow: '0 2px 6px rgba(124, 58, 237, 0.15)'
                                                 }}
                                                 onMouseEnter={(e) => {
-                                                    e.currentTarget.style.borderColor = 'var(--primary)'
-                                                    e.currentTarget.style.color = 'var(--primary)'
+                                                    e.currentTarget.style.background = 'linear-gradient(135deg, #EDE9FE 0%, #DDD6FE 100%)'
                                                     e.currentTarget.style.transform = 'translateY(-1px)'
-                                                    e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)'
+                                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(124, 58, 237, 0.25)'
                                                 }}
                                                 onMouseLeave={(e) => {
-                                                    e.currentTarget.style.borderColor = '#D1D5DB'
-                                                    e.currentTarget.style.color = '#6B7280'
+                                                    e.currentTarget.style.background = 'linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)'
                                                     e.currentTarget.style.transform = 'translateY(0)'
-                                                    e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)'
+                                                    e.currentTarget.style.boxShadow = '0 2px 6px rgba(124, 58, 237, 0.15)'
                                                 }}
                                             >
-                                                <Percent size={16} strokeWidth={2.5} />
+                                              <>  <Percent size={16} strokeWidth={2.5} /> Discount </>
                                             </button>
 
                                             <button
@@ -1792,36 +1837,46 @@ export default function KitchenPage() {
                                                 style={{
                                                     height: '46px',
                                                     borderRadius: '12px',
-                                                    border: `1.5px solid ${editingOrderId === order.id ? '#DC2626' : '#D1D5DB'}`,
-                                                    background: editingOrderId === order.id ? '#FEE2E2' : 'white',
+                                                    border: `1.5px solid ${editingOrderId === order.id ? '#10B981' : '#D1D5DB'}`,
+                                                    background: editingOrderId === order.id ? 'linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%)' : 'white',
                                                     cursor: 'pointer',
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     gap: '8px',
-                                                    color: editingOrderId === order.id ? '#DC2626' : '#374151',
+                                                    color: editingOrderId === order.id ? '#059669' : '#374151',
                                                     fontWeight: 700,
                                                     fontSize: '0.85rem',
                                                     transition: 'all 0.2s',
-                                                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                                                    boxShadow: editingOrderId === order.id ? '0 2px 6px rgba(16, 185, 129, 0.2)' : '0 1px 3px rgba(0,0,0,0.05)'
                                                 }}
                                                 onMouseEnter={(e) => {
                                                     if (editingOrderId !== order.id) {
                                                         e.currentTarget.style.background = '#F9FAFB'
+                                                        e.currentTarget.style.borderColor = '#3B82F6'
+                                                        e.currentTarget.style.color = '#3B82F6'
                                                         e.currentTarget.style.transform = 'translateY(-1px)'
-                                                        e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)'
+                                                        e.currentTarget.style.boxShadow = '0 4px 8px rgba(59, 130, 246, 0.15)'
+                                                    } else {
+                                                        e.currentTarget.style.transform = 'translateY(-1px)'
+                                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)'
                                                     }
                                                 }}
                                                 onMouseLeave={(e) => {
                                                     if (editingOrderId !== order.id) {
                                                         e.currentTarget.style.background = 'white'
+                                                        e.currentTarget.style.borderColor = '#D1D5DB'
+                                                        e.currentTarget.style.color = '#374151'
                                                         e.currentTarget.style.transform = 'translateY(0)'
                                                         e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)'
+                                                    } else {
+                                                        e.currentTarget.style.transform = 'translateY(0)'
+                                                        e.currentTarget.style.boxShadow = '0 2px 6px rgba(16, 185, 129, 0.2)'
                                                     }
                                                 }}
                                             >
                                                 {editingOrderId === order.id ? (
-                                                    <><XIcon size={16} strokeWidth={2.5} /> Cancel</>
+                                                    <><CheckCircle2 size={16} strokeWidth={2.5} /> Done</>
                                                 ) : (
                                                     <><Pencil size={16} strokeWidth={2.5} /> Edit</>
                                                 )}
@@ -1867,32 +1922,32 @@ export default function KitchenPage() {
                                                         flex: 1,
                                                         height: '46px',
                                                         borderRadius: '12px',
-                                                        border: '1.5px solid #D1D5DB',
-                                                        background: 'white',
+                                                        border: '1.5px solid #2563EB',
+                                                        background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)',
                                                         cursor: generatingBill === order.id ? 'not-allowed' : 'pointer',
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'center',
                                                         gap: '8px',
-                                                        color: '#374151',
+                                                        color: '#2563EB',
                                                         fontWeight: 700,
                                                         fontSize: '0.85rem',
                                                         opacity: generatingBill === order.id ? 0.6 : 1,
                                                         transition: 'all 0.2s',
-                                                        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                                                        boxShadow: '0 2px 6px rgba(37, 99, 235, 0.15)'
                                                     }}
                                                     onMouseEnter={(e) => {
                                                         if (generatingBill !== order.id && printingBill === null) {
-                                                            e.currentTarget.style.background = '#F9FAFB'
+                                                            e.currentTarget.style.background = 'linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%)'
                                                             e.currentTarget.style.transform = 'translateY(-1px)'
-                                                            e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)'
+                                                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(37, 99, 235, 0.25)'
                                                         }
                                                     }}
                                                     onMouseLeave={(e) => {
                                                         if (generatingBill !== order.id) {
-                                                            e.currentTarget.style.background = 'white'
+                                                            e.currentTarget.style.background = 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)'
                                                             e.currentTarget.style.transform = 'translateY(0)'
-                                                            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)'
+                                                            e.currentTarget.style.boxShadow = '0 2px 6px rgba(37, 99, 235, 0.15)'
                                                         }
                                                     }}
                                                 >
@@ -1934,6 +1989,7 @@ export default function KitchenPage() {
                                                 title="Cancel Order"
                                             >
                                                 <StopCircle size={16} strokeWidth={2.5} />
+                                                Cancel
                                             </button>
                                         </div>
 
