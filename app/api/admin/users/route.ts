@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
             // Step 2: Validate user creation data
             const createResult = createUserSchema.safeParse(userData)
             if (!createResult.success) {
-                const errors = createResult.error.issues.map((e: { path: (string | number)[]; message: string }) => `${e.path.join('.')}: ${e.message}`).join(', ')
+                const errors = createResult.error.issues.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ')
                 return NextResponse.json({ success: false, error: `Validation failed: ${errors}` }, { status: 400 })
             }
 
@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
         } else if (action === 'update') {
             const updateResult = updateUserSchema.safeParse(userData)
             if (!updateResult.success) {
-                const errors = updateResult.error.issues.map((e: { path: (string | number)[]; message: string }) => `${e.path.join('.')}: ${e.message}`).join(', ')
+                const errors = updateResult.error.issues.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ')
                 return NextResponse.json({ success: false, error: `Validation failed: ${errors}` }, { status: 400 })
             }
 

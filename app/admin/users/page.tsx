@@ -880,6 +880,7 @@ export default function UserControlPage() {
                     <ItalianFormField
                       label="Email Address"
                       icon={<Mail size={14} />}
+                      type="email"
                       value={formData.email}
                       onChange={(e: any) =>
                         setFormData({ ...formData, email: e.target.value })
@@ -942,9 +943,13 @@ export default function UserControlPage() {
                           : "Phone (Optional)"
                       }
                       icon={<Phone size={14} />}
+                      type="tel"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={10}
                       value={formData.phone}
                       onChange={(e: any) =>
-                        setFormData({ ...formData, phone: e.target.value })
+                        setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })
                       }
                       placeholder={
                         formData.role === "KITCHEN" ||
@@ -966,12 +971,15 @@ export default function UserControlPage() {
                       icon={<Key size={14} />}
                       value={formData.pin}
                       onChange={(e: any) =>
-                        setFormData({ ...formData, pin: e.target.value })
+                        setFormData({ ...formData, pin: e.target.value.replace(/\D/g, '').slice(0, 6) })
                       }
-                      placeholder="6+ characters"
+                      placeholder="6 digit PIN"
                       required
                       minLength={6}
+                      maxLength={6}
                       type="password"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                     />
                   </div>
                 </div>

@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
             // Step 2: Validate the creation payload
             const createResult = createAnnouncementSchema.safeParse(payload)
             if (!createResult.success) {
-                const errors = createResult.error.issues.map((e: { path: (string | number)[]; message: string }) => `${e.path.join('.')}: ${e.message}`).join(', ')
+                const errors = createResult.error.issues.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ')
                 return NextResponse.json({ success: false, error: `Validation failed: ${errors}` }, { status: 400 })
             }
 
