@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useMemo } from "react";
 import { X, Printer, Download, Receipt } from "lucide-react";
 import styles from "./BillPreviewModal.module.css";
 import { showError, showSuccess, showConfirm } from "@/components/ui/Popup";
@@ -102,19 +102,23 @@ export function BillPreviewModal({
   const orderCount = bill.sessionDetails?.orderCount;
   const numGuests = bill.sessionDetails?.numGuests;
 
+  // Memoize grouped items to prevent O(n²) recalculation on every render
+  const groupedItems = useMemo(() => {
+    return bill.items.reduce((acc: { item_name: string; quantity: number; subtotal: number }[], item) => {
+      const existing = acc.find(g => g.item_name === item.item_name);
+      if (existing) {
+        existing.quantity += item.quantity;
+        existing.subtotal += (item.subtotal || 0);
+      } else {
+        acc.push({ item_name: item.item_name, quantity: item.quantity, subtotal: item.subtotal || 0 });
+      }
+      return acc;
+    }, []);
+  }, [bill.items]);
+
   // Build the receipt HTML for print/PDF
   const buildPrintHTML = useCallback(() => {
-    // Group items by name for print
-    const groupedItems = bill.items.reduce((acc: { item_name: string; quantity: number; subtotal: number }[], item) => {
-      const existing = acc.find(g => g.item_name === item.item_name)
-      if (existing) {
-        existing.quantity += item.quantity
-        existing.subtotal += (item.subtotal || 0)
-      } else {
-        acc.push({ item_name: item.item_name, quantity: item.quantity, subtotal: item.subtotal || 0 })
-      }
-      return acc
-    }, [])
+    // Use memoized grouped items
     const itemsHTML = groupedItems
       .map(
         (item) => `
@@ -280,7 +284,7 @@ export function BillPreviewModal({
     </div>
 </body>
 </html>`;
-  }, [bill, dateStr, timeStr, guestName, numGuests, orderCount, itemsTotal, discountAmount, gstAmount, finalTotal, paymentMethod, discountPercent]);
+  }, [groupedItems, bill.billNumber, bill.attendedBy, dateStr, timeStr, guestName, numGuests, orderCount, itemsTotal, discountAmount, gstAmount, finalTotal, paymentMethod, discountPercent]);
 
   // Open browser print dialog (works for both printing and saving as PDF via browser)
   const handlePrint = useCallback(() => {
@@ -492,17 +496,8 @@ export function BillPreviewModal({
               <span>Amt</span>
             </div>
 
-            {/* Items - grouped by name */}
-            {bill.items.reduce((acc: { item_name: string; quantity: number; subtotal: number }[], item) => {
-              const existing = acc.find(g => g.item_name === item.item_name)
-              if (existing) {
-                existing.quantity += item.quantity
-                existing.subtotal += (item.subtotal || 0)
-              } else {
-                acc.push({ item_name: item.item_name, quantity: item.quantity, subtotal: item.subtotal || 0 })
-              }
-              return acc
-            }, []).map((item, index) => (
+            {/* Items - grouped by name (memoized) */}
+            {groupedItems.map((item, index) => (
               <div key={index} className={styles.itemRow}>
                 <span>{item.item_name}</span>
                 <span>{item.quantity}</span>

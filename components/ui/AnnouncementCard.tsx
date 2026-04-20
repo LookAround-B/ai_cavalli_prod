@@ -2,9 +2,12 @@
 
 import React from 'react'
 import { Calendar, ArrowRight } from 'lucide-react'
+import Link from 'next/link'
 
 export function AnnouncementCard({ announcement }: { announcement: any }) {
-    return (
+    const isExternal = announcement.link?.startsWith('http')
+
+    const cardContent = (
         <div className="hover-lift" style={{
             background: 'white',
             borderRadius: 'clamp(16px, 4vw, 24px)',
@@ -13,9 +16,9 @@ export function AnnouncementCard({ announcement }: { announcement: any }) {
             display: 'flex',
             flexDirection: 'column',
             transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-            cursor: 'pointer'
-        }}
-        >
+            cursor: announcement.link ? 'pointer' : 'default',
+            height: '100%'
+        }}>
             {/* Image Container */}
             {announcement.image_url && (
                 <div style={{ width: '100%', height: 'clamp(160px, 30vw, 220px)', overflow: 'hidden' }}>
@@ -69,19 +72,39 @@ export function AnnouncementCard({ announcement }: { announcement: any }) {
                     {announcement.content}
                 </p>
 
-                <div style={{
-                    marginTop: 'auto',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    color: '#A91E22',
-                    fontWeight: 700,
-                    fontSize: '0.85rem',
-                    letterSpacing: '0.05em'
-                }}>
-                    READ MORE <ArrowRight size={16} />
-                </div>
+                {announcement.link && (
+                    <div style={{
+                        marginTop: 'auto',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        color: '#A91E22',
+                        fontWeight: 700,
+                        fontSize: '0.85rem',
+                        letterSpacing: '0.05em'
+                    }}>
+                        READ MORE <ArrowRight size={16} />
+                    </div>
+                )}
             </div>
         </div>
+    )
+
+    if (!announcement.link) {
+        return cardContent
+    }
+
+    if (isExternal) {
+        return (
+            <a href={announcement.link} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', display: 'block', height: '100%' }}>
+                {cardContent}
+            </a>
+        )
+    }
+
+    return (
+        <Link href={announcement.link} style={{ textDecoration: 'none', display: 'block', height: '100%' }}>
+            {cardContent}
+        </Link>
     )
 }

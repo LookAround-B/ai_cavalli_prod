@@ -124,10 +124,12 @@ export default function KitchenPage() {
         }
         return {}
     })
-    // Elapsed seconds for each cooking order (for re-rendering the timer display)
-    const [timerElapsed, setTimerElapsed] = useState<Record<string, number>>({})
+    // Timer tick counter - increments every second to trigger re-render only for timer display
+    const [timerTick, setTimerTick] = useState(0)
     // Track which orders have already triggered the overdue alarm
     const overdueAlerted = useRef<Set<string>>(new Set())
+    // Track if page is visible (for pausing polling when tab is inactive)
+    const isPageVisible = useRef(true)
     const alarmAudioRef = useRef<HTMLAudioElement | null>(null)
     // Notification sound for new incoming orders
     const notificationAudioRef = useRef<HTMLAudioElement | null>(null)
@@ -151,6 +153,13 @@ export default function KitchenPage() {
     // Payment method per order (orderId -> selected method)
     const [orderPaymentMethods, setOrderPaymentMethods] = useState<Record<string, string>>({})
     const [paymentDropdownOpen, setPaymentDropdownOpen] = useState<string | null>(null)
+
+    // Debounce refs for preventing rapid API calls
+    const pendingStatusUpdates = useRef<Set<string>>(new Set())
+    const pendingDiscountUpdates = useRef<Set<string>>(new Set())
+    const pendingQuantityUpdates = useRef<Set<string>>(new Set())
+    const discountDebounceTimers = useRef<Record<string, NodeJS.Timeout>>({})
+    const quantityDebounceTimers = useRef<Record<string, NodeJS.Timeout>>({})
 
     const PAYMENT_OPTIONS = [
         { value: 'cash', label: 'Cash', icon: <Banknote size={16} /> },
@@ -252,8 +261,11 @@ export default function KitchenPage() {
         fetchCompletedOrders()
         setStatus('SUBSCRIBED')
 
-        // Auto-poll for new orders every 15 seconds
+        // Auto-poll for new orders every 15 seconds (only when tab is visible)
         const pollInterval = setInterval(() => {
+            // Skip polling if page is not visible
+            if (!isPageVisible.current) return
+
             fetchOrders()
             fetchCompletedOrders()
             // Refresh bill requests too
@@ -344,45 +356,62 @@ export default function KitchenPage() {
         notificationAudioRef.current.load()
     }, [])
 
-    // Tick every second to update elapsed times and check for overdue orders
+    // Compute elapsed times from cookingTimers (memoized, re-computed on tick)
+    const timerElapsed = useMemo(() => {
+        const now = Date.now()
+        const elapsed: Record<string, number> = {}
+        for (const [orderId, startTime] of Object.entries(cookingTimers)) {
+            elapsed[orderId] = Math.floor((now - startTime) / 1000)
+        }
+        return elapsed
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [cookingTimers, timerTick])
+
+    // Tick every second - only updates a single counter, not the entire elapsed state
     useEffect(() => {
         const interval = setInterval(() => {
-            const now = Date.now()
-            setCookingTimers(prev => {
-                const newElapsed: Record<string, number> = {}
-                for (const [orderId, startTime] of Object.entries(prev)) {
-                    const elapsed = Math.floor((now - startTime) / 1000)
-                    newElapsed[orderId] = elapsed
+            // Only tick if page is visible
+            if (!isPageVisible.current) return
 
-                    // Check if overdue (30 min) and hasn't been alerted yet
-                    if (elapsed >= COOKING_TIME_LIMIT && !overdueAlerted.current.has(orderId)) {
-                        overdueAlerted.current.add(orderId)
-                        // Play alarm sound (silently catch if user hasn't interacted yet)
-                        if (alarmAudioRef.current) {
-                            alarmAudioRef.current.currentTime = 0
-                            alarmAudioRef.current.play().catch(() => { })
-                            // Stop alarm after 10 seconds
-                            setTimeout(() => {
-                                alarmAudioRef.current?.pause()
-                                if (alarmAudioRef.current) alarmAudioRef.current.currentTime = 0
-                            }, 10000)
-                        }
-                        // Browser notification
-                        if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-                            new Notification('⏰ Order Overdue!', {
-                                body: `Order #${orderId.slice(0, 8).toUpperCase()} has exceeded 30 minutes!`,
-                                icon: '/favicon.ico',
-                                requireInteraction: true
-                            })
-                        }
+            setTimerTick(t => t + 1)
+
+            // Check for overdue orders
+            const now = Date.now()
+            for (const [orderId, startTime] of Object.entries(cookingTimers)) {
+                const elapsed = Math.floor((now - startTime) / 1000)
+                if (elapsed >= COOKING_TIME_LIMIT && !overdueAlerted.current.has(orderId)) {
+                    overdueAlerted.current.add(orderId)
+                    // Play alarm sound
+                    if (alarmAudioRef.current) {
+                        alarmAudioRef.current.currentTime = 0
+                        alarmAudioRef.current.play().catch(() => { })
+                        setTimeout(() => {
+                            alarmAudioRef.current?.pause()
+                            if (alarmAudioRef.current) alarmAudioRef.current.currentTime = 0
+                        }, 10000)
+                    }
+                    // Browser notification
+                    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+                        new Notification('⏰ Order Overdue!', {
+                            body: `Order #${orderId.slice(0, 8).toUpperCase()} has exceeded 30 minutes!`,
+                            icon: '/favicon.ico',
+                            requireInteraction: true
+                        })
                     }
                 }
-                setTimerElapsed(newElapsed)
-                return prev
-            })
+            }
         }, 1000)
 
         return () => clearInterval(interval)
+    }, [cookingTimers])
+
+    // Page Visibility API - pause polling when tab is inactive
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            isPageVisible.current = document.visibilityState === 'visible'
+        }
+        document.addEventListener('visibilitychange', handleVisibilityChange)
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
     }, [])
 
     // Clean up timers when orders are completed/cancelled/removed
@@ -630,6 +659,11 @@ export default function KitchenPage() {
     }, [orders, filter])
 
     async function updateStatus(orderId: string, newStatus: string) {
+        // Prevent duplicate status updates for the same order
+        const key = `${orderId}-${newStatus}`
+        if (pendingStatusUpdates.current.has(key)) return
+        pendingStatusUpdates.current.add(key)
+
         try {
             const res = await fetch('/api/orders/status', {
                 method: 'PATCH',
@@ -646,39 +680,87 @@ export default function KitchenPage() {
             }
         } catch (e) {
             showError('Update Failed', 'Failed to update order status')
+        } finally {
+            pendingStatusUpdates.current.delete(key)
         }
     }
 
-    async function updateDiscount(orderId: string, amount: number) {
-        try {
-            const res = await fetch('/api/orders/discount', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ orderId, discountAmount: amount })
-            })
-            const json = await res.json()
-            if (!json.success) {
+    function updateDiscount(orderId: string, amount: number) {
+        // Optimistic update for UI responsiveness
+        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, discount_amount: amount } : o))
+
+        // Clear existing timer for this order
+        if (discountDebounceTimers.current[orderId]) {
+            clearTimeout(discountDebounceTimers.current[orderId])
+        }
+
+        // Debounce the API call (300ms delay)
+        discountDebounceTimers.current[orderId] = setTimeout(async () => {
+            if (pendingDiscountUpdates.current.has(orderId)) return
+            pendingDiscountUpdates.current.add(orderId)
+
+            try {
+                const res = await fetch('/api/orders/discount', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ orderId, discountAmount: amount })
+                })
+                const json = await res.json()
+                if (!json.success) {
+                    showError('Discount Failed', 'Failed to apply discount')
+                }
+            } catch (e) {
                 showError('Discount Failed', 'Failed to apply discount')
-            } else {
-                setOrders(prev => prev.map(o => o.id === orderId ? { ...o, discount_amount: amount } : o))
+            } finally {
+                pendingDiscountUpdates.current.delete(orderId)
+                delete discountDebounceTimers.current[orderId]
             }
-        } catch (e) {
-            showError('Discount Failed', 'Failed to apply discount')
-        }
+        }, 300)
     }
 
-    async function updateItemQuantity(orderItemId: string, orderId: string, newQuantity: number) {
+    function updateItemQuantity(orderItemId: string, orderId: string, newQuantity: number) {
         if (newQuantity < 1) return
-        try {
-            const res = await fetch('/api/orders/items', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ orderItemId, quantity: newQuantity })
-            })
-            const json = await res.json()
-            if (!json.success) showError('Update Failed', json.error || 'Failed to update quantity')
-            else await fetchOrders()
-        } catch (e) { showError('Update Failed', 'Failed to update quantity') }
+
+        // Optimistic update for UI responsiveness
+        setOrders(prev => prev.map(o => {
+            if (o.id !== orderId) return o
+            return {
+                ...o,
+                items: o.items?.map(item =>
+                    item.id === orderItemId ? { ...item, quantity: newQuantity } : item
+                )
+            }
+        }))
+
+        // Clear existing timer for this item
+        if (quantityDebounceTimers.current[orderItemId]) {
+            clearTimeout(quantityDebounceTimers.current[orderItemId])
+        }
+
+        // Debounce the API call (300ms delay)
+        quantityDebounceTimers.current[orderItemId] = setTimeout(async () => {
+            if (pendingQuantityUpdates.current.has(orderItemId)) return
+            pendingQuantityUpdates.current.add(orderItemId)
+
+            try {
+                const res = await fetch('/api/orders/items', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ orderItemId, quantity: newQuantity })
+                })
+                const json = await res.json()
+                if (!json.success) {
+                    showError('Update Failed', json.error || 'Failed to update quantity')
+                    await fetchOrders() // Revert on failure
+                }
+            } catch (e) {
+                showError('Update Failed', 'Failed to update quantity')
+                await fetchOrders() // Revert on failure
+            } finally {
+                pendingQuantityUpdates.current.delete(orderItemId)
+                delete quantityDebounceTimers.current[orderItemId]
+            }
+        }, 300)
     }
 
     async function deleteOrderItem(orderItemId: string, orderId: string) {
