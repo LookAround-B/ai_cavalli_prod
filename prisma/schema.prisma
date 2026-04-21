@@ -53,8 +53,26 @@ model MenuItem {
   dailySpecials DailySpecial[]
   category      Category?      @relation(fields: [categoryId], references: [id])
   orderItems    OrderItem[]
+  priceHistory  PriceHistory[]
 
   @@map("menu_items")
+}
+
+model PriceHistory {
+  id         String   @id @default(uuid()) @db.Uuid
+  menuItemId String   @map("menu_item_id") @db.Uuid
+  oldPrice   Decimal  @db.Decimal(10, 2)
+  newPrice   Decimal  @db.Decimal(10, 2)
+  changeType String   @map("change_type")
+  percentage Decimal? @db.Decimal(5, 2)
+  changedBy  String?  @map("changed_by") @db.Uuid
+  changedAt  DateTime @default(now()) @map("changed_at") @db.Timestamptz(6)
+  reason     String?
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@index([menuItemId])
+  @@index([changedAt])
+  @@map("price_history")
 }
 
 model DailySpecial {

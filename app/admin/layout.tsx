@@ -23,6 +23,7 @@ export default function AdminLayout({
     const links = [
         { label: 'Analytics', href: '/admin' },
         { label: 'Menu', href: '/admin/menu' },
+        { label: 'Price Increase', href: '/admin/menu/price-increase' },
         { label: 'CMS', href: '/admin/cms' },
         { label: 'Users', href: '/admin/users' },
     ]

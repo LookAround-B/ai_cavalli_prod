@@ -177,6 +177,13 @@ export const toggleMenuItemSchema = z.object({
     available: z.boolean(),
 })
 
+export const bulkPriceIncreaseSchema = z.object({
+    action: z.enum(['preview', 'apply']),
+    percentage: z.number().min(0.01, 'Percentage must be at least 0.01').max(100, 'Percentage cannot exceed 100'),
+    userId: idOptionalSchema,
+    reason: safeStringOptional.pipe(z.string().max(500)),
+})
+
 // ============================================================
 // Bill Schemas
 // ============================================================
