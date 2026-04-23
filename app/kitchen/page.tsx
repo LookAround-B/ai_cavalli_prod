@@ -77,6 +77,7 @@ interface Order {
     items?: OrderItem[]
     user?: { role: string, name: string, phone: string } | null
     billed?: boolean
+    bill_payment_method?: string | null
 }
 
 type FilterType = 'all' | 'rider' | 'staff' | 'guest'
