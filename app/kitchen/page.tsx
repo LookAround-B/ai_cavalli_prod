@@ -2173,6 +2173,145 @@ export default function KitchenPage() {
                                         </div>
                                     </div>
                                 )}
+
+                                {/* History Tab Action Buttons - Paid By & Print Bill */}
+                                {viewTab === 'completed' && (
+                                    <div style={{ padding: '20px', background: 'linear-gradient(180deg, #FAFAFA 0%, #F5F5F5 100%)', borderTop: '2px solid #E5E5E5', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        {/* Payment Method Dropdown */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#4B5563', whiteSpace: 'nowrap' }}>Paid by:</span>
+                                            <div style={{ position: 'relative', flex: 1 }}>
+                                                <button
+                                                    onClick={() => setPaymentDropdownOpen(paymentDropdownOpen === order.id ? null : order.id)}
+                                                    style={{
+                                                        width: '100%',
+                                                        height: '40px',
+                                                        borderRadius: '10px',
+                                                        border: '1.5px solid #D1D5DB',
+                                                        background: 'white',
+                                                        padding: '0 12px',
+                                                        fontSize: '0.85rem',
+                                                        fontWeight: 700,
+                                                        color: '#374151',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'space-between',
+                                                        transition: 'all 0.2s',
+                                                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                                    }}
+                                                    onFocus={(e) => {
+                                                        e.currentTarget.style.borderColor = 'var(--primary)'
+                                                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(var(--primary-rgb), 0.1)'
+                                                    }}
+                                                    onBlur={(e) => {
+                                                        e.currentTarget.style.borderColor = '#D1D5DB'
+                                                        e.currentTarget.style.boxShadow = 'none'
+                                                    }}
+                                                >
+                                                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <span style={{ color: 'var(--primary)', display: 'flex' }}>
+                                                            {PAYMENT_OPTIONS.find(o => o.value === (orderPaymentMethods[order.id] || order.bill_payment_method || 'cash'))?.icon}
+                                                        </span>
+                                                        {PAYMENT_OPTIONS.find(o => o.value === (orderPaymentMethods[order.id] || order.bill_payment_method || 'cash'))?.label}
+                                                    </span>
+                                                    <ChevronDown size={14} style={{ transform: paymentDropdownOpen === order.id ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', color: '#9CA3AF' }} />
+                                                </button>
+
+                                                {paymentDropdownOpen === order.id && (
+                                                    <div style={{
+                                                        position: 'absolute',
+                                                        bottom: '44px',
+                                                        left: 0,
+                                                        right: 0,
+                                                        background: 'white',
+                                                        borderRadius: '12px',
+                                                        border: '1.5px solid #D1D5DB',
+                                                        boxShadow: '0 -8px 24px rgba(0,0,0,0.15)',
+                                                        zIndex: 60,
+                                                        maxHeight: '220px',
+                                                        overflowY: 'auto',
+                                                        padding: '6px'
+                                                    }}>
+                                                        {PAYMENT_OPTIONS.map((opt) => (
+                                                            <button
+                                                                key={opt.value}
+                                                                onClick={() => {
+                                                                    setOrderPaymentMethods(prev => ({ ...prev, [order.id]: opt.value }))
+                                                                    setPaymentDropdownOpen(null)
+                                                                }}
+                                                                style={{
+                                                                    width: '100%',
+                                                                    padding: '10px 12px',
+                                                                    border: 'none',
+                                                                    background: (orderPaymentMethods[order.id] || order.bill_payment_method || 'cash') === opt.value ? 'rgba(var(--primary-rgb), 0.08)' : 'transparent',
+                                                                    borderRadius: '8px',
+                                                                    cursor: 'pointer',
+                                                                    textAlign: 'left',
+                                                                    fontWeight: 700,
+                                                                    fontSize: '0.85rem',
+                                                                    color: (orderPaymentMethods[order.id] || order.bill_payment_method || 'cash') === opt.value ? 'var(--primary)' : 'var(--text)',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '10px',
+                                                                    marginBottom: '2px',
+                                                                    transition: 'all 0.1s'
+                                                                }}
+                                                                onMouseEnter={e => e.currentTarget.style.background = '#F9FAFB'}
+                                                                onMouseLeave={e => e.currentTarget.style.background = (orderPaymentMethods[order.id] || order.bill_payment_method || 'cash') === opt.value ? 'rgba(var(--primary-rgb), 0.08)' : 'transparent'}
+                                                            >
+                                                                <span style={{
+                                                                    display: 'flex',
+                                                                    color: (orderPaymentMethods[order.id] || order.bill_payment_method || 'cash') === opt.value ? 'var(--primary)' : '#6B7280'
+                                                                }}>
+                                                                    {opt.icon}
+                                                                </span>
+                                                                {opt.label}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Print Bill Button */}
+                                        <button
+                                            onClick={() => handleReprintBill(order.id)}
+                                            disabled={reprintingBill === order.id}
+                                            style={{
+                                                width: '100%',
+                                                height: '46px',
+                                                borderRadius: '12px',
+                                                border: '1.5px solid #10B981',
+                                                background: 'linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%)',
+                                                cursor: reprintingBill === order.id ? 'not-allowed' : 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: '8px',
+                                                color: '#059669',
+                                                fontWeight: 700,
+                                                fontSize: '0.85rem',
+                                                transition: 'all 0.2s',
+                                                boxShadow: '0 2px 6px rgba(16, 185, 129, 0.2)',
+                                                opacity: reprintingBill === order.id ? 0.6 : 1
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                if (reprintingBill !== order.id) {
+                                                    e.currentTarget.style.transform = 'translateY(-1px)'
+                                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)'
+                                                }
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.transform = 'translateY(0)'
+                                                e.currentTarget.style.boxShadow = '0 2px 6px rgba(16, 185, 129, 0.2)'
+                                            }}
+                                        >
+                                            <Printer size={16} strokeWidth={2.5} />
+                                            {reprintingBill === order.id ? 'Printing...' : 'Print Bill'}
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         )
                     })
