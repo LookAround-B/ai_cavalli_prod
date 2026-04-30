@@ -209,9 +209,6 @@ export function TopNav({ title, links, accentColor = '#1A1A1A', accentText = '#F
                         fontWeight: 500,
                         transition: 'all 0.15s ease',
                         minHeight: '40px', /* Touch target */
-                        borderRadius: '24px',
-                        background: 'transparent',
-                        border: `1.5px solid ${accentText}20`,
                     }}
                     aria-label="User menu"
                 >
