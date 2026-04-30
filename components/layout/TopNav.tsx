@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/lib/auth/context'
-import { LogOut, ChevronDown } from 'lucide-react'
+import { LogOut, ChevronDown, Search, Bell } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 
 interface NavLink {
@@ -78,8 +78,10 @@ export function TopNav({ title, links, accentColor = '#1A1A1A', accentText = '#F
                 whiteSpace: 'nowrap',
                 fontFamily: 'var(--font-serif)',
                 flexShrink: 0,
+                color: title.toLowerCase() === 'kitchen' ? '#C0272D' : 'inherit',
+                fontStyle: title.toLowerCase() === 'kitchen' ? 'italic' : 'normal',
             }}>
-                {title}
+                {title.toLowerCase()}
             </h1>
 
             {/* Center: Nav links */}
@@ -116,13 +118,13 @@ export function TopNav({ title, links, accentColor = '#1A1A1A', accentText = '#F
                             style={{
                                 color: link.muted
                                     ? `${accentText}88`
-                                    : isActive ? accentText : `${accentText}cc`,
+                                    : isActive ? accentColor : `${accentText}cc`,
                                 textDecoration: 'none',
                                 fontSize: 'clamp(0.7rem, 1.5vw, 0.85rem)',
                                 fontWeight: isActive ? 700 : 500,
-                                padding: '0.4rem clamp(0.4rem, 1vw, 0.75rem)',
-                                borderRadius: '8px',
-                                background: isActive ? `${accentText}15` : 'transparent',
+                                padding: '0.4rem clamp(0.7rem, 1vw, 1.2rem)',
+                                borderRadius: '24px',
+                                background: isActive ? accentText : 'transparent',
                                 transition: 'all 0.15s ease',
                                 whiteSpace: 'nowrap',
                                 flexShrink: 0,
@@ -135,57 +137,62 @@ export function TopNav({ title, links, accentColor = '#1A1A1A', accentText = '#F
 
                 {/* View Toggle for ADMIN users */}
                 {viewToggle && (
-                    <Link
-                        href={isKitchen ? '/admin' : '/kitchen'}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            marginLeft: 'clamp(0.25rem, 1vw, 0.5rem)',
-                            padding: '0.3rem 0.7rem',
-                            borderRadius: '20px',
-                            border: `1.5px solid ${accentText}30`,
-                            background: `${accentText}08`,
-                            color: `${accentText}90`,
-                            textDecoration: 'none',
-                            fontSize: 'clamp(0.65rem, 1.2vw, 0.78rem)',
-                            fontWeight: 600,
-                            whiteSpace: 'nowrap',
-                            transition: 'all 0.2s ease',
-                            flexShrink: 0,
-                        }}
-                    >
-                        <span style={{
-                            display: 'inline-block',
-                            width: '28px',
-                            height: '16px',
-                            borderRadius: '12px',
-                            background: isAdmin
-                                ? 'linear-gradient(135deg, #C0272D, #8B1A1F)'
-                                : `${accentText}25`,
-                            position: 'relative',
-                            transition: 'background 0.25s ease',
-                            flexShrink: 0,
-                        }}>
+                    <>
+                        {/* Divider */}
+                        <div style={{ width: '1px', height: '24px', background: `${accentText}20`, margin: '0 0.5rem' }} />
+                        <Link
+                            href={isKitchen ? '/admin' : '/kitchen'}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                padding: '0.3rem 0.7rem',
+                                borderRadius: '20px',
+                                color: `${accentText}90`,
+                                textDecoration: 'none',
+                                fontSize: 'clamp(0.65rem, 1.2vw, 0.78rem)',
+                                fontWeight: 500,
+                                whiteSpace: 'nowrap',
+                                transition: 'all 0.2s ease',
+                                flexShrink: 0,
+                            }}
+                        >
                             <span style={{
-                                position: 'absolute',
-                                top: '2px',
-                                left: isAdmin ? '14px' : '2px',
-                                width: '12px',
-                                height: '12px',
-                                borderRadius: '50%',
-                                background: 'white',
-                                transition: 'left 0.25s ease',
-                                boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                            }} />
-                        </span>
-                        {isKitchen ? 'Admin' : 'Kitchen'}
-                    </Link>
+                                display: 'inline-block',
+                                width: '28px',
+                                height: '16px',
+                                borderRadius: '12px',
+                                background: isAdmin
+                                    ? 'linear-gradient(135deg, #C0272D, #8B1A1F)'
+                                    : `${accentText}25`,
+                                position: 'relative',
+                                transition: 'background 0.25s ease',
+                                flexShrink: 0,
+                            }}>
+                                <span style={{
+                                    position: 'absolute',
+                                    top: '2px',
+                                    left: isAdmin ? '14px' : '2px',
+                                    width: '12px',
+                                    height: '12px',
+                                    borderRadius: '50%',
+                                    background: 'white',
+                                    transition: 'left 0.25s ease',
+                                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                }} />
+                            </span>
+                            {isKitchen ? 'Admin' : 'Kitchen'}
+                        </Link>
+                    </>
                 )}
             </nav>
 
             {/* Right: User menu */}
-            <div ref={menuRef} className="top-nav-user" style={{ position: 'relative', flexShrink: 0 }}>
+            <div ref={menuRef} className="top-nav-user" style={{ position: 'relative', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: `${accentText}aa` }}>
+                    {/* <Search size={18} style={{ cursor: 'pointer' }} />
+                    <Bell size={18} style={{ cursor: 'pointer' }} /> */}
+                </div>
                 <button
                     onClick={() => setMenuOpen(!menuOpen)}
                     style={{
@@ -198,23 +205,27 @@ export function TopNav({ title, links, accentColor = '#1A1A1A', accentText = '#F
                         padding: '0.35rem clamp(0.5rem, 1.5vw, 0.75rem)',
                         color: accentText,
                         cursor: 'pointer',
-                        fontSize: '0.85rem',
-                        fontWeight: 600,
+                        fontSize: '0.9rem',
+                        fontWeight: 500,
                         transition: 'all 0.15s ease',
-                        minHeight: '44px', /* Touch target */
+                        minHeight: '40px', /* Touch target */
+                        borderRadius: '24px',
+                        background: 'transparent',
+                        border: `1.5px solid ${accentText}20`,
                     }}
                     aria-label="User menu"
                 >
                     {/* Avatar circle */}
                     <span style={{
-                        width: '28px',
-                        height: '28px',
+                        width: '32px',
+                        height: '32px',
                         borderRadius: '50%',
-                        background: `${accentText}25`,
+                        background: '#f2c99f', // Light orange to match screenshot
+                        color: '#6e4400',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '0.75rem',
+                        fontSize: '0.8rem',
                         fontWeight: 700,
                         flexShrink: 0,
                     }}>

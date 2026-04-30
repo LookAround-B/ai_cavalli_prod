@@ -26,6 +26,8 @@ export const metadata: Metadata = {
 
 import { AuthProvider } from '@/lib/auth/context'
 import { CartProvider } from '@/lib/context/CartContext'
+import { Analytics } from "@vercel/analytics/next"
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 export default function RootLayout({
   children,
@@ -39,6 +41,8 @@ export default function RootLayout({
           <CartProvider>
             <div className="texture-overlay" />
             {children}
+            <Analytics />
+            <SpeedInsights />
           </CartProvider>
         </AuthProvider>
       </body>
