@@ -57,8 +57,8 @@ export function TopNav({ title, links, accentColor = '#1A1A1A', accentText = '#F
         <header style={{
             background: accentColor,
             color: accentText,
-            padding: '0 clamp(0.75rem, 2vw, 1.5rem)',
-            height: '60px',
+            padding: '0.5rem clamp(0.75rem, 2vw, 1.5rem)',
+            minHeight: '60px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -66,10 +66,11 @@ export function TopNav({ title, links, accentColor = '#1A1A1A', accentText = '#F
             top: 0,
             zIndex: 100,
             boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
-            gap: '0.5rem',
+            gap: '1rem',
+            flexWrap: 'wrap',
         }}>
             {/* Left: Title */}
-            <h1 style={{
+            <h1 className="top-nav-title" style={{
                 margin: 0,
                 fontSize: 'clamp(1rem, 2.5vw, 1.2rem)',
                 fontWeight: 800,
@@ -82,20 +83,29 @@ export function TopNav({ title, links, accentColor = '#1A1A1A', accentText = '#F
             </h1>
 
             {/* Center: Nav links */}
-            <nav style={{
+            <nav className="top-nav-links" style={{
                 display: 'flex',
-                gap: '0.25rem',
+                gap: '0.4rem',
                 alignItems: 'center',
+                flexWrap: 'nowrap',
+                justifyContent: 'center',
                 overflowX: 'auto',
-                paddingBottom: '2px', // Space for focus ring if needed
-                flexShrink: 1,
-                minWidth: 0,
                 msOverflowStyle: 'none',
                 scrollbarWidth: 'none',
                 WebkitOverflowScrolling: 'touch',
+                flex: '1 1 auto',
             }}>
                 <style>{`
-                    nav::-webkit-scrollbar { display: none; }
+                    nav.top-nav-links::-webkit-scrollbar { display: none; }
+                    @media (max-width: 600px) {
+                        .top-nav-links {
+                            order: 3;
+                            width: 100%;
+                            justify-content: flex-start !important;
+                            padding-top: 0.5rem;
+                            border-top: 1px solid rgba(0,0,0,0.05);
+                        }
+                    }
                 `}</style>
                 {links.map((link) => {
                     const isActive = pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href))
@@ -175,7 +185,7 @@ export function TopNav({ title, links, accentColor = '#1A1A1A', accentText = '#F
             </nav>
 
             {/* Right: User menu */}
-            <div ref={menuRef} style={{ position: 'relative', flexShrink: 0 }}>
+            <div ref={menuRef} className="top-nav-user" style={{ position: 'relative', flexShrink: 0 }}>
                 <button
                     onClick={() => setMenuOpen(!menuOpen)}
                     style={{
@@ -211,6 +221,15 @@ export function TopNav({ title, links, accentColor = '#1A1A1A', accentText = '#F
                         {user?.name?.charAt(0)?.toUpperCase() || '?'}
                     </span>
                     <span className="user-name-label" style={{ maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <style>{`
+                            @media (max-width: 480px) {
+                                .user-name-label { display: none; }
+                            }
+                            @media (max-width: 600px) {
+                                .top-nav-title { order: 1; }
+                                .top-nav-user { order: 2; margin-left: auto; }
+                            }
+                        `}</style>
                         {user?.name || 'User'}
                     </span>
                     <ChevronDown size={14} style={{
