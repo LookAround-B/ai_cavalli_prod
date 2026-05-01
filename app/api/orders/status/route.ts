@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/database/prisma'
 import { validateBody, updateOrderStatusSchema } from '@/lib/validation/schemas'
+import { notifyOrderEvent } from '@/lib/sse/notify'
 
 export async function PATCH(request: NextRequest) {
   try {
@@ -11,15 +12,30 @@ export async function PATCH(request: NextRequest) {
 
     const { orderId, status } = parsed.data
 
-    await prisma.order.update({
+    const updated = await prisma.order.update({
       where: { id: orderId },
-      data: { status }
+      data: { status },
+      // Include userId + billed so the customer SSE handler can filter / update correctly
+      select: {
+        id:        true,
+        status:    true,
+        userId:    true,
+        billed:    true,
+        updatedAt: true,
+      },
+    })
+
+    await notifyOrderEvent('order_updated', {
+      id:        updated.id,
+      status:    updated.status,
+      user_id:   updated.userId,
+      billed:    updated.billed,
+      updatedAt: updated.updatedAt.toISOString(),
     })
 
     return NextResponse.json({ success: true })
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Failed to update status'
-    console.error('Order status update error:', error)
-    return NextResponse.json({ success: false, error: message }, { status: 500 })
+  } catch (error) {
+    console.error('[PATCH /api/orders/status]', error)
+    return NextResponse.json({ success: false, error: 'Failed to update status' }, { status: 500 })
   }
 }

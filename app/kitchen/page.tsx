@@ -1,8 +1,10 @@
 'use client'
 
-import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
+import { useEffect, useState, useMemo, useRef, useCallback, startTransition } from 'react'
 import { useAuth } from '@/lib/auth/context'
 import { useRouter } from 'next/navigation'
+import { useOrderStream } from '@/lib/hooks/useOrderStream'
+import { fetchWithRetry } from '@/lib/utils/fetch-with-retry'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
@@ -161,6 +163,11 @@ export default function KitchenPage() {
     const pendingQuantityUpdates = useRef<Set<string>>(new Set())
     const discountDebounceTimers = useRef<Record<string, NodeJS.Timeout>>({})
     const quantityDebounceTimers = useRef<Record<string, NodeJS.Timeout>>({})
+    // AbortController for in-flight fetch requests
+    const fetchOrdersAbort = useRef<AbortController | null>(null)
+    const fetchCompletedAbort = useRef<AbortController | null>(null)
+    // SSE stream health indicator
+    const [streamStatus, setStreamStatus] = useState<'connected' | 'reconnecting'>('reconnecting')
 
     const PAYMENT_OPTIONS = [
         { value: 'cash', label: 'Cash', icon: <Banknote size={16} /> },
@@ -176,9 +183,14 @@ export default function KitchenPage() {
     const { user, logout, isLoading: authLoading } = useAuth()
     const router = useRouter()
 
-    const fetchOrders = async () => {
+    const fetchOrders = useCallback(async () => {
+        fetchOrdersAbort.current?.abort()
+        fetchOrdersAbort.current = new AbortController()
         try {
-            const res = await fetch('/api/orders?status=pending,preparing,ready&all=true')
+            const res = await fetchWithRetry(
+                '/api/orders?status=pending,preparing,ready&all=true',
+                { signal: fetchOrdersAbort.current.signal, cache: 'no-store' },
+            )
             const json = await res.json()
             if (json.success && json.data) {
                 // Sort descending by created_at (newest first)
@@ -208,13 +220,20 @@ export default function KitchenPage() {
                 }
                 knownOrderIdsRef.current = incomingIds
             }
-        } catch (e) { console.error('fetchOrders error:', e) }
+        } catch (e) {
+            if ((e as Error).name !== 'AbortError') console.error('fetchOrders error:', e)
+        }
         setLoading(false)
-    }
+    }, [])
 
-    const fetchCompletedOrders = async () => {
+    const fetchCompletedOrders = useCallback(async () => {
+        fetchCompletedAbort.current?.abort()
+        fetchCompletedAbort.current = new AbortController()
         try {
-            const res = await fetch('/api/orders?status=completed&all=true&limit=30')
+            const res = await fetchWithRetry(
+                '/api/orders?status=completed&all=true&limit=30',
+                { signal: fetchCompletedAbort.current.signal, cache: 'no-store' },
+            )
             const json = await res.json()
             if (json.success && json.data) {
                 setCompletedOrders(json.data)
@@ -227,12 +246,14 @@ export default function KitchenPage() {
                     setOrderPaymentMethods(prev => ({ ...billedPayments, ...prev }))
                 }
             }
-        } catch (e) { console.error('fetchCompletedOrders error:', e) }
-    }
+        } catch (e) {
+            if ((e as Error).name !== 'AbortError') console.error('fetchCompletedOrders error:', e)
+        }
+    }, [])
 
     const fetchCancelledOrders = async () => {
         try {
-            const res = await fetch('/api/orders?status=cancelled&all=true&limit=30')
+            const res = await fetch('/api/orders?status=cancelled&all=true&limit=30', { cache: 'no-store' })
             const json = await res.json()
             if (json.success && json.data) setCancelledOrders(json.data)
         } catch (e) { console.error('fetchCancelledOrders error:', e) }
@@ -240,7 +261,7 @@ export default function KitchenPage() {
 
     const fetchSingleOrder = async (orderId: string) => {
         try {
-            const res = await fetch(`/api/orders?orderId=${orderId}`)
+            const res = await fetch(`/api/orders?orderId=${orderId}`, { cache: 'no-store' })
             const json = await res.json()
             return json.success && json.data?.[0] ? json.data[0] : null
         } catch (e) {
@@ -256,34 +277,111 @@ export default function KitchenPage() {
         }
     }, [user, authLoading, router])
 
+    // ── SSE real-time updates ────────────────────────────────────────────
+    useOrderStream((event) => {
+        setStreamStatus('connected')
+
+        if (event.type === 'order_created') {
+            if (event._needsFetch) {
+                // Payload was too large — fetch just this one order
+                fetchSingleOrder(event.id as string).then(order => {
+                    if (order) {
+                        startTransition(() => {
+                            setOrders(prev => {
+                                if (prev.some(o => o.id === order.id)) return prev
+                                return [order, ...prev]
+                            })
+                        })
+                        notificationAudioRef.current?.play().catch(() => {})
+                    }
+                })
+            } else {
+                // Full order payload — add directly with zero extra fetch
+                startTransition(() => {
+                    setOrders(prev => {
+                        if (prev.some(o => o.id === event.id)) return prev
+                        return [event as unknown as Order, ...prev]
+                    })
+                })
+                notificationAudioRef.current?.play().catch(() => {})
+            }
+            return
+        }
+
+        if (event.type === 'order_updated' && event.id) {
+            const id        = event.id as string
+            const newStatus = event.status as Order['status'] | undefined
+
+            const ACTIVE   = ['pending', 'preparing', 'ready'] as const
+            const isActive = newStatus ? (ACTIVE as readonly string[]).includes(newStatus) : true
+
+            startTransition(() => {
+                setOrders(prev => {
+                    const exists = prev.some(o => o.id === id)
+
+                    if (newStatus === 'completed' || newStatus === 'cancelled') {
+                        // Remove from active list — completed moves to history
+                        if (newStatus === 'completed') {
+                            setCompletedOrders(hist => {
+                                const updated = prev.find(o => o.id === id)
+                                if (!updated || hist.some(o => o.id === id)) return hist
+                                return [{ ...updated, status: 'completed' }, ...hist]
+                            })
+                        }
+                        stopCookingTimer(id)
+                        return prev.filter(o => o.id !== id)
+                    }
+
+                    if (!exists) return prev // unknown order — ignore
+
+                    return prev.map(o =>
+                        o.id === id
+                            ? {
+                                ...o,
+                                ...(newStatus !== undefined        ? { status: newStatus }                               : {}),
+                                ...(event.discount_amount !== undefined ? { discount_amount: Number(event.discount_amount) } : {}),
+                                ...(event.billed !== undefined     ? { billed: Boolean(event.billed) }                  : {}),
+                            }
+                            : o,
+                    )
+                })
+
+                // Start cooking timer when status becomes preparing via SSE
+                if (newStatus === 'preparing') startCookingTimer(id)
+                if (newStatus === 'ready')     stopCookingTimer(id)
+            })
+        }
+    })
+
     // Subscription & Init
     useEffect(() => {
         fetchOrders()
         fetchCompletedOrders()
         setStatus('SUBSCRIBED')
 
-        // Auto-poll for new orders every 15 seconds (only when tab is visible)
+        // 30-second fallback poll (safety net for any missed SSE events)
         const pollInterval = setInterval(() => {
-            // Skip polling if page is not visible
             if (!isPageVisible.current) return
-
             fetchOrders()
             fetchCompletedOrders()
-            // Refresh bill requests too
-            fetch('/api/kitchen/bill-requests')
+            fetch('/api/kitchen/bill-requests', { cache: 'no-store' })
                 .then(r => r.json())
                 .then(json => { if (json.success) setBillRequests(json.data || []) })
-                .catch(() => { })
-        }, 15000)
+                .catch(() => {})
+        }, 30_000)
 
-        return () => clearInterval(pollInterval)
-    }, [])
+        return () => {
+            clearInterval(pollInterval)
+            fetchOrdersAbort.current?.abort()
+            fetchCompletedAbort.current?.abort()
+        }
+    }, [fetchOrders, fetchCompletedOrders])
 
     // Fetch menu items and categories
     useEffect(() => {
         async function fetchMenuData() {
             try {
-                const res = await fetch('/api/menu')
+                const res = await fetch('/api/menu', { cache: 'no-store' })
                 const json = await res.json()
                 if (json.success) {
                     const fetchedItems = json.data?.menuItems || []
@@ -311,7 +409,7 @@ export default function KitchenPage() {
     useEffect(() => {
         async function fetchBillRequests() {
             try {
-                const res = await fetch('/api/kitchen/bill-requests')
+                const res = await fetch('/api/kitchen/bill-requests', { cache: 'no-store' })
                 const json = await res.json()
                 if (json.success) setBillRequests(json.data || [])
             } catch (e) { console.error('fetchBillRequests error:', e) }
@@ -328,7 +426,7 @@ export default function KitchenPage() {
                 fetchOrders(),
                 fetchCompletedOrders(),
                 (async () => {
-                    const res = await fetch('/api/kitchen/bill-requests')
+                    const res = await fetch('/api/kitchen/bill-requests', { cache: 'no-store' })
                     const json = await res.json()
                     if (json.success) setBillRequests(json.data || [])
                 })()
@@ -486,8 +584,12 @@ export default function KitchenPage() {
 
     // Cancel order
     async function cancelOrder(orderId: string) {
-        const ok = await showConfirm('Cancel Order', 'Are you sure you want to cancel this order? This cannot be undone.')
-        if (!ok) return
+        const confirmed = await showConfirm('Cancel Order', 'Are you sure you want to cancel this order? This cannot be undone.')
+        if (!confirmed) return
+        // Optimistic update
+        const prevOrders = orders
+        setOrders(prev => prev.filter(o => o.id !== orderId))
+        stopCookingTimer(orderId)
         try {
             const res = await fetch('/api/orders/status', {
                 method: 'PATCH',
@@ -496,14 +598,16 @@ export default function KitchenPage() {
             })
             const json = await res.json()
             if (!json.success) {
+                setOrders(prevOrders) // roll back optimistic removal
                 showError('Cancel Failed', 'Failed to cancel order')
             } else {
-                setOrders(prev => prev.filter(o => o.id !== orderId))
-                stopCookingTimer(orderId)
                 showSuccess('Order Cancelled', 'The order has been cancelled.')
             }
         } catch (e) {
-            showError('Cancel Failed', 'Failed to cancel order')
+            if ((e as Error).name !== 'AbortError') {
+                setOrders(prevOrders)
+                showError('Cancel Failed', 'Failed to cancel order')
+            }
         }
     }
 
@@ -660,10 +764,30 @@ export default function KitchenPage() {
     }, [orders, filter])
 
     async function updateStatus(orderId: string, newStatus: string) {
-        // Prevent duplicate status updates for the same order
         const key = `${orderId}-${newStatus}`
         if (pendingStatusUpdates.current.has(key)) return
         pendingStatusUpdates.current.add(key)
+
+        // ── Optimistic update ─────────────────────────────────────────────
+        const prevOrders    = orders
+        const prevCompleted = completedOrders
+
+        if (newStatus === 'preparing') startCookingTimer(orderId)
+        if (newStatus === 'ready' || newStatus === 'cancelled') stopCookingTimer(orderId)
+
+        if (newStatus === 'completed' || newStatus === 'cancelled') {
+            if (newStatus === 'completed') {
+                const order = orders.find(o => o.id === orderId)
+                if (order) {
+                    setCompletedOrders(prev => [{ ...order, status: 'completed' as Order['status'] }, ...prev])
+                }
+                stopCookingTimer(orderId)
+            }
+            setOrders(prev => prev.filter(o => o.id !== orderId))
+        } else {
+            setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus as Order['status'] } : o))
+        }
+        // ─────────────────────────────────────────────────────────────────
 
         try {
             const res = await fetch('/api/orders/status', {
@@ -673,13 +797,14 @@ export default function KitchenPage() {
             })
             const json = await res.json()
             if (!json.success) {
+                // Roll back optimistic update
+                setOrders(prevOrders)
+                setCompletedOrders(prevCompleted)
                 showError('Update Failed', 'Failed to update order status')
-            } else {
-                setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus as any } : o))
-                if (newStatus === 'preparing') startCookingTimer(orderId)
-                if (newStatus === 'ready' || newStatus === 'completed' || newStatus === 'cancelled') stopCookingTimer(orderId)
             }
-        } catch (e) {
+        } catch {
+            setOrders(prevOrders)
+            setCompletedOrders(prevCompleted)
             showError('Update Failed', 'Failed to update order status')
         } finally {
             pendingStatusUpdates.current.delete(key)
@@ -977,14 +1102,18 @@ export default function KitchenPage() {
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', flexWrap: 'wrap' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{
-                            width: '12px',
-                            height: '12px',
-                            borderRadius: '50%',
-                            background: status === 'SUBSCRIBED' ? '#10B981' : '#EF4444',
-                            boxShadow: status === 'SUBSCRIBED' ? '0 0 10px #10B981' : 'none',
-                            animation: status === 'SUBSCRIBED' ? 'pulse 2s infinite' : 'none'
-                        }} />
+                        <div
+                            title={streamStatus === 'connected' ? 'Live updates active' : 'Reconnecting…'}
+                            style={{
+                                width: '12px',
+                                height: '12px',
+                                borderRadius: '50%',
+                                background: streamStatus === 'connected' ? '#10B981' : '#F59E0B',
+                                boxShadow: streamStatus === 'connected' ? '0 0 10px #10B981' : 'none',
+                                animation: streamStatus === 'connected' ? 'pulse 2s infinite' : 'none',
+                                transition: 'background 0.3s',
+                            }}
+                        />
                         <h2 style={{
                             margin: 0,
                             fontSize: 'clamp(1.25rem, 3vw, 1.75rem)',

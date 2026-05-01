@@ -1,232 +1,197 @@
-import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/database/prisma";
-import { validateSessionToken } from "@/lib/auth/utils";
-import { sanitizeId, sanitizeString, sanitizeNotes } from "@/lib/validation/sanitize";
+import { NextRequest, NextResponse } from 'next/server'
+import prisma from '@/lib/database/prisma'
+import { sanitizeId, sanitizeString, sanitizeNotes } from '@/lib/validation/sanitize'
+import { notifyOrderEvent } from '@/lib/sse/notify'
+import { fetchAndSerializeOrder } from '@/lib/utils/serialize-order'
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await request.json()
     const {
       userId: rawUserId,
-      phone,
       items,
       tableName: rawTableName,
       numGuests,
       locationType,
       notes: rawNotes,
       sessionId: rawSessionId,
-    } = body;
+    } = body
 
-    // Sanitize all string inputs
-    const userId = sanitizeId(rawUserId || '');
-    const sessionId = rawSessionId ? sanitizeId(rawSessionId) : undefined;
-    const tableName = sanitizeString(rawTableName || '') || 'N/A';
-    const notes = sanitizeNotes(rawNotes || '');
-    const sanitizedNumGuests = Math.min(Math.max(parseInt(numGuests) || 1, 1), 50);
+    const userId           = sanitizeId(rawUserId || '')
+    const sessionId        = rawSessionId ? sanitizeId(rawSessionId) : undefined
+    const tableName        = sanitizeString(rawTableName || '') || 'N/A'
+    const notes            = sanitizeNotes(rawNotes || '')
+    const sanitizedGuests  = Math.min(Math.max(parseInt(numGuests) || 1, 1), 50)
+    const hasStaffMeal     = notes === 'REGULAR_STAFF_MEAL'
 
-    const hasRegularStaffMeal = notes === "REGULAR_STAFF_MEAL";
-
-    if (!userId || (!hasRegularStaffMeal && (!items || items.length === 0))) {
+    if (!userId || (!hasStaffMeal && (!items || items.length === 0))) {
       return NextResponse.json(
-        { success: false, error: "Missing required fields: userId and at least one item" },
-        { status: 400 }
-      );
+        { success: false, error: 'Missing required fields: userId and at least one item' },
+        { status: 400 },
+      )
     }
 
-    // AUTH GUARD: Multiple auth strategies
-    const authHeader = request.headers.get("Authorization");
-    let isAuthorized = false;
+    // ── Auth guard: single DB query ──────────────────────────────────────
+    const authHeader = request.headers.get('Authorization')
+    const token      = authHeader?.replace('Bearer ', '') ?? ''
 
-    // Strategy 1: Custom session token
-    if (!isAuthorized && authHeader && authHeader !== "Bearer null" && authHeader !== "Bearer undefined") {
-      const token = authHeader.replace("Bearer ", "");
-      if (userId && token) {
-        try {
-          const tokenValid = await validateSessionToken(userId, token);
-          if (tokenValid) {
-            isAuthorized = true;
-          } else {
-            // Sliding window: check if token matches but expired
-            const userRec = await prisma.user.findUnique({
-              where: { id: userId },
-              select: { id: true, sessionToken: true, sessionExpiresAt: true },
-            });
-            if (userRec && userRec.sessionToken === token) {
-              const newExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
-              await prisma.user.update({
-                where: { id: userId },
-                data: { sessionExpiresAt: newExpiry },
-              });
-              isAuthorized = true;
-              console.log(`Session auto-extended for user ${userId}`);
-            }
-          }
-        } catch (e) {
-          console.log("Custom token validation error:", e);
-        }
-      }
-    }
-
-    // Strategy 2: Guest session check
-    if (!isAuthorized && sessionId && userId) {
-      const session = await prisma.guestSession.findFirst({
-        where: { id: sessionId, userId, status: "active" },
-        select: { id: true },
-      });
-      if (session) isAuthorized = true;
-    }
-
-    // Strategy 3: Any active guest session
-    if (!isAuthorized && userId) {
-      const activeSession = await prisma.guestSession.findFirst({
-        where: { userId, status: "active" },
-        select: { id: true },
-      });
-      if (activeSession) isAuthorized = true;
-    }
-
-    // Strategy 4: User exists in DB
-    if (!isAuthorized && userId) {
-      const userRecord = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { id: true },
-      });
-      if (userRecord) isAuthorized = true;
-    }
-
-    if (!isAuthorized) {
-      console.warn(`Order creation blocked: Unauthorized attempt for userId ${userId}`);
-      return NextResponse.json(
-        { success: false, error: "Unauthorized: User mismatch or invalid session" },
-        { status: 403 }
-      );
-    }
-
-    // 1. Fetch user profile
-    const userData = await prisma.user.findUnique({
+    const userRecord = await prisma.user.findUnique({
       where: { id: userId },
-      select: { name: true, email: true, role: true },
-    });
+      select: {
+        id:              true,
+        name:            true,
+        email:           true,
+        role:            true,
+        sessionToken:    true,
+        sessionExpiresAt: true,
+        guestSessions:   {
+          where: { status: 'active' },
+          select: { id: true },
+          take: 1,
+        },
+      },
+    })
 
-    if (!userData) {
-      return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
+    if (!userRecord) {
+      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 })
     }
 
-    const rawRole = (userData.role || "").toUpperCase();
-    const normalizedRole = rawRole === "KITCHEN_MANAGER" ? "KITCHEN"
-      : rawRole === "GUEST" ? "OUTSIDER" : rawRole;
+    const tokenValid =
+      token &&
+      token !== 'null' &&
+      token !== 'undefined' &&
+      userRecord.sessionToken === token &&
+      userRecord.sessionExpiresAt &&
+      userRecord.sessionExpiresAt > new Date()
 
-    if (hasRegularStaffMeal && normalizedRole !== "STAFF") {
+    const hasActiveSession = userRecord.guestSessions.length > 0
+
+    // Also allow if sessionId was passed and belongs to this user
+    let sessionBelongsToUser = false
+    if (!tokenValid && !hasActiveSession && sessionId) {
+      const sess = await prisma.guestSession.findFirst({
+        where: { id: sessionId, userId, status: 'active' },
+        select: { id: true },
+      })
+      sessionBelongsToUser = !!sess
+    }
+
+    if (!tokenValid && !hasActiveSession && !sessionBelongsToUser) {
+      console.warn(`[CREATE ORDER] Unauthorized attempt for userId=${userId}`)
       return NextResponse.json(
-        { success: false, error: "Regular Staff Meal is available to STAFF only" },
-        { status: 403 }
-      );
+        { success: false, error: 'Unauthorized' },
+        { status: 403 },
+      )
     }
 
-    // 2. Fetch current prices for all items
-    const itemIds = Array.isArray(items) ? items.map((item: any) => sanitizeId(item.itemId || '')) : [];
-    let menuItems: any[] = [];
+    // Sliding-window session extension
+    if (tokenValid) {
+      prisma.user
+        .update({
+          where: { id: userId },
+          data: { sessionExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) },
+        })
+        .catch(() => {})
+    }
+    // ─────────────────────────────────────────────────────────────────────
 
-    if (itemIds.length > 0) {
-      menuItems = await prisma.menuItem.findMany({
-        where: { id: { in: itemIds } },
-        select: { id: true, name: true, price: true, available: true },
-      });
+    const rawRole     = (userRecord.role ?? '').toUpperCase()
+    const normalRole  = rawRole === 'KITCHEN_MANAGER' ? 'KITCHEN' : rawRole === 'GUEST' ? 'OUTSIDER' : rawRole
+
+    if (hasStaffMeal && normalRole !== 'STAFF') {
+      return NextResponse.json(
+        { success: false, error: 'Regular Staff Meal is available to STAFF only' },
+        { status: 403 },
+      )
     }
 
-    // 3. Validate availability and calculate total
-    let serverTotal = 0;
-    const validatedOrderItems = [];
+    // ── Fetch + validate menu items ───────────────────────────────────────
+    const itemIds   = Array.isArray(items) ? items.map((i: { itemId?: string }) => sanitizeId(i.itemId || '')) : []
+    const menuItems = itemIds.length
+      ? await prisma.menuItem.findMany({
+          where: { id: { in: itemIds } },
+          select: { id: true, name: true, price: true, available: true },
+        })
+      : []
 
-    for (const item of Array.isArray(items) ? items : []) {
-      const sanitizedItemId = sanitizeId(item.itemId || '');
-      const menuItem = menuItems.find((m) => m.id === sanitizedItemId);
+    let serverTotal = 0
+    const orderItemsData: { menuItemId: string; quantity: number; price: number }[] = []
+
+    for (const item of (Array.isArray(items) ? items : []) as { itemId?: string; quantity?: number }[]) {
+      const sanitizedId = sanitizeId(item.itemId || '')
+      const menuItem    = menuItems.find((m) => m.id === sanitizedId)
       if (!menuItem) {
-        return NextResponse.json(
-          { success: false, error: `Item ${sanitizedItemId} not found` },
-          { status: 400 }
-        );
+        return NextResponse.json({ success: false, error: `Item ${sanitizedId} not found` }, { status: 400 })
       }
       if (!menuItem.available) {
-        return NextResponse.json(
-          { success: false, error: `Item ${sanitizedItemId} is currently unavailable` },
-          { status: 400 }
-        );
+        return NextResponse.json({ success: false, error: `${menuItem.name} is currently unavailable` }, { status: 400 })
       }
-
-      const safeQuantity = Math.min(Math.max(parseInt(item.quantity) || 1, 1), 100);
-      const itemTotal = Number(menuItem.price) * safeQuantity;
-      serverTotal += itemTotal;
-
-      validatedOrderItems.push({
-        menuItemId: sanitizedItemId,
-        quantity: safeQuantity,
-        price: Number(menuItem.price),
-      });
+      const qty       = Math.min(Math.max(parseInt(String(item.quantity)) || 1, 1), 100)
+      serverTotal    += Number(menuItem.price) * qty
+      orderItemsData.push({ menuItemId: sanitizedId, quantity: qty, price: Number(menuItem.price) })
     }
 
-    // 4. Create order with items in a transaction
+    // ── Create order ──────────────────────────────────────────────────────
     const order = await prisma.order.create({
       data: {
         userId,
-        guestInfo: normalizedRole === "OUTSIDER"
-          ? { name: userData.name, email: userData.email }
+        guestInfo: normalRole === 'OUTSIDER'
+          ? { name: userRecord.name, email: userRecord.email }
           : undefined,
         tableName,
         locationType: locationType === 'indoor' || locationType === 'outdoor' ? locationType : undefined,
-        numGuests: sanitizedNumGuests,
+        numGuests: sanitizedGuests,
         total: serverTotal,
         notes,
         sessionId: sessionId || undefined,
-        status: "pending",
+        status: 'pending',
         orderItems: {
-          create: validatedOrderItems.map((item) => ({
-            menuItemId: item.menuItemId,
-            quantity: item.quantity,
-            price: item.price,
+          create: orderItemsData.map((i) => ({
+            menuItemId: i.menuItemId,
+            quantity:   i.quantity,
+            price:      i.price,
           })),
         },
       },
-    });
+      select: { id: true },
+    })
 
-    // 5. Send Email Summary (Asynchronous)
-    if (userData?.email) {
+    // Push FULL order via SSE — kitchen renders it instantly with zero extra fetch
+    // fetchAndSerializeOrder runs after the transaction so all relations are readable
+    const serialized = await fetchAndSerializeOrder(order.id)
+    if (serialized) {
+      await notifyOrderEvent('order_created', serialized as unknown as Record<string, unknown>)
+    } else {
+      // Fallback stub — client will call fetchSingleOrder(id)
+      await notifyOrderEvent('order_created', { id: order.id, _needsFetch: true })
+    }
+
+    // ── Email summary (non-blocking) ──────────────────────────────────────
+    if (userRecord.email) {
       try {
-        const { sendEmail } = require("@/lib/utils/email");
-        const itemsListHtml = (items || [])
-          .map((item: any) => {
-            const menuItem = menuItems.find((m) => m.id === item.itemId);
-            return `<li>${menuItem?.name || "Item"} x ${item.quantity} - ₹${(Number(menuItem?.price) || 0) * item.quantity}</li>`;
+        const { sendEmail } = require('@/lib/utils/email')
+        const itemsHtml = (Array.isArray(items) ? items : [])
+          .map((item: { itemId?: string; quantity?: number }) => {
+            const m = menuItems.find((x) => x.id === item.itemId)
+            return `<li>${m?.name ?? 'Item'} x ${item.quantity} — ₹${(Number(m?.price) || 0) * (Number(item.quantity) || 1)}</li>`
           })
-          .join("");
-
+          .join('')
         sendEmail({
-          to: userData.email,
-          subject: `Order Confirmed: ${tableName} - Ai Cavalli`,
-          html: `
-            <div style="font-family: sans-serif; padding: 20px;">
-              <h2 style="color: #c0272d;">Grazie, ${userData.name}!</h2>
-              <p>Your order for <strong>Table ${tableName}</strong> has been received and is being prepared.</p>
-              <hr /><ul>${itemsListHtml}</ul>
-              <p><strong>Total: ₹${serverTotal}</strong></p>
-              <p style="font-size: 12px; color: #666;">This is an automated summary of your order at Ai Cavalli.</p>
-            </div>`,
-        }).catch((err: any) => console.error("Failed to send order email:", err));
+          to:      userRecord.email,
+          subject: `Order Confirmed: ${tableName} — Ai Cavalli`,
+          html: `<div style="font-family:sans-serif;padding:20px">
+            <h2 style="color:#c0272d">Grazie, ${userRecord.name}!</h2>
+            <p>Your order for <strong>Table ${tableName}</strong> is being prepared.</p>
+            <ul>${itemsHtml}</ul>
+            <p><strong>Total: ₹${serverTotal}</strong></p>
+          </div>`,
+        }).catch((e: Error) => console.error('[CREATE ORDER] Email failed:', e.message))
       } catch {}
     }
 
-    return NextResponse.json({
-      success: true,
-      orderId: order.id,
-      total: serverTotal,
-      message: "Order created successfully",
-    });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    console.error("Secure order API error:", error);
-    return NextResponse.json(
-      { success: false, error: message },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: true, orderId: order.id, total: serverTotal, message: 'Order created successfully' })
+  } catch (error) {
+    console.error('[POST /api/orders/create]', error)
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
   }
 }

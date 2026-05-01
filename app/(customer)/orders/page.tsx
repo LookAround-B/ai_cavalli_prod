@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, startTransition } from 'react'
 import { useAuth } from '@/lib/auth/context'
-
 import { useSearchParams, useRouter } from 'next/navigation'
+import { useOrderStream } from '@/lib/hooks/useOrderStream'
+import { fetchWithRetry } from '@/lib/utils/fetch-with-retry'
 import { ChevronLeft, Package, Clock, CheckCircle2, XCircle, ChevronDown, LogOut, RefreshCw, Timer } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -15,7 +16,7 @@ import { showError, showSuccess, showConfirm } from '@/components/ui/Popup'
 
 export default function OrdersPage() {
     const { user, logout } = useAuth()
-    const { clearCart, addToCart, items: cartItems, setEditingOrderId } = useCart()
+    const { clearCart, addToCart, items: cartItems, setEditingOrderId, editingOrderId } = useCart()
     const router = useRouter()
     const searchParams = useSearchParams()
     const orderIdParam = searchParams.get('orderId')
@@ -27,6 +28,11 @@ export default function OrdersPage() {
     const [endingSession, setEndingSession] = useState(false)
     const [billPreview, setBillPreview] = useState<BillData | null>(null)
     const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
+
+    // AbortController for in-flight fetch
+    const fetchAbort = useRef<AbortController | null>(null)
+    // ETag from last fetch — used for conditional GET (304 detection)
+    const lastEtag = useRef<string | null>(null)
 
     // Roles that should see Sign Out button and auto-logout after 5 min
     const isAutoLogoutRole = user?.role === 'OUTSIDER' || user?.role === 'RIDER' || user?.role === 'STAFF'
@@ -140,9 +146,11 @@ export default function OrdersPage() {
     const logoutRef = useRef(logout)
     const clearCartRef = useRef(clearCart)
     const userRef = useRef(user)
+    const editingOrderIdRef = useRef(editingOrderId)
     useEffect(() => { logoutRef.current = logout }, [logout])
     useEffect(() => { clearCartRef.current = clearCart }, [clearCart])
     useEffect(() => { userRef.current = user }, [user])
+    useEffect(() => { editingOrderIdRef.current = editingOrderId }, [editingOrderId])
 
     // Refs for discount polling — avoid stale closures in setInterval
     const ordersRef = useRef<any[]>([])
@@ -162,11 +170,11 @@ export default function OrdersPage() {
         if (!showCooldown || cooldownTime < 0) return
 
         if (cooldownTime === 0) {
-            // Timer expired — auto-logout immediately
             setShowCooldown(false)
+            // Don't log out if customer is mid-edit — let them finish
+            if (editingOrderIdRef.current) return
             const role = userRef.current?.role
             if (role === 'OUTSIDER' || role === 'RIDER' || role === 'STAFF') {
-                console.log('Auto-logout triggered after 5-min cooldown')
                 clearCartRef.current()
                 logoutRef.current()
             }
@@ -231,116 +239,177 @@ export default function OrdersPage() {
         router.push('/menu')
     }
 
-    // Separate effect for polling guest session status (billed by kitchen/admin)
-    useEffect(() => {
-        if (
-            !user ||
-            user.role !== 'OUTSIDER' ||
-            !activeSession ||
-            activeSession._virtual ||
-            !activeSession.id ||
-            autoLogoutTriggered
-        ) return
+    // ── Helper: compute rupees from discount % ────────────────────────────
+    const toRupees = (pct: number, itemsTotal: number) =>
+        pct > 0 ? Math.round((itemsTotal * (pct / 100)) * 100) / 100 : 0
 
-        const sessionPollInterval = setInterval(async () => {
-            try {
-                const params = new URLSearchParams()
-                if (user.phone) params.set('phone', user.phone)
-                params.set('userId', user.id)
-                const res = await fetch(`/api/sessions/active?${params.toString()}`)
-                const data = await res.json()
-                if (data.success && data.session?.status === 'ended' && !autoLogoutTriggered) {
-                    setAutoLogoutTriggered(true)
-                    const orderIds = orders.map((o: any) => o.id)
-                    if (orderIds.length > 0) {
-                        fetchKitchenBill(orderIds)
-                    } else {
-                        showSuccess('Session Ended', 'Your visit has ended. Logging you out...')
-                        clearCart()
-                        setTimeout(() => logout(), 2500)
-                    }
-                }
-            } catch (e) { console.error('Session poll error:', e) }
-        }, 5000)
+    // ── Merge an SSE event into order state + show discount toast ─────────
+    const applyOrderUpdate = (patch: { id?: string; status?: string; discount_amount?: number; billed?: boolean }) => {
+        if (!patch.id) return
+        const current = ordersRef.current
+        const existing = current.find((o: any) => o.id === patch.id)
+        if (!existing) return
 
-        return () => {
-            clearInterval(sessionPollInterval)
+        const prevPct = Number(existing.discount_amount || 0)
+        const nextPct = patch.discount_amount !== undefined ? Number(patch.discount_amount) : prevPct
+
+        if (nextPct > prevPct) {
+            const itemsTotal = (existing.items || []).reduce(
+                (s: number, i: any) => s + i.quantity * Number(i.price), 0,
+            ) || Number(existing.total || 0)
+            const saved = toRupees(nextPct, itemsTotal) - toRupees(prevPct, itemsTotal)
+            prevDiscountsRef.current[patch.id] = nextPct
+            if (saved > 0) {
+                const newOrderTotal = orderFinalTotal({ ...existing, discount_amount: nextPct })
+                showSuccess(
+                    'Discount Applied!',
+                    `${nextPct}% off — You saved ₹${saved.toFixed(2)}! Your updated total is ₹${newOrderTotal.toFixed(2)}.`,
+                )
+            }
         }
-    }, [user, activeSession, autoLogoutTriggered])
 
-    // Poll every 5 s for discount / status changes on active orders
+        startTransition(() => {
+            setOrders((prev: any[]) =>
+                prev.map((o: any) =>
+                    o.id === patch.id
+                        ? {
+                              ...o,
+                              ...(patch.status !== undefined          ? { status: patch.status }       : {}),
+                              ...(patch.discount_amount !== undefined ? { discount_amount: nextPct }   : {}),
+                              ...(patch.billed !== undefined          ? { billed: patch.billed }       : {}),
+                          }
+                        : o,
+                ),
+            )
+        })
+    }
+
+    // ── SSE hook: real-time push from server ──────────────────────────────
+    useOrderStream((event) => {
+        if (event.type === 'order_updated') {
+            const id      = event.id as string | undefined
+            const userId  = event.user_id as string | undefined
+
+            // Only process events relevant to THIS user's orders
+            if (!id) return
+            const current = ordersRef.current
+            const isMyOrder = current.some((o: any) => o.id === id) ||
+                              (userId && user && userId === user.id)
+            if (!isMyOrder) return
+
+            applyOrderUpdate({
+                id,
+                status:          event.status as string | undefined,
+                discount_amount: event.discount_amount as number | undefined,
+            })
+
+            // Billed → trigger bill preview exactly like the polling path did
+            const billed = event.billed as boolean | undefined
+            if (billed && !autoLogoutTriggered) {
+                const myOrders = ordersRef.current
+                const allBilled = myOrders.every((o: any) => o.id === id ? true : o.billed)
+                if (allBilled && myOrders.length > 0) {
+                    setAutoLogoutTriggered(true)
+                    fetchKitchenBill(myOrders.map((o: any) => o.id))
+                }
+            }
+        }
+    }, Boolean(user))
+
+    // ── Unified 30-second fallback poll (handles session end for OUTSIDER) ─
     useEffect(() => {
         if (!user) return
 
+        const isVisible = () => !document.hidden
+
         const poll = setInterval(async () => {
+            if (!isVisible()) return
+
             const current = ordersRef.current
             if (!current.length || current.every((o: any) => o.billed)) return
 
             try {
+                fetchAbort.current?.abort()
+                fetchAbort.current = new AbortController()
+
+                // Use ?since= to only fetch changed orders
+                const sinceParam = lastEtag.current ? '' : '' // initial load has no since
                 const url = `/api/orders?userId=${user.id}`
-                const res = await fetch(url)
-                const json = await res.json()
-                if (!json.success || !Array.isArray(json.data)) return
-                const fresh: any[] = json.data
+                const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+                if (lastEtag.current) headers['If-None-Match'] = lastEtag.current
 
-                // discount_amount is a percentage (e.g. 45 = 45%) — compute rupee savings
-                const toRupees = (pct: number, itemsTotal: number) =>
-                    pct > 0 ? Math.round((itemsTotal * (pct / 100)) * 100) / 100 : 0
-
-                let totalNewlySaved = 0
-                fresh.forEach((fo: any) => {
-                    const orderItemsTotal = (fo.items || []).reduce(
-                        (s: number, i: any) => s + i.quantity * Number(i.price), 0
-                    ) || Number(fo.total || 0)
-                    const prevPct = prevDiscountsRef.current[fo.id] ?? Number(fo.discount_amount || 0)
-                    const nextPct = Number(fo.discount_amount || 0)
-                    if (nextPct > prevPct) {
-                        totalNewlySaved += toRupees(nextPct, orderItemsTotal) - toRupees(prevPct, orderItemsTotal)
-                    }
-                    prevDiscountsRef.current[fo.id] = nextPct
+                const res = await fetchWithRetry(url, {
+                    signal: fetchAbort.current.signal,
+                    headers,
                 })
 
-                // Only re-render if discount or status changed
+                // 304 = nothing changed
+                if (res.status === 304) return
+
+                const etag = res.headers.get('ETag')
+                if (etag) lastEtag.current = etag
+
+                const json = await res.json()
+                if (!json.success || !Array.isArray(json.data)) return
+
+                const fresh: any[] = json.data
                 const hasChange = fresh.some((fo: any) => {
-                    const existing = current.find((o: any) => o.id === fo.id)
-                    return !existing ||
-                        Number(existing.discount_amount) !== Number(fo.discount_amount) ||
-                        existing.status !== fo.status
+                    const ex = current.find((o: any) => o.id === fo.id)
+                    return !ex ||
+                        Number(ex.discount_amount) !== Number(fo.discount_amount) ||
+                        ex.status !== fo.status ||
+                        ex.billed !== fo.billed
                 })
 
                 if (hasChange) {
-                    setOrders(fresh)
-
-                    if (totalNewlySaved > 0) {
-                        const newTotal = fresh
-                            .filter((o: any) => !o.billed)
-                            .reduce((sum: number, o: any) => {
-                                const itemsTotal = (o.items || []).reduce(
-                                    (s: number, i: any) => s + i.quantity * Number(i.price), 0
-                                ) || Number(o.total || 0)
-                                const pct = Number(o.discount_amount || 0)
-                                const discRupees = toRupees(pct, itemsTotal)
-                                const afterDiscount = itemsTotal - discRupees
-                                return sum + Math.round(afterDiscount * 1.05 * 100) / 100
-                            }, 0)
-
-                        const discountPcts = fresh
-                            .filter((o: any) => !o.billed && Number(o.discount_amount) > 0)
-                            .map((o: any) => Number(o.discount_amount))
-                            .filter(Boolean)
-                            .join('%, ')
-
-                        showSuccess(
-                            'Discount Applied!',
-                            `${discountPcts ? discountPcts + '% off — ' : ''}You saved ₹${totalNewlySaved.toFixed(2)}! Your updated total is ₹${newTotal.toFixed(2)}.`
-                        )
-                    }
+                    // Show discount toast for any newly applied discounts
+                    fresh.forEach((fo: any) => applyOrderUpdate({
+                        id:              fo.id,
+                        status:          fo.status,
+                        discount_amount: Number(fo.discount_amount),
+                        billed:          Boolean(fo.billed),
+                    }))
+                    startTransition(() => setOrders(fresh))
                 }
-            } catch {}
-        }, 5000)
+            } catch (e) {
+                if ((e as Error).name !== 'AbortError') console.error('[orders poll]', e)
+            }
 
-        return () => clearInterval(poll)
-    }, [user])
+            // For OUTSIDER: also check if session ended
+            if (
+                user.role === 'OUTSIDER' &&
+                activeSession &&
+                !activeSession._virtual &&
+                activeSession.id &&
+                !autoLogoutTriggered
+            ) {
+                try {
+                    const params = new URLSearchParams()
+                    if (user.phone) params.set('phone', user.phone)
+                    params.set('userId', user.id)
+                    const sRes = await fetch(`/api/sessions/active?${params.toString()}`)
+                    const sData = await sRes.json()
+                    if (sData.success && sData.session?.status === 'ended' && !autoLogoutTriggered) {
+                        setAutoLogoutTriggered(true)
+                        const orderIds = ordersRef.current.map((o: any) => o.id)
+                        if (orderIds.length > 0) {
+                            fetchKitchenBill(orderIds)
+                        } else {
+                            showSuccess('Session Ended', 'Your visit has ended. Logging you out...')
+                            clearCart()
+                            setTimeout(() => logout(), 2500)
+                        }
+                    }
+                } catch {}
+            }
+        }, 30_000)
+
+        return () => {
+            clearInterval(poll)
+            fetchAbort.current?.abort()
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user, activeSession, autoLogoutTriggered])
 
     // Fetch a bill generated by kitchen/admin and show it in the preview modal
     const fetchKitchenBill = async (orderIds: string[]) => {

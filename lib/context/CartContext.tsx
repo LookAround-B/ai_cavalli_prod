@@ -24,16 +24,25 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-    const [items, setItems] = useState<CartItem[]>([])
-    const [editingOrderId, setEditingOrderId] = useState<string | null>(null)
-
-    // Load from local storage on mount
-    useEffect(() => {
-        const saved = localStorage.getItem('cart')
-        if (saved) setItems(JSON.parse(saved))
-        const savedEditingId = localStorage.getItem('editing_order_id')
-        if (savedEditingId) setEditingOrderId(savedEditingId)
-    }, [])
+    const [items, setItems] = useState<CartItem[]>(() => {
+        if (typeof window === 'undefined') return []
+        try {
+            const saved = localStorage.getItem('cart')
+            return saved ? JSON.parse(saved) : []
+        } catch {
+            localStorage.removeItem('cart')
+            return []
+        }
+    })
+    const [editingOrderId, setEditingOrderId] = useState<string | null>(() => {
+        if (typeof window === 'undefined') return null
+        try {
+            return localStorage.getItem('editing_order_id')
+        } catch {
+            localStorage.removeItem('editing_order_id')
+            return null
+        }
+    })
 
     // Save to local storage on change
     useEffect(() => {

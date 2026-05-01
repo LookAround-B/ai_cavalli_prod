@@ -111,6 +111,7 @@ model Order {
   readyInMinutes Int?          @map("ready_in_minutes")
   notes          String?
   createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   locationType   String?       @default("indoor") @map("location_type")
   numGuests      Int?          @default(1) @map("num_guests")
   billed         Boolean       @default(false)
@@ -123,6 +124,10 @@ model Order {
   @@index([status], map: "idx_orders_status")
   @@index([userId], map: "idx_orders_user_id")
   @@index([sessionId], map: "idx_orders_session_id")
+  @@index([updatedAt], map: "idx_orders_updated_at")
+  @@index([status, createdAt], map: "idx_orders_status_created")
+  @@index([userId, createdAt], map: "idx_orders_user_created")
+  @@index([billed, status], map: "idx_orders_billed_status")
   @@map("orders")
 }
 
