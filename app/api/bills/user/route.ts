@@ -105,7 +105,10 @@ export async function POST(request: NextRequest) {
         let totalDiscount = 0
 
         orders.forEach((order) => {
-            totalDiscount += Number(order.discountAmount || 0)
+            // discountAmount is stored as a percentage (e.g. 45 = 45%)
+            const orderItemsTotal = order.orderItems.reduce((s, i) => s + i.quantity * Number(i.price), 0)
+            const discountPct = Number(order.discountAmount || 0)
+            totalDiscount += discountPct > 0 ? Math.round((orderItemsTotal * (discountPct / 100)) * 100) / 100 : 0
             order.orderItems.forEach((item) => {
                 const itemName = item.menuItem?.name || 'Unknown Item'
                 const price = Number(item.price)
@@ -120,8 +123,9 @@ export async function POST(request: NextRequest) {
             })
         })
 
-        const finalTotal = totalItemsAmount - totalDiscount
-        const gstAmount = Math.round((finalTotal * 0.05) * 100) / 100
+        const afterDiscount = totalItemsAmount - totalDiscount
+        const gstAmount = Math.round((afterDiscount * 0.05) * 100) / 100
+        const finalTotal = Math.round((afterDiscount + gstAmount) * 100) / 100
 
         // 4. Generate bill number
         let billNumber: string

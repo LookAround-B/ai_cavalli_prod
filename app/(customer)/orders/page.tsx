@@ -144,6 +144,19 @@ export default function OrdersPage() {
     useEffect(() => { clearCartRef.current = clearCart }, [clearCart])
     useEffect(() => { userRef.current = user }, [user])
 
+    // Refs for discount polling — avoid stale closures in setInterval
+    const ordersRef = useRef<any[]>([])
+    const prevDiscountsRef = useRef<Record<string, number>>({})
+    useEffect(() => {
+        ordersRef.current = orders
+        // Seed baseline discounts for orders we haven't seen yet
+        orders.forEach((o: any) => {
+            if (!(o.id in prevDiscountsRef.current)) {
+                prevDiscountsRef.current[o.id] = Number(o.discount_amount || 0)
+            }
+        })
+    }, [orders])
+
     // Cooldown timer effect + auto-logout when timer expires
     useEffect(() => {
         if (!showCooldown || cooldownTime < 0) return
@@ -166,6 +179,15 @@ export default function OrdersPage() {
 
         return () => clearInterval(timer)
     }, [showCooldown, cooldownTime])
+
+    // Compute final total for an order (items total → apply % discount → add 5% GST)
+    const orderFinalTotal = (order: any) => {
+        const itemsTotal = Number(order.total || 0)
+        const discountPct = Number(order.discount_amount || 0)
+        const discountRupees = discountPct > 0 ? Math.round((itemsTotal * (discountPct / 100)) * 100) / 100 : 0
+        const afterDiscount = itemsTotal - discountRupees
+        return Math.round(afterDiscount * 1.05 * 100) / 100
+    }
 
     // Format cooldown time display
     const formatCooldownTime = (seconds: number) => {
@@ -246,6 +268,80 @@ export default function OrdersPage() {
         }
     }, [user, activeSession, autoLogoutTriggered])
 
+    // Poll every 5 s for discount / status changes on active orders
+    useEffect(() => {
+        if (!user) return
+
+        const poll = setInterval(async () => {
+            const current = ordersRef.current
+            if (!current.length || current.every((o: any) => o.billed)) return
+
+            try {
+                const url = `/api/orders?userId=${user.id}`
+                const res = await fetch(url)
+                const json = await res.json()
+                if (!json.success || !Array.isArray(json.data)) return
+                const fresh: any[] = json.data
+
+                // discount_amount is a percentage (e.g. 45 = 45%) — compute rupee savings
+                const toRupees = (pct: number, itemsTotal: number) =>
+                    pct > 0 ? Math.round((itemsTotal * (pct / 100)) * 100) / 100 : 0
+
+                let totalNewlySaved = 0
+                fresh.forEach((fo: any) => {
+                    const orderItemsTotal = (fo.items || []).reduce(
+                        (s: number, i: any) => s + i.quantity * Number(i.price), 0
+                    ) || Number(fo.total || 0)
+                    const prevPct = prevDiscountsRef.current[fo.id] ?? Number(fo.discount_amount || 0)
+                    const nextPct = Number(fo.discount_amount || 0)
+                    if (nextPct > prevPct) {
+                        totalNewlySaved += toRupees(nextPct, orderItemsTotal) - toRupees(prevPct, orderItemsTotal)
+                    }
+                    prevDiscountsRef.current[fo.id] = nextPct
+                })
+
+                // Only re-render if discount or status changed
+                const hasChange = fresh.some((fo: any) => {
+                    const existing = current.find((o: any) => o.id === fo.id)
+                    return !existing ||
+                        Number(existing.discount_amount) !== Number(fo.discount_amount) ||
+                        existing.status !== fo.status
+                })
+
+                if (hasChange) {
+                    setOrders(fresh)
+
+                    if (totalNewlySaved > 0) {
+                        const newTotal = fresh
+                            .filter((o: any) => !o.billed)
+                            .reduce((sum: number, o: any) => {
+                                const itemsTotal = (o.items || []).reduce(
+                                    (s: number, i: any) => s + i.quantity * Number(i.price), 0
+                                ) || Number(o.total || 0)
+                                const pct = Number(o.discount_amount || 0)
+                                const discRupees = toRupees(pct, itemsTotal)
+                                const afterDiscount = itemsTotal - discRupees
+                                return sum + Math.round(afterDiscount * 1.05 * 100) / 100
+                            }, 0)
+
+                        const discountPcts = fresh
+                            .filter((o: any) => !o.billed && Number(o.discount_amount) > 0)
+                            .map((o: any) => Number(o.discount_amount))
+                            .filter(Boolean)
+                            .join('%, ')
+
+                        showSuccess(
+                            'Discount Applied!',
+                            `${discountPcts ? discountPcts + '% off — ' : ''}You saved ₹${totalNewlySaved.toFixed(2)}! Your updated total is ₹${newTotal.toFixed(2)}.`
+                        )
+                    }
+                }
+            } catch {}
+        }, 5000)
+
+        return () => clearInterval(poll)
+    }, [user])
+
     // Fetch a bill generated by kitchen/admin and show it in the preview modal
     const fetchKitchenBill = async (orderIds: string[]) => {
         try {
@@ -310,8 +406,18 @@ export default function OrdersPage() {
         }
     }
 
-    const handleOrderBill = (order: any) => {
-        const items = (order.items || []).map((item: any) => ({
+    const handleOrderBill = async (order: any) => {
+        // Fetch fresh order data so discount reflects any kitchen-applied changes
+        let freshOrder = order
+        try {
+            const res = await fetch(`/api/orders?orderId=${order.id}`)
+            const json = await res.json()
+            if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+                freshOrder = { ...json.data[0], items: json.data[0].items ?? order.items }
+            }
+        } catch {}
+
+        const items = (freshOrder.items || []).map((item: any) => ({
             item_name: item.menu_item?.name || 'Item',
             quantity: item.quantity,
             price: Number(item.price),
@@ -319,7 +425,7 @@ export default function OrdersPage() {
         }))
 
         // Prepend staff meal label for staff meal orders
-        if (order.notes === 'REGULAR_STAFF_MEAL') {
+        if (freshOrder.notes === 'REGULAR_STAFF_MEAL') {
             items.unshift({
                 item_name: 'Standard Regular Staff Meal',
                 quantity: 1,
@@ -329,19 +435,25 @@ export default function OrdersPage() {
         }
 
         const itemsTotal = items.reduce((sum: number, i: any) => sum + i.subtotal, 0)
+        // discount_amount is stored as a percentage (e.g. 45 = 45%)
+        const discountPct = Number(freshOrder.discount_amount || 0)
+        const discountAmount = discountPct > 0 ? Math.round((itemsTotal * (discountPct / 100)) * 100) / 100 : 0
+        const afterDiscount = itemsTotal - discountAmount
+        const gstAmount = Math.round((afterDiscount * 0.05) * 100) / 100
+        const finalTotal = Math.round((afterDiscount + gstAmount) * 100) / 100
         setBillPreview({
-            billNumber: `ORD-${order.id.slice(0, 8).toUpperCase()}`,
+            billNumber: `ORD-${freshOrder.id.slice(0, 8).toUpperCase()}`,
             items,
             itemsTotal,
-            discountAmount: Number(order.discount_amount || 0),
-            finalTotal: Number(order.total || itemsTotal),
-            paymentMethod: order.payment_method || 'cash',
-            createdAt: order.created_at,
+            discountAmount,
+            finalTotal,
+            paymentMethod: freshOrder.payment_method || 'cash',
+            createdAt: freshOrder.created_at,
             sessionDetails: {
-                guestName: user?.name || order.guest_name || 'Guest',
-                numGuests: order.num_guests || 1,
+                guestName: user?.name || freshOrder.guest_name || 'Guest',
+                numGuests: freshOrder.num_guests || 1,
                 orderCount: 1,
-                startedAt: order.created_at
+                startedAt: freshOrder.created_at
             }
         })
     }
@@ -527,7 +639,7 @@ export default function OrdersPage() {
                         </div>
                         {orders.length > 0 && (
                             <p style={{ margin: '6px 0 0', opacity: 1, fontSize: '0.85rem', fontWeight: 700, textShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
-                                {orders.length} order{orders.length !== 1 ? 's' : ''} &middot; ₹{orders.reduce((sum: number, o: any) => sum + (o.total || 0), 0).toFixed(0)} total
+                                {orders.length} order{orders.length !== 1 ? 's' : ''} &middot; ₹{orders.reduce((sum: number, o: any) => sum + orderFinalTotal(o), 0).toFixed(0)} total
                             </p>
                         )}
                     </div>
@@ -825,7 +937,7 @@ export default function OrdersPage() {
                                                     fontSize: '1rem',
                                                     flexShrink: 0,
                                                 }}>
-                                                    ₹{order.total.toFixed(0)}
+                                                    ₹{orderFinalTotal(order).toFixed(0)}
                                                 </span>
                                             </div>
                                             <div style={{
@@ -968,7 +1080,7 @@ export default function OrdersPage() {
                                                     fontWeight: 800,
                                                 }}>
                                                     <span style={{ color: 'var(--text-muted)' }}>Order Total</span>
-                                                    <span style={{ color: 'var(--primary)' }}>₹{order.total.toFixed(0)}</span>
+                                                    <span style={{ color: 'var(--primary)' }}>₹{orderFinalTotal(order).toFixed(2)}</span>
                                                 </div>
 
                                                 {/* Notes */}
