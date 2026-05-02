@@ -336,8 +336,9 @@ export default function AdminMenuPage() {
                             <div style={{
                                 display: 'flex',
                                 gap: '8px',
-                                overflowX: 'auto',
-                                paddingBottom: '4px',
+                                overflowX: isMobile ? 'auto' : 'visible',
+                                flexWrap: isMobile ? 'nowrap' : 'wrap',
+                                paddingBottom: isMobile ? '4px' : 0,
                                 scrollbarWidth: 'none',
                                 msOverflowStyle: 'none',
                             }}>
@@ -700,7 +701,7 @@ function FormPanel({
                     />
                 </FormField>
 
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'minmax(0, 1fr)' : 'minmax(0, 1fr) minmax(0, 1fr)', gap: '1rem', width: '100%' }}>
                     <FormField label="Price (₹)">
                         <Input
                             type="text"
@@ -719,6 +720,7 @@ function FormPanel({
                         <Select
                             value={categoryId}
                             onChange={e => setCategoryId(e.target.value)}
+                            style={{ width: '100%', minWidth: 0 }}
                         >
                             {categories.map(c => (
                                 <option key={c.id} value={c.id}>{c.name}</option>
@@ -884,7 +886,7 @@ function MenuItemCard({ item, isActive, onEdit, onDelete, onToggleAvailable, isM
                             <NextImage
                                 src={item.image_url} alt={item.name}
                                 width={92} height={92}
-                                style={{ objectFit: 'cover', display: 'block' }}
+                                style={{ objectFit: 'contain', display: 'block' }}
                             />
                         ) : (
                             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
@@ -967,7 +969,7 @@ function MenuItemCard({ item, isActive, onEdit, onDelete, onToggleAvailable, isM
         >
             <div style={{ width: '100%', height: '170px', background: 'rgba(var(--primary-rgb), 0.05)', position: 'relative' }}>
                 {item.image_url ? (
-                    <NextImage src={item.image_url} alt={item.name} fill style={{ objectFit: 'cover' }} />
+                    <NextImage src={item.image_url} alt={item.name} fill style={{ objectFit: 'contain' }} />
                 ) : (
                     <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
                         <ImageIcon size={44} strokeWidth={1} />
