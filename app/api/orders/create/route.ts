@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
     // ── Email summary (non-blocking) ──────────────────────────────────────
     if (userRecord.email) {
       try {
-        const { sendEmail } = require('@/lib/utils/email')
+        const { sendEmail } = await import('@/lib/utils/email')
         const itemsHtml = (Array.isArray(items) ? items : [])
           .map((item: { itemId?: string; quantity?: number }) => {
             const m = menuItems.find((x) => x.id === item.itemId)

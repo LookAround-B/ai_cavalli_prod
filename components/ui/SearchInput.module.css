@@ -5,7 +5,7 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     padding: 0 var(--space-4);
-    height: 48px;
+    height: clamp(44px, 10vw, 48px);
     gap: var(--space-3);
     transition: var(--transition);
     box-shadow: var(--shadow-sm);
@@ -29,7 +29,7 @@
     flex: 1;
     border: none;
     background: transparent;
-    font-size: 1rem;
+    font-size: clamp(0.9rem, 2vw, 1rem);
     color: var(--text);
     font-family: var(--font-sans);
     outline: none;

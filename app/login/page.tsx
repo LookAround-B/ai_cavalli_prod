@@ -425,9 +425,9 @@ export default function LoginPage() {
           </div>
         )}
       </div>
-      <div className={styles.loginFooter}>
+      {/* <div className={styles.loginFooter}>
         Powered by LookAround
-      </div>
+      </div> */}
 
       {showInstallPrompt && (
         <div className={styles.installPopup}>

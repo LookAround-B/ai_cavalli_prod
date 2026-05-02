@@ -11,21 +11,15 @@ import { showError, showSuccess, showConfirm } from "@/components/ui/Popup";
 import {
   Users,
   Search,
-  Plus,
   Edit2,
   Trash2,
   User,
   Mail,
   Phone,
-  Shield,
-  Check,
   X,
-  MoreVertical,
   UserCircle,
   Key,
   UserPlus,
-  Filter,
-  ChevronDown,
 } from "lucide-react";
 import { AdminPageHeader } from "@/components/layout/AdminPageHeader";
 
@@ -92,6 +86,7 @@ export default function UserControlPage() {
     const hasToken = sessionToken || localStorage.getItem("session_token");
     const hasUser = authUser?.id || localStorage.getItem("auth_user");
     if (hasToken || hasUser) fetchUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionToken, authUser]);
 
   async function fetchUsers() {
@@ -108,7 +103,7 @@ export default function UserControlPage() {
       } else {
         console.error("Failed to fetch users:", result.error);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error fetching users:", err);
     } finally {
       setLoading(false);
@@ -184,8 +179,8 @@ export default function UserControlPage() {
       resetForm();
       fetchUsers();
       showSuccess("User Created", "The new user has been added successfully.");
-    } catch (err: any) {
-      showError("Error Adding User", err.message);
+    } catch (err: unknown) {
+      showError("Error Adding User", (err as Error).message);
     } finally {
       setSubmitting(false);
     }
@@ -241,8 +236,8 @@ export default function UserControlPage() {
       setIsEditModalOpen(false);
       fetchUsers();
       showSuccess("User Updated", "Changes have been saved successfully.");
-    } catch (err: any) {
-      showError("Error Updating User", err.message);
+    } catch (err: unknown) {
+      showError("Error Updating User", (err as Error).message);
     } finally {
       setSubmitting(false);
     }
@@ -272,8 +267,8 @@ export default function UserControlPage() {
       if (!data.success) throw new Error(data.error);
       fetchUsers();
       showSuccess("User Deleted", "The user has been permanently removed.");
-    } catch (err: any) {
-      showError("Error Deleting User", err.message);
+    } catch (err: unknown) {
+      showError("Error Deleting User", (err as Error).message);
     }
   }
 
@@ -863,7 +858,7 @@ export default function UserControlPage() {
                 label="Full Name"
                 icon={<User size={14} />}
                 value={formData.name}
-                onChange={(e: any) =>
+                onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
                 placeholder="Enter full name"
@@ -882,7 +877,7 @@ export default function UserControlPage() {
                       icon={<Mail size={14} />}
                       type="email"
                       value={formData.email}
-                      onChange={(e: any) =>
+                      onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
                         setFormData({ ...formData, email: e.target.value })
                       }
                       placeholder="user@example.com (Optional)"
@@ -948,7 +943,7 @@ export default function UserControlPage() {
                       pattern="[0-9]*"
                       maxLength={10}
                       value={formData.phone}
-                      onChange={(e: any) =>
+                      onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
                         setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })
                       }
                       placeholder={
@@ -970,7 +965,7 @@ export default function UserControlPage() {
                       label="Auth PIN"
                       icon={<Key size={14} />}
                       value={formData.pin}
-                      onChange={(e: any) =>
+                      onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
                         setFormData({ ...formData, pin: e.target.value.replace(/\D/g, '').slice(0, 6) })
                       }
                       placeholder="6 digit PIN"
@@ -990,7 +985,7 @@ export default function UserControlPage() {
                   label="Parent/Guardian Name"
                   icon={<Users size={14} />}
                   value={formData.parent_name}
-                  onChange={(e: any) =>
+                  onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
                     setFormData({ ...formData, parent_name: e.target.value })
                   }
                   placeholder="Responsible party name"
@@ -1084,7 +1079,7 @@ function ItalianFormField({
 }: {
   label: React.ReactNode;
   icon?: React.ReactNode;
-  [x: string]: any;
+  [x: string]: unknown;
 }) {
   return (
     <div>

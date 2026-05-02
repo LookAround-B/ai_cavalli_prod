@@ -135,6 +135,7 @@ export function ImageSelector({ value, onChange, label = "Image" }: ImageSelecto
                                 placeholder="Paste image URL here..."
                                 style={{
                                     width: '100%',
+                                    boxSizing: 'border-box',
                                     padding: '10px 12px',
                                     borderRadius: 'var(--radius-sm)',
                                     border: '1px solid var(--border)',

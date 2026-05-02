@@ -9,7 +9,7 @@ import { sanitizeId } from '@/lib/validation/sanitize'
 // DELETE: delete menu item
 // PATCH: toggle availability
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const [categories, items] = await Promise.all([
       prisma.category.findMany({ orderBy: { sortOrder: 'asc' } }),

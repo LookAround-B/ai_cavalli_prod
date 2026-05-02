@@ -176,18 +176,35 @@ h6 {
 .menu-grid {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 12px;
   width: 100%;
+  padding: 0 0 16px 0;
+}
+
+@media (min-width: 640px) {
+  .menu-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    padding: 16px 0;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
 }
 
 @media (min-width: 768px) {
   .menu-grid {
-    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+    padding: 20px 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  .menu-grid {
     grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
     gap: 24px;
     padding: 24px 0;
-    max-width: 1200px;
-    margin: 0 auto;
   }
 }
 

@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
         const sanitizedPhone = sanitizePhone(phone || '')
         const sanitizedUserId = userId ? sanitizeId(userId) : ''
 
-        const where: any = { status: 'active' }
+        const where: Record<string, unknown> = { status: 'active' }
         if (sanitizedPhone) {
             where.guestPhone = sanitizedPhone
         } else if (sanitizedUserId) {

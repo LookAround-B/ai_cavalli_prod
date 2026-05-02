@@ -2,15 +2,12 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { SearchInput } from '@/components/ui/SearchInput'
-import { CategoryBadge } from '@/components/ui/CategoryBadge'
 import { MenuItemCard, MenuItem } from '@/components/ui/MenuItemCard'
 import { useCart } from '@/lib/context/CartContext'
 import { useAuth } from '@/lib/auth/context'
-import { Utensils, X, LayoutGrid } from 'lucide-react'
+import { X, LayoutGrid } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Loading } from '@/components/ui/Loading'
-import { Button } from '@/components/ui/button'
-import { useRouter } from 'next/navigation'
 
 interface MenuPageItem extends MenuItem {
     category_id: string;
@@ -24,7 +21,7 @@ interface Category {
 }
 
 export default function MenuPage() {
-    const { user, isLoading: authLoading } = useAuth()
+    const { user } = useAuth()
     const role = user?.role
     const isRIDERLikeRole = role === 'RIDER' || role === 'STAFF'
     const [categories, setCategories] = useState<Category[]>([])
@@ -34,8 +31,6 @@ export default function MenuPage() {
     const [searchQuery, setSearchQuery] = useState('')
     const [loading, setLoading] = useState(true)
     const { addToCart } = useCart()
-    const router = useRouter()
-    const [isOrderingMeal, setIsOrderingMeal] = useState(false)
     const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false)
 
     useEffect(() => {
@@ -48,7 +43,7 @@ export default function MenuPage() {
                     if (json.data?.categories) setCategories(json.data.categories)
                     if (json.data?.menuItems) setItems(json.data.menuItems)
                     if (json.data?.specials) {
-                        const specialItems = json.data.specials.map((s: any) => ({
+                        const specialItems = json.data.specials.map((s: { menu_item: MenuItem; period?: string }) => ({
                             ...s.menu_item,
                             special_period: s.period
                         }))
@@ -134,11 +129,10 @@ export default function MenuPage() {
     }
     const ITALIAN_RED = '#A91E22';
     const DEEP_BLACK = '#1A1A1A';
-    const PAGE_BG = '#FDFBF7';
 
     return (
         <>
-            <div className="container fade-in" style={{ paddingTop: 'clamp(1rem, 4vw, 1.5rem)', paddingBottom: 'clamp(200px, 35vw, 240px)' }}>
+            <div className="container fade-in" style={{ paddingTop: 'clamp(1rem, 4vw, 1.5rem)', paddingBottom: 'clamp(140px, 25vw, 200px)' }}>
                 <PageHeader title="Menu" backHref="/home" />
 
                 <div style={{
@@ -148,8 +142,8 @@ export default function MenuPage() {
                     background: 'rgba(253, 251, 247, 0.95)',
                     backdropFilter: 'blur(12px)',
                     WebkitBackdropFilter: 'blur(12px)',
-                    margin: '0 calc(-1 * var(--space-4)) clamp(1.5rem, 5vw, 2.5rem)',
-                    padding: 'clamp(0.75rem, 3vw, 1.25rem) var(--space-4)',
+                    margin: '0 calc(-1 * clamp(0.75rem, 4vw, 2rem)) clamp(1rem, 4vw, 2rem)',
+                    padding: 'clamp(0.75rem, 2.5vw, 1rem) clamp(0.75rem, 4vw, 2rem)',
                     borderBottom: '1px solid var(--border)',
                     boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
                 }}>
@@ -180,7 +174,7 @@ export default function MenuPage() {
                     <div style={{ marginBottom: 'var(--space-10)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
                             <div style={{ width: '8px', height: '24px', background: 'var(--primary)', borderRadius: '4px' }} />
-                            <h2 style={{ fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', fontWeight: 800, margin: 0, color: 'var(--text)' }}>Today's Specials</h2>
+                            <h2 style={{ fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', fontWeight: 800, margin: 0, color: 'var(--text)' }}>Today&apos;s Specials</h2>
                         </div>
                         <div className="menu-grid">
                             {specials.map(item => (
@@ -225,28 +219,30 @@ export default function MenuPage() {
             <div 
                 style={{
                 position: 'fixed',
-                bottom: 'clamp(100px, 18vw, 120px)',
+                bottom: 'clamp(70px, 12vw, 100px)',
                 left: '50%',
                 transform: 'translateX(-50%)',
                 zIndex: 10001,
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                width: '100%',
-                maxWidth: 'clamp(280px, 80vw, 320px)',
-                padding: '0 clamp(12px, 3vw, 20px)'
+                width: 'calc(100% - 16px)',
+                maxWidth: '320px',
+                padding: '0 8px',
+                boxSizing: 'border-box',
+                pointerEvents: 'none'
             }}>
                 {/* The Pop-up Menu */}
                 {isCategoryMenuOpen && (
                     <div
                         style={{
                             width: '100%',
-                            maxHeight: '400px',
+                            maxHeight: 'clamp(300px, 60vh, 400px)',
                             background: 'rgba(255, 255, 255, 0.9)',
                             backdropFilter: 'blur(20px)',
                             WebkitBackdropFilter: 'blur(20px)',
                             borderRadius: '32px',
-                            padding: '1.25rem',
+                            padding: 'clamp(1rem, 3vw, 1.25rem)',
                             boxShadow: '0 20px 50px rgba(0,0,0,0.15)',
                             border: '1px solid rgba(255,255,255,0.5)',
                             display: 'flex',
@@ -254,7 +250,9 @@ export default function MenuPage() {
                             gap: '8px',
                             marginBottom: '16px',
                             animation: 'slideUpCenter 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                            overflowY: 'auto'
+                            overflowY: 'auto',
+                            pointerEvents: 'auto',
+                            boxSizing: 'border-box'
                         }}
                         className="scrollbar-hide"
                     >
@@ -272,7 +270,7 @@ export default function MenuPage() {
                             onClick={() => { setActiveCategory('all'); setIsCategoryMenuOpen(false); }}
                             style={{
                                 textAlign: 'center',
-                                padding: '1rem',
+                                padding: 'clamp(0.75rem, 2vw, 1rem)',
                                 borderRadius: '20px',
                                 border: 'none',
                                 background: activeCategory === 'all' ? ITALIAN_RED : 'rgba(0,0,0,0.03)',
@@ -280,7 +278,8 @@ export default function MenuPage() {
                                 fontWeight: 600,
                                 cursor: 'pointer',
                                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                fontSize: '0.95rem'
+                                fontSize: 'clamp(0.85rem, 2vw, 0.95rem)',
+                                pointerEvents: 'auto'
                             }}
                         >
                             All Dishes
@@ -292,7 +291,7 @@ export default function MenuPage() {
                                 onClick={() => { setActiveCategory(cat.id); setIsCategoryMenuOpen(false); }}
                                 style={{
                                     textAlign: 'center',
-                                    padding: '1rem',
+                                    padding: 'clamp(0.75rem, 2vw, 1rem)',
                                     borderRadius: '20px',
                                     border: 'none',
                                     background: activeCategory === cat.id ? ITALIAN_RED : 'rgba(0,0,0,0.03)',
@@ -300,7 +299,9 @@ export default function MenuPage() {
                                     fontWeight: 600,
                                     cursor: 'pointer',
                                     transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                    fontSize: '0.95rem'
+                                    fontSize: 'clamp(0.85rem, 2vw, 0.95rem)',
+                                    pointerEvents: 'auto',
+                                    wordBreak: 'break-word'
                                 }}
                             >
                                 {cat.name}
@@ -313,7 +314,7 @@ export default function MenuPage() {
                 <button
                     onClick={() => setIsCategoryMenuOpen(!isCategoryMenuOpen)}
                     style={{
-                        width: isCategoryMenuOpen ? '64px' : 'clamp(150px, 40vw, 180px)',
+                        width: isCategoryMenuOpen ? 'clamp(48px, 12vw, 64px)' : 'clamp(130px, 35vw, 180px)',
                         height: 'clamp(52px, 12vw, 64px)',
                         borderRadius: '40px',
                         background: isCategoryMenuOpen ? 'white' : ITALIAN_RED,
@@ -327,15 +328,17 @@ export default function MenuPage() {
                         cursor: 'pointer',
                         transition: 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
                         fontWeight: 700,
-                        letterSpacing: '0.05em'
+                        letterSpacing: '0.05em',
+                        pointerEvents: 'auto',
+                        flexShrink: 0
                     }}
                 >
                     {isCategoryMenuOpen ? (
-                        <X size={28} />
+                        <X size={24} />
                     ) : (
                         <>
-                            <LayoutGrid size={22} />
-                            <span style={{ fontSize: '0.9rem' }}>CATEGORIES</span>
+                            <LayoutGrid size={20} />
+                            <span style={{ fontSize: 'clamp(0.75rem, 2vw, 0.9rem)' }}>CATEGORIES</span>
                         </>
                     )}
                 </button>

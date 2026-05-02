@@ -1,19 +1,17 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
     TrendingUp,
     ShoppingBag,
     Clock,
     Download,
-    Settings,
     Users,
     FileText,
     ArrowUpRight,
     ArrowDownRight,
     Menu as MenuIcon,
     PieChart as PieChartIcon,
-    BarChart2,
     Sparkles,
     Activity,
     DollarSign,
@@ -37,7 +35,6 @@ import {
     LineChart,
     Line
 } from 'recharts'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Loading } from '@/components/ui/Loading'
 import Link from 'next/link'
@@ -53,9 +50,9 @@ interface Order {
     table_name: string
     num_guests: number | null
     discount_amount: number
-    user?: { role: string }
-    guest_info?: any
-    items?: any[]
+    user?: { role: string; name?: string; phone?: string; parent_name?: string }
+    guest_info?: { name?: string; phone?: string }
+    items?: { menu_item?: { name?: string; category?: { name?: string } }; quantity: number }[]
 }
 
 export default function AdminDashboard() {
@@ -69,13 +66,11 @@ export default function AdminDashboard() {
     })
 
     const [recentOrders, setRecentOrders] = useState<Order[]>([])
-    const [allOrders, setAllOrders] = useState<Order[]>([])
     const [currentPage, setCurrentPage] = useState(1)
-    const itemsPerPage = 10
-    const [revenueData, setRevenueData] = useState<any[]>([])
-    const [categoryData, setCategoryData] = useState<any[]>([])
-    const [demographicData, setDemographicData] = useState<any[]>([])
-    const [hourlyData, setHourlyData] = useState<any[]>([])
+    const [revenueData, setRevenueData] = useState<{ date: string; amount: number; orders: number; rawDate: string }[]>([])
+    const [categoryData, setCategoryData] = useState<{ name: string; count: number; color: string }[]>([])
+    const [demographicData, setDemographicData] = useState<{ name: string; value: number; color: string }[]>([])
+    const [hourlyData, setHourlyData] = useState<{ hour: string; orders: number }[]>([])
     const [loading, setLoading] = useState(true)
     const { logout } = useAuth()
     const { clearCart } = useCart()
@@ -101,6 +96,7 @@ export default function AdminDashboard() {
 
     useEffect(() => {
         fetchData()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [startDate, endDate])
 
     async function fetchData() {
@@ -108,7 +104,7 @@ export default function AdminDashboard() {
         try {
             const res = await fetch(`/api/orders?all=true&startDate=${startDate}&endDate=${endDate}`)
             const json = await res.json()
-            const orders: any[] = json.success ? json.data : null
+            const orders: Order[] = json.success ? json.data : null
 
             if (orders) {
                 const totalRevenue = orders.reduce((sum, o) => sum + (o.total || 0), 0)
@@ -128,7 +124,6 @@ export default function AdminDashboard() {
                     avgOrderValue: parseFloat(avgVal),
                     todayRevenue
                 })
-                setAllOrders(orders)
                 setRecentOrders(orders.slice(0, 10))
 
                 // 1. Process Revenue Data
@@ -163,7 +158,7 @@ export default function AdminDashboard() {
                 // 3. Process Category Data
                 const categories: { [key: string]: number } = {}
                 orders.forEach(o => {
-                    o.items?.forEach((item: any) => {
+                    o.items?.forEach((item) => {
                         const catName = item.menu_item?.category?.name || 'Other'
                         categories[catName] = (categories[catName] || 0) + item.quantity
                     })
@@ -198,18 +193,18 @@ export default function AdminDashboard() {
                 const data = json.success ? json.data : null
                 if (!data) return
                 const headers = ['Customer Name', 'Parent Name', 'Phone Number', 'Role', 'Guests', 'Items Ordered', 'Money Spent (₹)', 'Timestamp']
-                const rows = data.map((o: any) => {
+                const rows = data.map((o: Order) => {
                     const role = o.user?.role || (o.guest_info ? 'guest' : 'unknown')
                     const name = o.user?.name || o.guest_info?.name || 'Guest'
                     const parentName = o.user?.role === 'RIDER' ? (o.user?.parent_name || 'N/A') : ''
                     const phone = o.user?.phone || o.guest_info?.phone || 'N/A'
                     const guests = o.num_guests || 1
-                    const itemSummary = o.items ? o.items.map((i: any) => `${i.menu_item?.name} (x${i.quantity})`).join('; ') : 'No items'
+                    const itemSummary = o.items ? o.items.map((i) => `${i.menu_item?.name} (x${i.quantity})`).join('; ') : 'No items'
                     const finalTotal = (o.total - (o.discount_amount || 0)).toFixed(2)
                     const timestamp = new Date(o.created_at).toLocaleString()
                     return [`"${name}"`, `"${parentName}"`, `"${phone}"`, role === 'RIDER' ? 'RIDER' : role.toUpperCase(), guests, `"${itemSummary}"`, finalTotal, `"${timestamp}"`]
                 })
-                const csvContent = [headers.join(','), ...rows.map((r: any) => r.join(','))].join('\n')
+                const csvContent = [headers.join(','), ...rows.map((r: unknown[]) => r.join(','))].join('\n')
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
                 const url = window.URL.createObjectURL(blob)
                 const a = document.createElement('a')
@@ -942,12 +937,12 @@ function ActionButton({ icon, label, href, onClick }: { icon: React.ReactNode, l
                 textDecoration: 'none',
                 boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
             }}
-            onMouseEnter={(e: any) => {
+            onMouseEnter={(e: React.MouseEvent<HTMLElement>) => {
                 e.currentTarget.style.background = 'rgba(var(--primary-rgb), 0.1)'
                 e.currentTarget.style.transform = 'translateX(5px)'
                 e.currentTarget.style.boxShadow = '0 4px 12px rgba(var(--primary-rgb), 0.1)'
             }}
-            onMouseLeave={(e: any) => {
+            onMouseLeave={(e: React.MouseEvent<HTMLElement>) => {
                 e.currentTarget.style.background = 'rgba(var(--primary-rgb), 0.03)'
                 e.currentTarget.style.transform = 'translateX(0)'
                 e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)'

@@ -2,21 +2,19 @@
 
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '@/lib/auth/context'
-import { Button } from '@/components/ui/button'
+import NextImage from 'next/image'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Loading } from '@/components/ui/Loading'
 import {
     Trash2,
     Plus,
-    Image,
     Bell,
     Calendar,
     Link as LinkIcon,
     Sparkles,
     ExternalLink,
-    ChefHat,
-    Utensils
+    ChefHat
 } from 'lucide-react'
 import { ImageSelector } from '@/components/ui/ImageSelector'
 import { AdminPageHeader } from '@/components/layout/AdminPageHeader'
@@ -51,6 +49,7 @@ export default function CMSPage() {
         checkMobile()
         window.addEventListener('resize', checkMobile)
         return () => window.removeEventListener('resize', checkMobile)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sessionToken, authUser])
 
     function getAuthHeaders(): Record<string, string> {
@@ -473,10 +472,12 @@ function ItalianAnnouncementCard({ item, onDelete }: { item: Announcement; onDel
                     position: 'relative',
                     borderBottom: '1px solid rgba(var(--primary-rgb), 0.1)'
                 }}>
-                    <img
-                        src={item.image_url}
+                    <NextImage
+                        src={item.image_url!}
                         alt={item.title}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        fill
+                        sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        style={{ objectFit: 'cover' }}
                     />
                     <div style={{
                         position: 'absolute',

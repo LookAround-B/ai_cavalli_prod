@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from 'react'
 import { AdminPageHeader } from '@/components/layout/AdminPageHeader'
-import { Loading } from '@/components/ui/Loading'
 import { showError, showSuccess, showConfirm } from '@/components/ui/Popup'
 import { TrendingUp, DollarSign, AlertCircle, Check, Search, ChevronLeft, ChevronRight } from 'lucide-react'
 
@@ -85,8 +84,8 @@ export default function PriceIncreasePage() {
             } else {
                 showError('Preview Failed', json.error || 'Failed to generate preview')
             }
-        } catch (e: any) {
-            showError('Preview Failed', e.message || 'An error occurred')
+        } catch (e: unknown) {
+            showError('Preview Failed', (e as Error).message || 'An error occurred')
         }
         setLoading(false)
     }

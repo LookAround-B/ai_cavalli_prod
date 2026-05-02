@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
             }
 
             // Create or update guest session
-            let session: any = null
+            let session: Record<string, unknown> | null = null
             try {
                 const existingSession = await prisma.guestSession.findFirst({
                     where: { guestPhone: sanitizedPhone, status: 'active' },
@@ -210,7 +210,7 @@ export async function POST(request: NextRequest) {
         }
 
         return NextResponse.json({ success: false, error: 'Invalid login_type' }, { status: 400 })
-    } catch (error) {
+    } catch {
         return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
     }
 }

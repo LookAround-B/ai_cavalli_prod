@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
         })
 
         // Map to snake_case for frontend compat
-        const data = users.map((u: any) => ({
+        const data = users.map((u) => ({
             id: u.id, phone: u.phone, email: u.email, name: u.name,
             role: u.role, parent_name: u.parentName, created_at: u.createdAt
         }))
@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
 
             const { id, name, phone, email, pin, role, parent_name } = updateResult.data
 
-            const data: any = {
+            const data: Record<string, unknown> = {
                 name,
                 phone,
                 role: role as UserRole,

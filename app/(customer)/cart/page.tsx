@@ -13,13 +13,26 @@ import { Loading } from '@/components/ui/Loading'
 import { showError, showPopup } from '@/components/ui/Popup'
 import { LoginRequiredModal } from '@/components/ui/LoginRequiredModal'
 
+interface DailySpecial {
+    id: string
+    period?: string
+    menu_item?: { id: string; name: string; price: number }
+    name?: string
+    price?: number
+}
+
+interface OrderResponse {
+    success: boolean
+    error?: string
+}
+
 export default function CartPage() {
-    const { items, addToCart, removeFromCart, updateQuantity, total, clearCart, editingOrderId, setEditingOrderId } = useCart()
+    const { items, addToCart, removeFromCart, updateQuantity, total, clearCart, editingOrderId } = useCart()
     const { user } = useAuth()
     const router = useRouter()
 
     const [loading, setLoading] = useState(false)
-    const [dailySpecials, setDailySpecials] = useState<any[]>([])
+    const [dailySpecials, setDailySpecials] = useState<DailySpecial[]>([])
     const [locationType, setLocationType] = useState<'indoor' | 'outdoor'>('indoor')
     const [notes, setNotes] = useState(() => {
         if (typeof window !== 'undefined') {
@@ -129,7 +142,7 @@ export default function CartPage() {
             // Get auth token
             const token = localStorage.getItem('session_token')
 
-            let orderData: any
+            let orderData: OrderResponse
 
             if (editingOrderId) {
                 // UPDATE existing order
@@ -183,9 +196,9 @@ export default function CartPage() {
 
             // Redirect
             router.push('/orders')
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Order placement error:', err)
-            showError('Oops!', err.message || 'Something went wrong. Please try again.')
+            showError('Oops!', (err as Error).message || 'Something went wrong. Please try again.')
         } finally {
             setLoading(false)
         }
@@ -222,7 +235,7 @@ export default function CartPage() {
                 </div>
                 <h1 style={{ fontSize: 'clamp(1.5rem, 5vw, 2rem)' }}>Your Cart is Empty</h1>
                 <p style={{ color: 'var(--text-muted)', fontSize: 'clamp(0.95rem, 3vw, 1.125rem)', maxWidth: '300px' }}>
-                    Looks like you haven't added anything to your cart yet.
+                    Looks like you haven&apos;t added anything to your cart yet.
                 </p>
                 <Link href="/menu">
                     <Button size="lg">Discover Our Menu</Button>
@@ -485,7 +498,7 @@ export default function CartPage() {
                         {(!user || user?.role === 'OUTSIDER') && dailySpecials.length > 0 && (
                             <div style={{ marginTop: '16px', padding: '16px', background: 'linear-gradient(135deg, #FFF7ED 0%, #FEF3C7 100%)', borderRadius: '12px', border: '2px solid #FBBF24', marginBottom: 'var(--space-6)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', fontSize: '0.75rem', fontWeight: 800, color: '#92400E', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    ⭐ Today's Specials
+                                    ⭐ Today&apos;s Specials
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '250px', overflowY: 'auto' }}>
                                     {dailySpecials.map((special) => {
@@ -566,7 +579,7 @@ export default function CartPage() {
                                     position: 'relative',
                                     zIndex: 1
                                 }}>
-                                    "Freshly made just for you - it'll be ready in about 30 minutes. Take a moment to soak in the Horsey atmosphere."
+                                    &quot;Freshly made just for you - it&apos;ll be ready in about 30 minutes. Take a moment to soak in the Horsey atmosphere.&quot;
                                 </p>
                             </div>
                         )}

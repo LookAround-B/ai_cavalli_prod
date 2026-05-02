@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/database/prisma'
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const staff = await prisma.user.findMany({
       where: { role: { in: ['KITCHEN', 'ADMIN'] } },

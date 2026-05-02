@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
 
         // Fetch user email if linked
         let userEmail: string | null = null
-        let emailResult = { success: false, error: 'No email found for user' }
+        let emailResult: { success: boolean; error?: string } = { success: false, error: 'No email found for user' }
         if (session.userId) {
             const userData = await prisma.user.findUnique({
                 where: { id: session.userId },
@@ -91,9 +91,9 @@ export async function POST(request: NextRequest) {
         // Send Email Bill if email available
         if (userEmail) {
             try {
-                const { sendOrderBillEmail } = require('@/lib/utils/email')
+                const { sendOrderBillEmail } = await import('@/lib/utils/email')
 
-                const allItems: any[] = []
+                const allItems: { name: string; quantity: number; price: number }[] = []
                 orders.forEach((order) => {
                     order.orderItems.forEach((item) => {
                         allItems.push({
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
                     items: allItems,
                     totalAmount
                 })
-            } catch (e) {
+            } catch {
                 emailResult = { success: false, error: 'Email sending failed' }
             }
         }

@@ -1,30 +1,61 @@
 'use client'
 
-import { useEffect, useState, useRef, startTransition } from 'react'
+import React, { useEffect, useState, useRef, startTransition } from 'react'
 import { useAuth } from '@/lib/auth/context'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useOrderStream } from '@/lib/hooks/useOrderStream'
 import { fetchWithRetry } from '@/lib/utils/fetch-with-retry'
 import { ChevronLeft, Package, Clock, CheckCircle2, XCircle, ChevronDown, LogOut, RefreshCw, Timer } from 'lucide-react'
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
 import { Loading } from '@/components/ui/Loading'
 import { Utensils, Receipt } from 'lucide-react'
 import { useCart } from '@/lib/context/CartContext'
 import { BillPreviewModal, BillData } from '@/components/ui/BillPreviewModal'
 import { showError, showSuccess, showConfirm } from '@/components/ui/Popup'
 
+interface OrderItem {
+    id: string
+    menu_item_id?: string
+    menu_item?: { id: string; name: string }
+    quantity: number
+    price: number | string
+}
+
+interface Order {
+    id: string
+    status: string
+    total: number | string
+    discount_amount: number | string | null
+    billed: boolean
+    created_at: string
+    notes?: string
+    items?: OrderItem[]
+    guest_name?: string
+    num_guests?: number
+    table_name?: string
+    payment_method?: string
+    user_id?: string
+}
+
+interface GuestSession {
+    id?: string
+    _virtual?: boolean
+    userId?: string
+    status?: string
+    phone?: string
+}
+
 export default function OrdersPage() {
     const { user, logout } = useAuth()
-    const { clearCart, addToCart, items: cartItems, setEditingOrderId, editingOrderId } = useCart()
+    const { clearCart, addToCart, setEditingOrderId, editingOrderId } = useCart()
     const router = useRouter()
     const searchParams = useSearchParams()
     const orderIdParam = searchParams.get('orderId')
 
-    const [orders, setOrders] = useState<any[]>([])
+    const [orders, setOrders] = useState<Order[]>([])
     const [loading, setLoading] = useState(true)
     const [refreshing, setRefreshing] = useState(false)
-    const [activeSession, setActiveSession] = useState<any>(null)
+    const [activeSession, setActiveSession] = useState<GuestSession | null>(null)
     const [endingSession, setEndingSession] = useState(false)
     const [billPreview, setBillPreview] = useState<BillData | null>(null)
     const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
@@ -43,7 +74,7 @@ export default function OrdersPage() {
     // Cooldown notification state
     const [showCooldown, setShowCooldown] = useState(false)
     const [cooldownTime, setCooldownTime] = useState(300) // 5 minutes in seconds
-    const [lastOrderTime, setLastOrderTime] = useState<Date | null>(null)
+    const [, setLastOrderTime] = useState<Date | null>(null)
 
     useEffect(() => {
         // If neither user nor orderIdParam, we can't show anything
@@ -81,12 +112,12 @@ export default function OrdersPage() {
                     if (
                         user?.role === 'OUTSIDER' &&
                         data.length > 0 &&
-                        data.every((o: any) => o.billed === true) &&
+                        data.every((o: Order) => o.billed === true) &&
                         !autoLogoutTriggered
                     ) {
                         setAutoLogoutTriggered(true)
                         // Fetch the generated bill and show it so guest can print/save
-                        fetchKitchenBill(data.map((o: any) => o.id))
+                        fetchKitchenBill(data.map((o: Order) => o.id))
                     }
                 }
             } catch (e) { console.error('fetchOrders error:', e) }
@@ -125,6 +156,7 @@ export default function OrdersPage() {
 
         fetchOrders()
         fetchActiveSession()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user, orderIdParam])
 
     // Manual refresh handler
@@ -153,12 +185,12 @@ export default function OrdersPage() {
     useEffect(() => { editingOrderIdRef.current = editingOrderId }, [editingOrderId])
 
     // Refs for discount polling — avoid stale closures in setInterval
-    const ordersRef = useRef<any[]>([])
+    const ordersRef = useRef<Order[]>([])
     const prevDiscountsRef = useRef<Record<string, number>>({})
     useEffect(() => {
         ordersRef.current = orders
         // Seed baseline discounts for orders we haven't seen yet
-        orders.forEach((o: any) => {
+        orders.forEach((o: Order) => {
             if (!(o.id in prevDiscountsRef.current)) {
                 prevDiscountsRef.current[o.id] = Number(o.discount_amount || 0)
             }
@@ -189,7 +221,7 @@ export default function OrdersPage() {
     }, [showCooldown, cooldownTime])
 
     // Compute final total for an order (items total → apply % discount → add 5% GST)
-    const orderFinalTotal = (order: any) => {
+    const orderFinalTotal = (order: Order) => {
         const itemsTotal = Number(order.total || 0)
         const discountPct = Number(order.discount_amount || 0)
         const discountRupees = discountPct > 0 ? Math.round((itemsTotal * (discountPct / 100)) * 100) / 100 : 0
@@ -247,7 +279,7 @@ export default function OrdersPage() {
     const applyOrderUpdate = (patch: { id?: string; status?: string; discount_amount?: number; billed?: boolean }) => {
         if (!patch.id) return
         const current = ordersRef.current
-        const existing = current.find((o: any) => o.id === patch.id)
+        const existing = current.find((o: Order) => o.id === patch.id)
         if (!existing) return
 
         const prevPct = Number(existing.discount_amount || 0)
@@ -255,7 +287,7 @@ export default function OrdersPage() {
 
         if (nextPct > prevPct) {
             const itemsTotal = (existing.items || []).reduce(
-                (s: number, i: any) => s + i.quantity * Number(i.price), 0,
+                (s: number, i: OrderItem) => s + i.quantity * Number(i.price), 0,
             ) || Number(existing.total || 0)
             const saved = toRupees(nextPct, itemsTotal) - toRupees(prevPct, itemsTotal)
             prevDiscountsRef.current[patch.id] = nextPct
@@ -269,8 +301,8 @@ export default function OrdersPage() {
         }
 
         startTransition(() => {
-            setOrders((prev: any[]) =>
-                prev.map((o: any) =>
+            setOrders((prev: Order[]) =>
+                prev.map((o: Order) =>
                     o.id === patch.id
                         ? {
                               ...o,
@@ -293,7 +325,7 @@ export default function OrdersPage() {
             // Only process events relevant to THIS user's orders
             if (!id) return
             const current = ordersRef.current
-            const isMyOrder = current.some((o: any) => o.id === id) ||
+            const isMyOrder = current.some((o: Order) => o.id === id) ||
                               (userId && user && userId === user.id)
             if (!isMyOrder) return
 
@@ -307,10 +339,10 @@ export default function OrdersPage() {
             const billed = event.billed as boolean | undefined
             if (billed && !autoLogoutTriggered) {
                 const myOrders = ordersRef.current
-                const allBilled = myOrders.every((o: any) => o.id === id ? true : o.billed)
+                const allBilled = myOrders.every((o: Order) => o.id === id ? true : o.billed)
                 if (allBilled && myOrders.length > 0) {
                     setAutoLogoutTriggered(true)
-                    fetchKitchenBill(myOrders.map((o: any) => o.id))
+                    fetchKitchenBill(myOrders.map((o: Order) => o.id))
                 }
             }
         }
@@ -326,14 +358,12 @@ export default function OrdersPage() {
             if (!isVisible()) return
 
             const current = ordersRef.current
-            if (!current.length || current.every((o: any) => o.billed)) return
+            if (!current.length || current.every((o: Order) => o.billed)) return
 
             try {
                 fetchAbort.current?.abort()
                 fetchAbort.current = new AbortController()
 
-                // Use ?since= to only fetch changed orders
-                const sinceParam = lastEtag.current ? '' : '' // initial load has no since
                 const url = `/api/orders?userId=${user.id}`
                 const headers: Record<string, string> = { 'Content-Type': 'application/json' }
                 if (lastEtag.current) headers['If-None-Match'] = lastEtag.current
@@ -352,9 +382,9 @@ export default function OrdersPage() {
                 const json = await res.json()
                 if (!json.success || !Array.isArray(json.data)) return
 
-                const fresh: any[] = json.data
-                const hasChange = fresh.some((fo: any) => {
-                    const ex = current.find((o: any) => o.id === fo.id)
+                const fresh: Order[] = json.data
+                const hasChange = fresh.some((fo: Order) => {
+                    const ex = current.find((o: Order) => o.id === fo.id)
                     return !ex ||
                         Number(ex.discount_amount) !== Number(fo.discount_amount) ||
                         ex.status !== fo.status ||
@@ -363,7 +393,7 @@ export default function OrdersPage() {
 
                 if (hasChange) {
                     // Show discount toast for any newly applied discounts
-                    fresh.forEach((fo: any) => applyOrderUpdate({
+                    fresh.forEach((fo: Order) => applyOrderUpdate({
                         id:              fo.id,
                         status:          fo.status,
                         discount_amount: Number(fo.discount_amount),
@@ -391,7 +421,7 @@ export default function OrdersPage() {
                     const sData = await sRes.json()
                     if (sData.success && sData.session?.status === 'ended' && !autoLogoutTriggered) {
                         setAutoLogoutTriggered(true)
-                        const orderIds = ordersRef.current.map((o: any) => o.id)
+                        const orderIds = ordersRef.current.map((o: Order) => o.id)
                         if (orderIds.length > 0) {
                             fetchKitchenBill(orderIds)
                         } else {
@@ -414,7 +444,7 @@ export default function OrdersPage() {
     // Fetch a bill generated by kitchen/admin and show it in the preview modal
     const fetchKitchenBill = async (orderIds: string[]) => {
         try {
-            let bill: any = null
+            let bill: Record<string, unknown> | null = null
 
             // Strategy 1: Find bill by session_id
             if (activeSession && !activeSession._virtual && activeSession.id) {
@@ -439,9 +469,10 @@ export default function OrdersPage() {
 
             if (bill) {
                 setBillPreview({
-                    id: bill.id,
-                    billNumber: bill.bill_number || '',
-                    items: (bill.bill_items || []).map((item: any) => ({
+                    id: (bill.id as string) || '',
+                    billNumber: (bill.bill_number as string) || '',
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    items: ((bill.bill_items as any[]) || []).map((item) => ({
                         item_name: item.item_name || item.itemName || item.name || 'Item',
                         quantity: item.quantity,
                         price: Number(item.price || item.unit_price || 0),
@@ -450,9 +481,9 @@ export default function OrdersPage() {
                     itemsTotal: Number(bill.items_total || 0),
                     discountAmount: Number(bill.discount_amount || 0),
                     finalTotal: Number(bill.final_total || 0),
-                    paymentMethod: bill.payment_method || 'cash',
-                    createdAt: bill.created_at,
-                    sessionDetails: bill.session_details
+                    paymentMethod: (bill.payment_method as string) || 'cash',
+                    createdAt: (bill.created_at as string),
+                    sessionDetails: (bill.session_details as any)
                 })
             } else {
                 // No bill record found — offer logout
@@ -475,7 +506,7 @@ export default function OrdersPage() {
         }
     }
 
-    const handleOrderBill = async (order: any) => {
+    const handleOrderBill = async (order: Order) => {
         // Fetch fresh order data so discount reflects any kitchen-applied changes
         let freshOrder = order
         try {
@@ -486,7 +517,7 @@ export default function OrdersPage() {
             }
         } catch {}
 
-        const items = (freshOrder.items || []).map((item: any) => ({
+        const items = (freshOrder.items || []).map((item: OrderItem) => ({
             item_name: item.menu_item?.name || 'Item',
             quantity: item.quantity,
             price: Number(item.price),
@@ -503,7 +534,7 @@ export default function OrdersPage() {
             })
         }
 
-        const itemsTotal = items.reduce((sum: number, i: any) => sum + i.subtotal, 0)
+        const itemsTotal = items.reduce((sum: number, i: { subtotal: number }) => sum + i.subtotal, 0)
         // discount_amount is stored as a percentage (e.g. 45 = 45%)
         const discountPct = Number(freshOrder.discount_amount || 0)
         const discountAmount = discountPct > 0 ? Math.round((itemsTotal * (discountPct / 100)) * 100) / 100 : 0
@@ -544,9 +575,9 @@ export default function OrdersPage() {
         }
 
         // CASE 2: All orders already billed — fetch existing bill and show it
-        const allBilled = orders.every((o: any) => o.billed === true)
+        const allBilled = orders.every((o: Order) => o.billed === true)
         if (allBilled) {
-            const orderIds = orders.map((o: any) => o.id)
+            const orderIds = orders.map((o: Order) => o.id)
             await fetchKitchenBill(orderIds)
             return
         }
@@ -567,7 +598,7 @@ export default function OrdersPage() {
 
         setEndingSession(true)
         try {
-            let data: any
+            let data: { success: boolean; error?: string; bill?: Record<string, unknown> }
 
             // Use session-based flow for OUTSIDER with a real guest_session
             if (activeSession && !activeSession._virtual && activeSession.id) {
@@ -596,9 +627,10 @@ export default function OrdersPage() {
             if (data.success && data.bill) {
                 // Show the bill preview modal
                 setBillPreview({
-                    id: data.bill.id,
-                    billNumber: data.bill.billNumber || data.bill.bill_number || '',
-                    items: (data.bill.items || []).map((i: any) => ({
+                    id: (data.bill.id as string) || '',
+                    billNumber: (data.bill.billNumber as string) || (data.bill.bill_number as string) || '',
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    items: ((data.bill.items as any[]) || []).map((i) => ({
                         item_name: i.item_name || i.itemName || i.name || '',
                         quantity: i.quantity,
                         price: Number(i.price),
@@ -607,9 +639,9 @@ export default function OrdersPage() {
                     itemsTotal: Number(data.bill.itemsTotal || data.bill.items_total || 0),
                     discountAmount: Number(data.bill.discountAmount || data.bill.discount_amount || 0),
                     finalTotal: Number(data.bill.finalTotal || data.bill.final_total || 0),
-                    paymentMethod: data.bill.paymentMethod || data.bill.payment_method || 'cash',
+                    paymentMethod: (data.bill.paymentMethod as string) || (data.bill.payment_method as string) || 'cash',
                     createdAt: new Date().toISOString(),
-                    sessionDetails: data.bill.sessionDetails
+                    sessionDetails: (data.bill.sessionDetails as any)
                 })
             } else {
                 showError("Bill Generation Failed", data.error || 'Unknown error')
@@ -708,7 +740,7 @@ export default function OrdersPage() {
                         </div>
                         {orders.length > 0 && (
                             <p style={{ margin: '6px 0 0', opacity: 1, fontSize: '0.85rem', fontWeight: 700, textShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
-                                {orders.length} order{orders.length !== 1 ? 's' : ''} &middot; ₹{orders.reduce((sum: number, o: any) => sum + orderFinalTotal(o), 0).toFixed(0)} total
+                                {orders.length} order{orders.length !== 1 ? 's' : ''} &middot; ₹{orders.reduce((sum: number, o: Order) => sum + orderFinalTotal(o), 0).toFixed(0)} total
                             </p>
                         )}
                     </div>
@@ -764,7 +796,7 @@ export default function OrdersPage() {
                             { key: 'ready', label: 'Ready', color: 'var(--primary)', bg: '#FEF2F2', icon: CheckCircle2 },
                             { key: 'completed', label: 'Done', color: '#10B981', bg: '#ECFDF5', icon: CheckCircle2 },
                         ].map(s => {
-                            const count = orders.filter((o: any) => o.status === s.key).length
+                            const count = orders.filter((o: Order) => o.status === s.key).length
                             if (count === 0) return null
                             const SIcon = s.icon
                             return (
@@ -919,8 +951,9 @@ export default function OrdersPage() {
                 {/* Orders List */}
                 {orders.length > 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {orders.map((order, index) => {
-                            const statusConfig: any = {
+                        {orders.map((order) => {
+                            type StatusConfig = { icon: React.ElementType; color: string; label: string; bg: string; borderColor: string }
+                            const statusConfig: Record<string, StatusConfig> = {
                                 pending: { icon: Clock, color: '#F59E0B', label: 'Preparing', bg: '#FFFBEB', borderColor: '#FDE68A' },
                                 ready: { icon: CheckCircle2, color: 'var(--primary)', label: 'Ready to Serve', bg: '#FEF2F2', borderColor: '#FECACA' },
                                 completed: { icon: CheckCircle2, color: '#10B981', label: 'Completed', bg: '#ECFDF5', borderColor: '#A7F3D0' },
@@ -1027,10 +1060,10 @@ export default function OrdersPage() {
                                                 </span>
                                                 <span style={{ opacity: 0.4 }}>&middot;</span>
                                                 <span>{new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                                {order.table_name && (
+                                                {(order as any).table_name && (
                                                     <>
                                                         <span style={{ opacity: 0.4 }}>&middot;</span>
-                                                        <span>{order.table_name}</span>
+                                                        <span>{(order as any).table_name}</span>
                                                     </>
                                                 )}
                                             </div>
@@ -1101,16 +1134,16 @@ export default function OrdersPage() {
                                                             Standard Regular Staff Meal
                                                         </div>
                                                     )}
-                                                    {order.items?.length > 0 && (
+                                                    {order.items && order.items.length > 0 && (
                                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                                            {order.items?.map((item: any, i: number) => (
+                                                            {order.items.map((item: OrderItem, i: number) => (
                                                                 <div key={item.id} style={{
                                                                     display: 'flex',
                                                                     justifyContent: 'space-between',
                                                                     alignItems: 'center',
                                                                     fontSize: '0.87rem',
-                                                                    paddingBottom: i < order.items.length - 1 ? '8px' : 0,
-                                                                    borderBottom: i < order.items.length - 1 ? '1px solid var(--border)' : 'none',
+                                                                    paddingBottom: i < (order.items?.length ?? 0) - 1 ? '8px' : 0,
+                                                                    borderBottom: i < (order.items?.length ?? 0) - 1 ? '1px solid var(--border)' : 'none',
                                                                 }}>
                                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                                         <span style={{
@@ -1131,7 +1164,7 @@ export default function OrdersPage() {
                                                                         <span style={{ fontWeight: 600, color: 'var(--text)' }}>{item.menu_item?.name}</span>
                                                                     </div>
                                                                     <span style={{ fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                                                                        ₹{(item.quantity * item.price).toFixed(0)}
+                                                                        ₹{(item.quantity * Number(item.price)).toFixed(0)}
                                                                     </span>
                                                                 </div>
                                                             ))}

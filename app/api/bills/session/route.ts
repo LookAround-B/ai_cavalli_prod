@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
                 orders = directOrders
             } else {
                 // Fallback: find orders by userId, guest phone, or tableName
-                const fallbackWhere: any[] = []
+                const fallbackWhere: Record<string, unknown>[] = []
                 if (session.userId) {
                     fallbackWhere.push({ userId: session.userId, billed: false, createdAt: { gte: session.startedAt } })
                 }
@@ -129,6 +129,7 @@ export async function POST(request: NextRequest) {
                     billNumber: existingBill.billNumber,
                     itemsTotal: Number(existingBill.itemsTotal),
                     discountAmount: Number(existingBill.discountAmount || 0),
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     gstAmount: Number((existingBill as any).gstAmount || 0),
                     finalTotal: Number(existingBill.finalTotal),
                     paymentMethod: existingBill.paymentMethod,

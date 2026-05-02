@@ -1,27 +1,56 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useAuth } from '@/lib/auth/context'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
-import { User, Package, LogOut, MessageSquare, ShieldCheck, Utensils, Receipt, CreditCard, Clock, CheckCircle2, XCircle, ChevronDown, KeyRound } from 'lucide-react'
-import Link from 'next/link'
+import { User, Package, LogOut, MessageSquare, ShieldCheck, Utensils, Receipt, Clock, CheckCircle2, XCircle, ChevronDown, KeyRound } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Loading } from '@/components/ui/Loading'
 import { useCart } from '@/lib/context/CartContext'
 import { showError, showSuccess, showConfirm } from '@/components/ui/Popup'
 import { useRouter } from 'next/navigation'
 
+interface ProfileOrderItem {
+    id: string
+    menu_item?: { name?: string }
+    quantity: number
+    price: number | string
+}
+
+interface ProfileOrder {
+    id: string
+    status: string
+    total: number | string
+    discount_amount?: number | string | null
+    billed?: boolean
+    created_at: string
+    notes?: string
+    items?: ProfileOrderItem[]
+    num_guests?: number
+    table_name?: string
+}
+
+interface ProfileSession {
+    id?: string
+    _virtual?: boolean
+    userId?: string
+    status?: string
+    total_amount?: number
+    table_name?: string
+}
+
 export default function ProfilePage() {
     const { logout, user, login, guestLogin, isLoading: authLoading } = useAuth()
     const role = user?.role
     const { clearCart } = useCart()
     const router = useRouter()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [userDetails, setUserDetails] = useState<any>(null)
-    const [orders, setOrders] = useState<any[]>([])
+    const [orders, setOrders] = useState<ProfileOrder[]>([])
     const [loadingOrders, setLoadingOrders] = useState(true)
-    const [activeSession, setActiveSession] = useState<any>(null)
+    const [activeSession, setActiveSession] = useState<ProfileSession | null>(null)
     const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
     const [endingSession, setEndingSession] = useState(false)
 
@@ -82,6 +111,7 @@ export default function ProfilePage() {
         fetchUserDetails()
         fetchOrders()
         fetchActiveSession()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user])
 
     const handleGetBill = async () => {
@@ -264,7 +294,7 @@ export default function ProfilePage() {
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                 <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Current Total</span>
                                                 <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--primary)' }}>
-                                                    ₹{(activeSession.total_amount || orders.reduce((sum: number, o: any) => sum + (o.total || 0), 0)).toFixed(2)}
+                                                    ₹{(activeSession.total_amount || orders.reduce((sum: number, o: ProfileOrder) => sum + (Number(o.total) || 0), 0)).toFixed(2)}
                                                 </span>
                                             </div>
                                         </div>
@@ -285,7 +315,7 @@ export default function ProfilePage() {
                                                 <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>{orders.length} ORDER{orders.length !== 1 ? 'S' : ''}</span>
                                             </div>
                                             <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--primary)' }}>
-                                                ₹{orders.reduce((sum: number, o: any) => sum + (o.total || 0), 0).toFixed(2)}
+                                                ₹{orders.reduce((sum: number, o: ProfileOrder) => sum + (Number(o.total) || 0), 0).toFixed(2)}
                                             </span>
                                         </div>
                                     </div>
@@ -388,7 +418,8 @@ export default function ProfilePage() {
             ) : orders.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
                     {orders.map(order => {
-                        const statusConfig: any = {
+                        type StatusConfig = { icon: React.ElementType; color: string; label: string; bg: string }
+                        const statusConfig: Record<string, StatusConfig> = {
                             pending: { icon: Clock, color: '#F59E0B', label: 'Preparing', bg: 'rgba(245, 158, 11, 0.1)' },
                             ready: { icon: CheckCircle2, color: 'var(--primary)', label: 'Ready', bg: 'rgba(var(--primary-rgb), 0.1)' },
                             completed: { icon: CheckCircle2, color: '#10B981', label: 'Done', bg: 'rgba(16, 185, 129, 0.1)' },
@@ -439,7 +470,7 @@ export default function ProfilePage() {
                                                 {summary}
                                             </span>
                                             <span style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '1rem', flexShrink: 0 }}>
-                                                ₹{order.total.toFixed(0)}
+                                                ₹{Number(order.total).toFixed(0)}
                                             </span>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -494,18 +525,18 @@ export default function ProfilePage() {
                                                         <span>Standard Regular Staff Meal</span>
                                                     </div>
                                                 )}
-                                                {order.items?.length > 0 && (
+                                                {(order.items?.length ?? 0) > 0 && (
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                        {order.items?.map((item: any) => (
+                                                        {order.items?.map((item: ProfileOrderItem) => (
                                                             <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 600 }}>
                                                                 <span>{item.quantity}x {item.menu_item?.name}</span>
-                                                                <span style={{ color: 'var(--text-muted)' }}>₹{(item.quantity * item.price).toFixed(0)}</span>
+                                                                <span style={{ color: 'var(--text-muted)' }}>₹{(item.quantity * Number(item.price)).toFixed(0)}</span>
                                                             </div>
                                                         ))}
                                                     </div>
                                                 )}
                                             </div>
-                                            {order.discount_amount > 0 && (
+                                            {Number(order.discount_amount || 0) > 0 && (
                                                 <div style={{ marginTop: '8px', fontSize: '0.8rem', color: '#DC2626', fontWeight: 600 }}>
                                                     Discount: -{order.discount_amount}%
                                                 </div>
@@ -532,13 +563,17 @@ export default function ProfilePage() {
 }
 
 // Myntra-style login section for unauthenticated users on Profile page
-function ProfileLoginSection({ login, guestLogin, router }: { login: any, guestLogin: any, router: any }) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type LoginFn = (params: any) => Promise<any>
+type RouterPush = { push: (path: string) => void }
+
+function ProfileLoginSection({ login, guestLogin, router }: { login: LoginFn, guestLogin: LoginFn, router: RouterPush }) {
     const [loginType, setLoginType] = useState<'guest' | 'staff' | null>(null)
     const [phone, setPhone] = useState('')
     const [pin, setPin] = useState('')
     const [guestName, setGuestName] = useState('')
     const [guestPhone, setGuestPhone] = useState('')
-    const [tableName, setTableName] = useState('')
+    const [tableName] = useState('')
     const [numGuests, setNumGuests] = useState('1')
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)

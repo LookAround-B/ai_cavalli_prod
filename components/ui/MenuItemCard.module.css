@@ -5,16 +5,15 @@
 /* --- Mobile Base Card --- */
 .card {
     position: relative;
-    padding: 16px;
-    margin-bottom: 8px;
+    padding: clamp(12px, 3vw, 16px);
     border: 1px solid #e9e9eb;
     border-radius: 12px;
     background: var(--surface);
     cursor: pointer;
     transition: background 0.15s, box-shadow 0.15s, transform 0.15s;
-    min-height: 120px;
+    min-height: 100px;
     display: flex;
-    gap: 16px;
+    gap: clamp(12px, 3vw, 16px);
     align-items: center;
 }
 
@@ -22,14 +21,30 @@
     background: #fafafa;
 }
 
+@media (min-width: 768px) {
+    .card {
+        flex-direction: column;
+        min-height: 320px;
+        padding: 16px;
+        gap: 0;
+    }
+}
+
 /* Image Section */
 .imageArea {
-    width: 100px;
-    height: 100px;
+    width: clamp(80px, 20vw, 100px);
+    height: clamp(80px, 20vw, 100px);
     flex-shrink: 0;
     border-radius: 12px;
     overflow: hidden;
     background: #f5f5f5;
+}
+
+@media (min-width: 768px) {
+    .imageArea {
+        width: 100%;
+        height: 200px;
+    }
 }
 
 .image {
@@ -62,7 +77,7 @@
 }
 
 .name {
-    font-size: 1.15rem;
+    font-size: clamp(0.95rem, 2.5vw, 1.15rem);
     font-weight: 700;
     font-family: var(--font-serif);
     color: var(--text);
@@ -72,12 +87,12 @@
 .price {
     font-weight: 700;
     color: var(--primary);
-    font-size: 1.05rem;
+    font-size: clamp(0.9rem, 2vw, 1.05rem);
     white-space: nowrap;
 }
 
 .description {
-    font-size: 0.85rem;
+    font-size: clamp(0.75rem, 1.8vw, 0.85rem);
     color: var(--text-muted);
     line-height: 1.4;
     margin: 4px 0 8px 0;
@@ -96,7 +111,7 @@
 .actionArea {
     align-self: flex-end;
     margin-top: auto;
-    width: 80px;
+    width: clamp(70px, 18vw, 80px);
 }
 
 .addBtn {
@@ -105,12 +120,12 @@
     color: var(--primary);
     border: 1px solid var(--primary);
     border-radius: 8px;
-    font-size: 0.85rem;
+    font-size: clamp(0.75rem, 1.5vw, 0.85rem);
     font-weight: 700;
     padding: 6px 0;
     cursor: pointer;
     letter-spacing: 0.02em;
-    min-height: 34px;
+    min-height: 44px;
     transition: background 0.15s, transform 0.1s, color 0.15s;
     display: flex;
     align-items: center;
@@ -143,14 +158,14 @@
     border: 1px solid var(--primary);
     border-radius: 8px;
     overflow: hidden;
-    min-height: 34px;
+    min-height: 44px;
     width: 100%;
     justify-content: space-between;
 }
 
 .qtyBtn {
-    width: 28px;
-    height: 34px;
+    width: clamp(36px, 10vw, 40px);
+    height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -191,7 +206,7 @@
     align-items: center;
     justify-content: center;
     z-index: 10100;
-    padding: 16px;
+    padding: clamp(12px, 3vw, 16px);
     animation: overlayFadeIn 0.2s ease-out;
 }
 
@@ -204,8 +219,8 @@
     background: var(--surface);
     border-radius: 20px;
     width: 100%;
-    max-width: 420px;
-    max-height: 90vh;
+    max-width: clamp(280px, 90vw, 420px);
+    max-height: 90dvh;
     overflow-y: auto;
     overflow-x: hidden;
     position: relative;
@@ -223,14 +238,14 @@
 /* Close (X) button */
 .closeButton {
     position: absolute;
-    top: 12px;
-    right: 12px;
+    top: clamp(8px, 2vw, 12px);
+    right: clamp(8px, 2vw, 12px);
     background: rgba(0, 0, 0, 0.45);
     color: #fff;
     border: none;
     border-radius: 50%;
-    width: 34px;
-    height: 34px;
+    width: clamp(32px, 8vw, 36px);
+    height: clamp(32px, 8vw, 36px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -247,7 +262,7 @@
 /* Modal image */
 .modalImageContainer {
     width: 100%;
-    height: 260px;
+    height: clamp(160px, 40vw, 260px);
     position: relative;
     flex-shrink: 0;
     overflow: hidden;
@@ -268,7 +283,7 @@
 
 /* Modal body */
 .modalBody {
-    padding: 20px 20px 24px;
+    padding: clamp(16px, 4vw, 20px) clamp(16px, 4vw, 20px) clamp(16px, 4vw, 24px);
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -290,7 +305,7 @@
 }
 
 .modalName {
-    font-size: 1.15rem;
+    font-size: clamp(1rem, 2.5vw, 1.15rem);
     font-weight: 700;
     color: var(--text);
     margin: 0;
@@ -300,7 +315,7 @@
 .modalPrice {
     font-weight: 500;
     color: var(--text);
-    font-size: 1rem;
+    font-size: clamp(0.9rem, 2vw, 1rem);
     margin: 0;
 }
 
@@ -317,11 +332,11 @@
     color: #1ba672;
     border: 1px solid #d4d5d9;
     border-radius: 10px;
-    font-size: 1rem;
+    font-size: clamp(0.8rem, 1.8vw, 1rem);
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.03em;
-    padding: 10px 32px;
+    padding: clamp(8px, 2vw, 10px) clamp(24px, 4vw, 32px);
     cursor: pointer;
     box-shadow: 0 3px 12px rgba(0, 0, 0, 0.06);
     transition: background 0.15s;
@@ -350,7 +365,7 @@
 }
 
 .modalQtyBtn {
-    width: 44px;
+    width: clamp(40px, 10vw, 44px);
     height: 44px;
     display: flex;
     align-items: center;
@@ -381,7 +396,7 @@
 
 /* Modal description */
 .modalDescription {
-    font-size: 0.88rem;
+    font-size: clamp(0.8rem, 1.8vw, 0.88rem);
     color: #7e808c;
     line-height: 1.6;
     padding-top: 8px;

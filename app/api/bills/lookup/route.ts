@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
     const orderIds = sanitizeIdList(searchParams.get('orderIds') || '')
     const guestName = sanitizeString(searchParams.get('guestName') || '').slice(0, 50)
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let bills: any[] = []
 
     // Strategy 1: by session
@@ -80,11 +81,12 @@ export async function GET(request: NextRequest) {
         table_name: bill.tableName,
         items_total: Number(bill.itemsTotal),
         discount_amount: Number(bill.discountAmount),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         gst_amount: Number((bill as any).gstAmount || 0),
         final_total: Number(bill.finalTotal),
         payment_method: bill.paymentMethod,
         created_at: bill.createdAt.toISOString(),
-        bill_items: bill.billItems.map((i: any) => ({
+        bill_items: bill.billItems.map((i: { id: string; itemName: string; quantity: number; price: unknown; subtotal: unknown }) => ({
           id: i.id,
           item_name: i.itemName,
           quantity: i.quantity,
