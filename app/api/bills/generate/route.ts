@@ -4,6 +4,7 @@ import { requireRoles } from '@/lib/auth/api-middleware'
 import type { UserRole } from '@/lib/types/auth'
 import { validateBody, generateBillSchema, updateBillPaymentSchema } from '@/lib/validation/schemas'
 import { sanitizeId } from '@/lib/validation/sanitize'
+import { Prisma } from '@prisma/client'
 
 function normalizeRole(role: string): UserRole {
     const raw = (role || '').toUpperCase()
@@ -82,7 +83,18 @@ export async function POST(request: NextRequest) {
         const finalTotal = Math.round((afterDiscount + gstAmount) * 100) / 100
 
         // 4. Generate bill number
-        const billNumber = `BILL-${Date.now().toString(36).toUpperCase()}`
+        let billNumber: string
+        try {
+            const result = await prisma.$queryRaw<[{ generate_bill_number: string }]>(
+                Prisma.sql`SELECT generate_bill_number()`
+            )
+            billNumber = result[0].generate_bill_number
+        } catch {
+            const fallback = await prisma.$queryRaw<[{ next_num: string }]>(
+                Prisma.sql`SELECT (COALESCE(MAX(CASE WHEN bill_number ~ '^[0-9]+$' THEN bill_number::integer ELSE 0 END), 0) + 1)::text AS next_num FROM bills`
+            )
+            billNumber = fallback[0].next_num
+        }
 
         // 4b. Resolve guest name (parse kitchen order notes if applicable)
         let resolvedGuestName = ''

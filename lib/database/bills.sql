@@ -80,32 +80,14 @@ create policy "Staff create bill items" on public.bill_items for insert
     )
   );
 
--- Function to generate sequential bill numbers
+-- Sequence for continuous bill numbers
+create sequence if not exists bill_number_seq start 1;
+
+-- Function to generate sequential bill numbers (pure numeric, continuous)
 create or replace function generate_bill_number()
 returns text as $$
-declare
-  today_date text;
-  next_number integer;
-  bill_num text;
 begin
-  -- Get today's date in YYYYMMDD format
-  today_date := to_char(current_date, 'YYYYMMDD');
-  
-  -- Get the next sequence number for today
-  select coalesce(max(
-    case 
-      when bill_number like 'BILL-' || today_date || '-%' 
-      then cast(substring(bill_number from length('BILL-' || today_date || '-') + 1) as integer)
-      else 0
-    end
-  ), 0) + 1
-  into next_number
-  from public.bills;
-  
-  -- Format the bill number
-  bill_num := 'BILL-' || today_date || '-' || lpad(next_number::text, 4, '0');
-  
-  return bill_num;
+  return nextval('bill_number_seq')::text;
 end;
 $$ language plpgsql;
 

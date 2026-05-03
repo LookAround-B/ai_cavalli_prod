@@ -144,6 +144,7 @@ export default function KitchenPage() {
     const [kitchenStaff, setKitchenStaff] = useState<{ id: string, name: string }[]>([])
     // Create order from kitchen portal
     const [showCreateOrder, setShowCreateOrder] = useState(false)
+    const [createOrderStep, setCreateOrderStep] = useState<1 | 2>(1)
     const [newOrderName, setNewOrderName] = useState('')
     const [newOrderPhone, setNewOrderPhone] = useState('')
     const [newOrderTable, setNewOrderTable] = useState('')
@@ -659,6 +660,7 @@ export default function KitchenPage() {
                 setNewOrderGuests(1)
                 setNewOrderLocation('indoor')
                 setNewOrderItems([])
+                setCreateOrderStep(1)
                 setShowCreateOrder(false)
                 await fetchOrders()
             } else {
@@ -2496,10 +2498,10 @@ export default function KitchenPage() {
                     display: 'flex',
                     alignItems: 'flex-start',
                     justifyContent: 'center',
-                    padding: 'clamp(10px, 4vw, 40px) 16px',
+                    padding: '68px 16px 16px',
                     animation: 'fadeIn 0.2s ease-out',
                 }}
-                    onClick={(e) => { if (e.target === e.currentTarget) { setShowCreateOrder(false); setShowNewOrderMenu(false) } }}
+                    onClick={(e) => { if (e.target === e.currentTarget) { setShowCreateOrder(false); setShowNewOrderMenu(false); setCreateOrderStep(1) } }}
                 >
                     <div style={{
                         background: 'white',
@@ -2524,13 +2526,20 @@ export default function KitchenPage() {
                             background: 'white',
                         }}>
                             <div>
-                                <h2 style={{ margin: 0, fontSize: 'clamp(1.25rem, 4vw, 1.75rem)', fontWeight: 900, color: 'var(--text)', letterSpacing: '-0.03em' }}>
-                                    Create Walk-in Order
-                                </h2>
-                                <p style={{ margin: '4px 0 0', fontSize: '0.9rem', color: '#6B7280', fontWeight: 600 }}>Enter details below to generate a new kitchen order</p>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                                    <h2 style={{ margin: 0, fontSize: 'clamp(1.25rem, 4vw, 1.75rem)', fontWeight: 900, color: 'var(--text)', letterSpacing: '-0.03em' }}>
+                                        {createOrderStep === 1 ? 'Create Walk-in Order' : 'Finalize Order'}
+                                    </h2>
+                                    <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 800, background: createOrderStep === 1 ? 'rgba(169,30,34,0.1)' : '#D1FAE5', color: createOrderStep === 1 ? 'var(--primary)' : '#065F46' }}>
+                                        STEP {createOrderStep} OF 2
+                                    </span>
+                                </div>
+                                <p style={{ margin: 0, fontSize: '0.9rem', color: '#6B7280', fontWeight: 600 }}>
+                                    {createOrderStep === 1 ? 'Add items and choose seating' : 'Enter customer details to complete the order'}
+                                </p>
                             </div>
                             <button
-                                onClick={() => { setShowCreateOrder(false); setShowNewOrderMenu(false) }}
+                                onClick={() => { setShowCreateOrder(false); setShowNewOrderMenu(false); setCreateOrderStep(1) }}
                                 style={{
                                     width: 'clamp(36px, 10vw, 44px)',
                                     height: 'clamp(36px, 10vw, 44px)',
@@ -2561,189 +2570,224 @@ export default function KitchenPage() {
                             flex: '1 1 auto',
                             background: '#F9FAFB',
                         }}>
-                            <div style={{
-                                display: 'grid',
-                                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))',
-                                gap: 'clamp(16px, 4vw, 24px)'
-                            }}>
-                                {/* Left Column: Customer & Details */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                            {createOrderStep === 1 ? (
+                                /* ── STEP 1: Order Items + Seating ── */
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))',
+                                    gap: 'clamp(16px, 4vw, 24px)'
+                                }}>
+                                    {/* Left Column: Order Items */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                        <div style={{ background: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', minHeight: '300px' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                                <h3 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 800, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Order Items</h3>
+                                                <span style={{ padding: '4px 10px', background: 'rgba(169, 30, 34, 0.1)', color: 'var(--primary)', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 800 }}>{newOrderItems.length} ITEMS</span>
+                                            </div>
+
+                                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto', maxHeight: '350px', paddingRight: '4px' }}>
+                                                {newOrderItems.length === 0 ? (
+                                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF', gap: '8px', opacity: 0.6 }}>
+                                                        <ShoppingBag size={32} />
+                                                        <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 600 }}>No items added yet</p>
+                                                    </div>
+                                                ) : (
+                                                    newOrderItems.map((item, idx) => {
+                                                        const menuItem = menuItems.find(m => m.id === item.menuItemId)
+                                                        return (
+                                                            <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: '#F9FAFB', borderRadius: '12px', border: '1px solid #F3F4F6', gap: '12px' }}>
+                                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{menuItem?.name || 'Unknown'}</div>
+                                                                    <div style={{ fontSize: '0.75rem', color: '#6B7280', fontWeight: 600 }}>₹{menuItem?.price || 0} x {item.quantity}</div>
+                                                                </div>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'white', padding: '2px', borderRadius: '8px', border: '1px solid #E5E7EB' }}>
+                                                                        <button onClick={() => {
+                                                                            if (item.quantity <= 1) setNewOrderItems(prev => prev.filter((_, i) => i !== idx))
+                                                                            else setNewOrderItems(prev => prev.map((it, i) => i === idx ? { ...it, quantity: it.quantity - 1 } : it))
+                                                                        }} style={{ width: '24px', height: '24px', borderRadius: '6px', border: 'none', background: 'transparent', cursor: 'pointer', color: '#6B7280' }}>-</button>
+                                                                        <span style={{ minWidth: '16px', textAlign: 'center', fontWeight: 800, fontSize: '0.85rem' }}>{item.quantity}</span>
+                                                                        <button onClick={() => setNewOrderItems(prev => prev.map((it, i) => i === idx ? { ...it, quantity: it.quantity + 1 } : it))} style={{ width: '24px', height: '24px', borderRadius: '6px', border: 'none', background: 'transparent', cursor: 'pointer', color: '#6B7280' }}>+</button>
+                                                                    </div>
+                                                                    <button onClick={() => setNewOrderItems(prev => prev.filter((_, i) => i !== idx))} style={{ width: '28px', height: '28px', borderRadius: '8px', border: 'none', background: '#FEE2E2', color: '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><XIcon size={14} /></button>
+                                                                </div>
+                                                            </div>
+                                                        )
+                                                    })
+                                                )}
+                                            </div>
+
+                                            {dailySpecials.length > 0 && (
+                                                <div style={{ marginTop: '16px', padding: '16px', background: 'linear-gradient(135deg, #FFF7ED 0%, #FEF3C7 100%)', borderRadius: '12px', border: '2px solid #FBBF24' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', fontSize: '0.75rem', fontWeight: 800, color: '#92400E', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                        ⭐ Today's Specials
+                                                    </div>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '150px', overflowY: 'auto' }}>
+                                                        {dailySpecials.map((special) => (
+                                                            <button
+                                                                key={special.id}
+                                                                onClick={() => quickAddSpecialToOrder(special.menu_item.id)}
+                                                                style={{
+                                                                    padding: '10px 12px',
+                                                                    background: 'white',
+                                                                    border: '1px solid #FBBF24',
+                                                                    borderRadius: '8px',
+                                                                    cursor: 'pointer',
+                                                                    textAlign: 'left',
+                                                                    fontSize: '0.85rem',
+                                                                    fontWeight: 600,
+                                                                    transition: 'all 0.2s',
+                                                                    display: 'flex',
+                                                                    justifyContent: 'space-between',
+                                                                    alignItems: 'center',
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    e.currentTarget.style.background = '#FBBF24'
+                                                                    e.currentTarget.style.color = 'white'
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    e.currentTarget.style.background = 'white'
+                                                                    e.currentTarget.style.color = 'inherit'
+                                                                }}
+                                                            >
+                                                                <div>
+                                                                    <div style={{ fontWeight: 700, color: '#92400E' }}>{special.menu_item.name}</div>
+                                                                    <div style={{ fontSize: '0.7rem', opacity: 0.7 }}>₹{special.menu_item.price} • {special.period}</div>
+                                                                </div>
+                                                                <Plus size={16} style={{ flexShrink: 0 }} />
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            <button
+                                                onClick={() => setShowNewOrderMenu(true)}
+                                                style={{ marginTop: '16px', padding: '14px', borderRadius: '12px', border: '2px dashed #D1D5DB', background: '#F9FAFB', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#6B7280', fontSize: '0.9rem', transition: 'all 0.2s' }}
+                                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)'; e.currentTarget.style.background = 'rgba(169, 30, 34, 0.02)' }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#D1D5DB'; e.currentTarget.style.color = '#6B7280'; e.currentTarget.style.background = '#F9FAFB' }}
+                                            >
+                                                <Plus size={18} />
+                                                Add Menu Items
+                                            </button>
+                                        </div>
+
+                                        {newOrderItems.length > 0 && (
+                                            <div style={{ background: 'var(--primary)', padding: '20px', borderRadius: '16px', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 10px 15px -3px rgba(169, 30, 34, 0.3)' }}>
+                                                <div>
+                                                    <div style={{ fontSize: '0.75rem', fontWeight: 800, opacity: 0.8, textTransform: 'uppercase' }}>Total Amount</div>
+                                                    <div style={{ fontSize: '1.5rem', fontWeight: 900 }}>₹{newOrderItems.reduce((sum, item) => {
+                                                        const mi = menuItems.find(m => m.id === item.menuItemId)
+                                                        return sum + (mi?.price || 0) * item.quantity
+                                                    }, 0).toFixed(0)}</div>
+                                                </div>
+                                                <Utensils size={32} style={{ opacity: 0.3 }} />
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Right Column: Seating Details */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                        <div style={{ background: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                                            <h3 style={{ margin: '0 0 16px', fontSize: '0.9rem', fontWeight: 800, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Seating Details</h3>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                                <div>
+                                                    <Input
+                                                        label="Table Number *"
+                                                        type="text"
+                                                        inputMode="numeric"
+                                                        value={newOrderTable}
+                                                        maxLength={2}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value.replace(/\D/g, '').slice(0, 2)
+                                                            setNewOrderTable(val)
+                                                        }}
+                                                        placeholder="00"
+                                                    />
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '16px' }}>
+                                                    <div style={{ flex: 1 }}>
+                                                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#6B7280', marginBottom: '6px' }}>GUESTS</label>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#F3F4F6', padding: '4px', borderRadius: '10px' }}>
+                                                            <button onClick={() => setNewOrderGuests(Math.max(1, newOrderGuests - 1))} style={{ width: '32px', height: '32px', borderRadius: '6px', border: 'none', background: 'white', cursor: 'pointer', fontWeight: 900, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>-</button>
+                                                            <span style={{ flex: 1, textAlign: 'center', fontWeight: 800 }}>{newOrderGuests}</span>
+                                                            <button onClick={() => setNewOrderGuests(newOrderGuests + 1)} style={{ width: '32px', height: '32px', borderRadius: '6px', border: 'none', background: 'white', cursor: 'pointer', fontWeight: 900, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>+</button>
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ flex: 1 }}>
+                                                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#6B7280', marginBottom: '6px' }}>LOCATION</label>
+                                                        <div style={{ display: 'flex', gap: '2px', background: '#F3F4F6', padding: '2px', borderRadius: '10px' }}>
+                                                            <button onClick={() => setNewOrderLocation('indoor')} style={{ flex: 1, height: '36px', borderRadius: '8px', border: 'none', background: newOrderLocation === 'indoor' ? 'white' : 'transparent', color: newOrderLocation === 'indoor' ? 'var(--primary)' : '#6B7280', fontWeight: 700, fontSize: '0.7rem', cursor: 'pointer', boxShadow: newOrderLocation === 'indoor' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none' }}>INDOOR</button>
+                                                            <button onClick={() => setNewOrderLocation('outdoor')} style={{ flex: 1, height: '36px', borderRadius: '8px', border: 'none', background: newOrderLocation === 'outdoor' ? 'white' : 'transparent', color: newOrderLocation === 'outdoor' ? 'var(--primary)' : '#6B7280', fontWeight: 700, fontSize: '0.7rem', cursor: 'pointer', boxShadow: newOrderLocation === 'outdoor' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none' }}>OUTDOOR</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                /* ── STEP 2: Finalize — Order Summary + Customer Info ── */
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '520px', margin: '0 auto', width: '100%' }}>
+                                    {/* Order summary (read-only) */}
+                                    <div style={{ background: 'white', padding: '20px', borderRadius: '16px', border: '1px solid #E5E7EB', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                                            <h3 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 800, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Order Summary</h3>
+                                            <div style={{ display: 'flex', gap: '8px', fontSize: '0.75rem', fontWeight: 700, color: '#6B7280' }}>
+                                                <span>Table {newOrderTable || '—'}</span>
+                                                <span>·</span>
+                                                <span>{newOrderGuests} guest{newOrderGuests !== 1 ? 's' : ''}</span>
+                                                <span>·</span>
+                                                <span style={{ textTransform: 'capitalize' }}>{newOrderLocation}</span>
+                                            </div>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '200px', overflowY: 'auto' }}>
+                                            {newOrderItems.map((item, idx) => {
+                                                const menuItem = menuItems.find(m => m.id === item.menuItemId)
+                                                return (
+                                                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#F9FAFB', borderRadius: '10px' }}>
+                                                        <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text)' }}>{menuItem?.name || 'Unknown'} <span style={{ color: '#9CA3AF', fontWeight: 500 }}>× {item.quantity}</span></div>
+                                                        <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>₹{((menuItem?.price || 0) * item.quantity).toFixed(0)}</div>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                        <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '2px solid #F3F4F6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#4B5563' }}>Total</span>
+                                            <span style={{ fontWeight: 900, fontSize: '1.25rem', color: 'var(--primary)' }}>₹{newOrderItems.reduce((sum, item) => {
+                                                const mi = menuItems.find(m => m.id === item.menuItemId)
+                                                return sum + (mi?.price || 0) * item.quantity
+                                            }, 0).toFixed(0)}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Customer info inputs */}
                                     <div style={{ background: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
                                         <h3 style={{ margin: '0 0 16px', fontSize: '0.9rem', fontWeight: 800, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Customer Info</h3>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                            <div>
-                                                <Input
-                                                    label="Customer Name *"
-                                                    type="text"
-                                                    value={newOrderName}
-                                                    onChange={(e) => setNewOrderName(e.target.value.replace(/[^a-zA-Z\s]/g, ''))}
-                                                    placeholder="Enter customer name"
-                                                    maxLength={50}
-                                                />
-                                            </div>
-                                            <div>
-                                                <Input
-                                                    label="Phone Number *"
-                                                    type="tel"
-                                                    value={newOrderPhone}
-                                                    onChange={(e) => {
-                                                        const val = e.target.value.replace(/\D/g, '');
-                                                        if (val.length <= 10) setNewOrderPhone(val);
-                                                    }}
-                                                    placeholder="10-digit phone number"
-                                                    maxLength={10}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div style={{ background: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-                                        <h3 style={{ margin: '0 0 16px', fontSize: '0.9rem', fontWeight: 800, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Seating Details</h3>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                            <div>
-                                                <Input
-                                                    label="Table Number *"
-                                                    type="text"
-                                                    inputMode="numeric"
-                                                    value={newOrderTable}
-                                                    maxLength={2}
-                                                    onChange={(e) => {
-                                                        const val = e.target.value.replace(/\D/g, '').slice(0, 2)
-                                                        setNewOrderTable(val)
-                                                    }}
-                                                    placeholder="00"
-                                                />
-                                            </div>
-                                            <div style={{ display: 'flex', gap: '16px' }}>
-                                                <div style={{ flex: 1 }}>
-                                                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#6B7280', marginBottom: '6px' }}>GUESTS</label>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#F3F4F6', padding: '4px', borderRadius: '10px' }}>
-                                                        <button onClick={() => setNewOrderGuests(Math.max(1, newOrderGuests - 1))} style={{ width: '32px', height: '32px', borderRadius: '6px', border: 'none', background: 'white', cursor: 'pointer', fontWeight: 900, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>-</button>
-                                                        <span style={{ flex: 1, textAlign: 'center', fontWeight: 800 }}>{newOrderGuests}</span>
-                                                        <button onClick={() => setNewOrderGuests(newOrderGuests + 1)} style={{ width: '32px', height: '32px', borderRadius: '6px', border: 'none', background: 'white', cursor: 'pointer', fontWeight: 900, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>+</button>
-                                                    </div>
-                                                </div>
-                                                <div style={{ flex: 1 }}>
-                                                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#6B7280', marginBottom: '6px' }}>LOCATION</label>
-                                                    <div style={{ display: 'flex', gap: '2px', background: '#F3F4F6', padding: '2px', borderRadius: '10px' }}>
-                                                        <button onClick={() => setNewOrderLocation('indoor')} style={{ flex: 1, height: '36px', borderRadius: '8px', border: 'none', background: newOrderLocation === 'indoor' ? 'white' : 'transparent', color: newOrderLocation === 'indoor' ? 'var(--primary)' : '#6B7280', fontWeight: 700, fontSize: '0.7rem', cursor: 'pointer', boxShadow: newOrderLocation === 'indoor' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none' }}>INDOOR</button>
-                                                        <button onClick={() => setNewOrderLocation('outdoor')} style={{ flex: 1, height: '36px', borderRadius: '8px', border: 'none', background: newOrderLocation === 'outdoor' ? 'white' : 'transparent', color: newOrderLocation === 'outdoor' ? 'var(--primary)' : '#6B7280', fontWeight: 700, fontSize: '0.7rem', cursor: 'pointer', boxShadow: newOrderLocation === 'outdoor' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none' }}>OUTDOOR</button>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                            <Input
+                                                label="Customer Name *"
+                                                type="text"
+                                                value={newOrderName}
+                                                onChange={(e) => setNewOrderName(e.target.value.replace(/[^a-zA-Z\s]/g, ''))}
+                                                placeholder="Enter customer name"
+                                                maxLength={50}
+                                            />
+                                            <Input
+                                                label="Phone Number *"
+                                                type="tel"
+                                                value={newOrderPhone}
+                                                onChange={(e) => {
+                                                    const val = e.target.value.replace(/\D/g, '');
+                                                    if (val.length <= 10) setNewOrderPhone(val);
+                                                }}
+                                                placeholder="10-digit phone number"
+                                                maxLength={10}
+                                            />
                                         </div>
                                     </div>
                                 </div>
-
-                                {/* Right Column: Order Items */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                    <div style={{ background: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', minHeight: '300px' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                                            <h3 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 800, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Order Items</h3>
-                                            <span style={{ padding: '4px 10px', background: 'rgba(169, 30, 34, 0.1)', color: 'var(--primary)', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 800 }}>{newOrderItems.length} ITEMS</span>
-                                        </div>
-
-                                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto', maxHeight: '350px', paddingRight: '4px' }}>
-                                            {newOrderItems.length === 0 ? (
-                                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF', gap: '8px', opacity: 0.6 }}>
-                                                    <ShoppingBag size={32} />
-                                                    <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 600 }}>No items added yet</p>
-                                                </div>
-                                            ) : (
-                                                newOrderItems.map((item, idx) => {
-                                                    const menuItem = menuItems.find(m => m.id === item.menuItemId)
-                                                    return (
-                                                        <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: '#F9FAFB', borderRadius: '12px', border: '1px solid #F3F4F6', gap: '12px' }}>
-                                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{menuItem?.name || 'Unknown'}</div>
-                                                                <div style={{ fontSize: '0.75rem', color: '#6B7280', fontWeight: 600 }}>₹{menuItem?.price || 0} x {item.quantity}</div>
-                                                            </div>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'white', padding: '2px', borderRadius: '8px', border: '1px solid #E5E7EB' }}>
-                                                                    <button onClick={() => {
-                                                                        if (item.quantity <= 1) setNewOrderItems(prev => prev.filter((_, i) => i !== idx))
-                                                                        else setNewOrderItems(prev => prev.map((it, i) => i === idx ? { ...it, quantity: it.quantity - 1 } : it))
-                                                                    }} style={{ width: '24px', height: '24px', borderRadius: '6px', border: 'none', background: 'transparent', cursor: 'pointer', color: '#6B7280' }}>-</button>
-                                                                    <span style={{ minWidth: '16px', textAlign: 'center', fontWeight: 800, fontSize: '0.85rem' }}>{item.quantity}</span>
-                                                                    <button onClick={() => setNewOrderItems(prev => prev.map((it, i) => i === idx ? { ...it, quantity: it.quantity + 1 } : it))} style={{ width: '24px', height: '24px', borderRadius: '6px', border: 'none', background: 'transparent', cursor: 'pointer', color: '#6B7280' }}>+</button>
-                                                                </div>
-                                                                <button onClick={() => setNewOrderItems(prev => prev.filter((_, i) => i !== idx))} style={{ width: '28px', height: '28px', borderRadius: '8px', border: 'none', background: '#FEE2E2', color: '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><XIcon size={14} /></button>
-                                                            </div>
-                                                        </div>
-                                                    )
-                                                })
-                                            )}
-                                        </div>
-
-                                        {dailySpecials.length > 0 && (
-                                            <div style={{ marginTop: '16px', padding: '16px', background: 'linear-gradient(135deg, #FFF7ED 0%, #FEF3C7 100%)', borderRadius: '12px', border: '2px solid #FBBF24' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', fontSize: '0.75rem', fontWeight: 800, color: '#92400E', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                                    ⭐ Today's Specials
-                                                </div>
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '150px', overflowY: 'auto' }}>
-                                                    {dailySpecials.map((special) => (
-                                                        <button
-                                                            key={special.id}
-                                                            onClick={() => quickAddSpecialToOrder(special.menu_item.id)}
-                                                            style={{
-                                                                padding: '10px 12px',
-                                                                background: 'white',
-                                                                border: '1px solid #FBBF24',
-                                                                borderRadius: '8px',
-                                                                cursor: 'pointer',
-                                                                textAlign: 'left',
-                                                                fontSize: '0.85rem',
-                                                                fontWeight: 600,
-                                                                transition: 'all 0.2s',
-                                                                display: 'flex',
-                                                                justifyContent: 'space-between',
-                                                                alignItems: 'center',
-                                                            }}
-                                                            onMouseEnter={(e) => {
-                                                                e.currentTarget.style.background = '#FBBF24'
-                                                                e.currentTarget.style.color = 'white'
-                                                            }}
-                                                            onMouseLeave={(e) => {
-                                                                e.currentTarget.style.background = 'white'
-                                                                e.currentTarget.style.color = 'inherit'
-                                                            }}
-                                                        >
-                                                            <div>
-                                                                <div style={{ fontWeight: 700, color: '#92400E' }}>{special.menu_item.name}</div>
-                                                                <div style={{ fontSize: '0.7rem', opacity: 0.7 }}>₹{special.menu_item.price} • {special.period}</div>
-                                                            </div>
-                                                            <Plus size={16} style={{ flexShrink: 0 }} />
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        <button
-                                            onClick={() => setShowNewOrderMenu(true)}
-                                            style={{ marginTop: '16px', padding: '14px', borderRadius: '12px', border: '2px dashed #D1D5DB', background: '#F9FAFB', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#6B7280', fontSize: '0.9rem', transition: 'all 0.2s' }}
-                                            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)'; e.currentTarget.style.background = 'rgba(169, 30, 34, 0.02)' }}
-                                            onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#D1D5DB'; e.currentTarget.style.color = '#6B7280'; e.currentTarget.style.background = '#F9FAFB' }}
-                                        >
-                                            <Plus size={18} />
-                                            Add Menu Items
-                                        </button>
-                                    </div>
-
-                                    {newOrderItems.length > 0 && (
-                                        <div style={{ background: 'var(--primary)', padding: '20px', borderRadius: '16px', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 10px 15px -3px rgba(169, 30, 34, 0.3)' }}>
-                                            <div>
-                                                <div style={{ fontSize: '0.75rem', fontWeight: 800, opacity: 0.8, textTransform: 'uppercase' }}>Total Amount</div>
-                                                <div style={{ fontSize: '1.5rem', fontWeight: 900 }}>₹{newOrderItems.reduce((sum, item) => {
-                                                    const mi = menuItems.find(m => m.id === item.menuItemId)
-                                                    return sum + (mi?.price || 0) * item.quantity
-                                                }, 0).toFixed(0)}</div>
-                                            </div>
-                                            <Utensils size={32} style={{ opacity: 0.3 }} />
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
+                            )}
                         </div>
 
                         {/* Modal Footer — sticky */}
@@ -2755,33 +2799,61 @@ export default function KitchenPage() {
                             flexShrink: 0,
                             background: 'white',
                         }}>
-                            <Button
-                                onClick={() => {
-                                    setShowCreateOrder(false)
-                                    setShowNewOrderMenu(false)
-                                }}
-                                variant="outline"
-                                style={{ flex: 1, height: 'clamp(44px, 6vw, 52px)', fontWeight: 700, borderRadius: '12px' }}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                onClick={handleCreateKitchenOrder}
-                                disabled={creatingOrder}
-                                style={{
-                                    flex: 2,
-                                    height: 'clamp(44px, 6vw, 52px)',
-                                    fontWeight: 900,
-                                    fontSize: 'clamp(0.875rem, 2vw, 1rem)',
-                                    borderRadius: '12px',
-                                    background: 'linear-gradient(135deg, var(--primary) 0%, #8B1A1F 100%)',
-                                    border: 'none',
-                                    boxShadow: '0 4px 12px rgba(192, 39, 45, 0.3)',
-                                    letterSpacing: '0.03em'
-                                }}
-                            >
-                                {creatingOrder ? 'Creating...' : 'Create Order'}
-                            </Button>
+                            {createOrderStep === 1 ? (
+                                <>
+                                    <Button
+                                        onClick={() => { setShowCreateOrder(false); setShowNewOrderMenu(false); setCreateOrderStep(1) }}
+                                        variant="outline"
+                                        style={{ flex: 1, height: 'clamp(44px, 6vw, 52px)', fontWeight: 700, borderRadius: '12px' }}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        onClick={() => setCreateOrderStep(2)}
+                                        disabled={newOrderItems.length === 0 || !newOrderTable.trim()}
+                                        style={{
+                                            flex: 2,
+                                            height: 'clamp(44px, 6vw, 52px)',
+                                            fontWeight: 900,
+                                            fontSize: 'clamp(0.875rem, 2vw, 1rem)',
+                                            borderRadius: '12px',
+                                            background: 'linear-gradient(135deg, var(--primary) 0%, #8B1A1F 100%)',
+                                            border: 'none',
+                                            boxShadow: '0 4px 12px rgba(192, 39, 45, 0.3)',
+                                            letterSpacing: '0.03em'
+                                        }}
+                                    >
+                                        Next: Finalize →
+                                    </Button>
+                                </>
+                            ) : (
+                                <>
+                                    <Button
+                                        onClick={() => setCreateOrderStep(1)}
+                                        variant="outline"
+                                        style={{ flex: 1, height: 'clamp(44px, 6vw, 52px)', fontWeight: 700, borderRadius: '12px' }}
+                                    >
+                                        ← Back
+                                    </Button>
+                                    <Button
+                                        onClick={handleCreateKitchenOrder}
+                                        disabled={creatingOrder}
+                                        style={{
+                                            flex: 2,
+                                            height: 'clamp(44px, 6vw, 52px)',
+                                            fontWeight: 900,
+                                            fontSize: 'clamp(0.875rem, 2vw, 1rem)',
+                                            borderRadius: '12px',
+                                            background: 'linear-gradient(135deg, var(--primary) 0%, #8B1A1F 100%)',
+                                            border: 'none',
+                                            boxShadow: '0 4px 12px rgba(192, 39, 45, 0.3)',
+                                            letterSpacing: '0.03em'
+                                        }}
+                                    >
+                                        {creatingOrder ? 'Creating...' : 'Create Order'}
+                                    </Button>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>

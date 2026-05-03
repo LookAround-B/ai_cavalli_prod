@@ -135,7 +135,10 @@ export async function POST(request: NextRequest) {
             )
             billNumber = result[0].generate_bill_number
         } catch {
-            billNumber = `BILL-${Date.now().toString(36).toUpperCase()}`
+            const fallback = await prisma.$queryRaw<[{ next_num: string }]>(
+                Prisma.sql`SELECT (COALESCE(MAX(CASE WHEN bill_number ~ '^[0-9]+$' THEN bill_number::integer ELSE 0 END), 0) + 1)::text AS next_num FROM bills`
+            )
+            billNumber = fallback[0].next_num
         }
 
         // 5. Create bill + items in transaction

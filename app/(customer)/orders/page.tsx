@@ -517,6 +517,16 @@ export default function OrdersPage() {
             }
         } catch {}
 
+        // Look up actual bill number from the server
+        let resolvedBillNumber = ''
+        try {
+            const billRes = await fetch(`/api/bills/lookup?orderId=${order.id}`)
+            const billJson = await billRes.json()
+            if (billJson.success && billJson.data?.bill_number) {
+                resolvedBillNumber = String(billJson.data.bill_number)
+            }
+        } catch {}
+
         const items = (freshOrder.items || []).map((item: OrderItem) => ({
             item_name: item.menu_item?.name || 'Item',
             quantity: item.quantity,
@@ -542,7 +552,7 @@ export default function OrdersPage() {
         const gstAmount = Math.round((afterDiscount * 0.05) * 100) / 100
         const finalTotal = Math.round((afterDiscount + gstAmount) * 100) / 100
         setBillPreview({
-            billNumber: `ORD-${freshOrder.id.slice(0, 8).toUpperCase()}`,
+            billNumber: resolvedBillNumber,
             items,
             itemsTotal,
             discountAmount,

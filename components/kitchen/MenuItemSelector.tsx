@@ -83,19 +83,38 @@ export function MenuItemSelector({
   const totalSelectedCount = selectedItems.reduce((sum, s) => sum + s.quantity, 0);
 
   const renderItemsContent = () => {
-    if (activeCategory === "all") {
-      return displayedCategories.map((category) => {
+    // Universal search: when query is active, search across all categories
+    if (activeCategory === "all" || searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const sections = displayedCategories.map((category) => {
         const categoryItems = itemsByCategory[category.id] || [];
-        const filtered = categoryItems.filter((item) => {
-          const matchesSearch =
-            item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (item.description &&
-              item.description.toLowerCase().includes(searchQuery.toLowerCase()));
-          return matchesSearch;
-        });
+        const filtered = categoryItems.filter(
+          (item) =>
+            !q ||
+            item.name.toLowerCase().includes(q) ||
+            (item.description && item.description.toLowerCase().includes(q))
+        );
+        return { category, filtered };
+      });
 
+      const hasResults = sections.some((s) => s.filtered.length > 0);
+      if (!hasResults && q) {
+        return (
+          <div
+            style={{
+              textAlign: "center",
+              padding: "3rem 1rem",
+              color: "var(--text-muted)",
+              fontSize: "0.9rem",
+            }}
+          >
+            No items found matching &ldquo;{searchQuery}&rdquo;
+          </div>
+        );
+      }
+
+      return sections.map(({ category, filtered }) => {
         if (filtered.length === 0) return null;
-
         return (
           <div key={category.id}>
             <div
@@ -107,14 +126,7 @@ export function MenuItemSelector({
                 marginTop: "var(--space-4)",
               }}
             >
-              <div
-                style={{
-                  width: "6px",
-                  height: "18px",
-                  background: "#A91E22",
-                  borderRadius: "2px",
-                }}
-              />
+              <div style={{ width: "6px", height: "18px", background: "#A91E22", borderRadius: "2px" }} />
               <h3
                 style={{
                   margin: 0,
@@ -147,14 +159,13 @@ export function MenuItemSelector({
         return (
           <div
             style={{
-              gridColumn: "1 / -1",
               textAlign: "center",
               padding: "3rem 1rem",
               color: "var(--text-muted)",
               fontSize: "0.9rem",
             }}
           >
-            No items found matching &ldquo;{searchQuery}&rdquo;
+            No items in this category
           </div>
         );
       }

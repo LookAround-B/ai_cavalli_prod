@@ -192,10 +192,26 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 })
     } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Internal server error'
         console.error('Admin user operation error:', error)
+
+        // Prisma unique constraint violation
+        if (
+            typeof error === 'object' &&
+            error !== null &&
+            'code' in error &&
+            (error as { code: string }).code === 'P2002'
+        ) {
+            const fields = (error as { meta?: { target?: string[] } }).meta?.target ?? []
+            const field = fields[0] ?? 'field'
+            const label = field === 'phone' ? 'phone number' : field === 'email' ? 'email' : field
+            return NextResponse.json(
+                { success: false, error: `A user with this ${label} already exists.` },
+                { status: 409 }
+            )
+        }
+
         return NextResponse.json(
-            { success: false, error: message },
+            { success: false, error: 'Something went wrong. Please try again.' },
             { status: 500 }
         )
     }
