@@ -1480,11 +1480,23 @@ export default function KitchenPage() {
 
                         return (
                             <div key={order.id} className="fade-in" style={{
-                                background: 'var(--surface)',
-                                borderRadius: '16px',
-                                boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+                                background: viewTab === 'completed'
+                                    ? 'linear-gradient(160deg, #F0FDF4 0%, #ECFDF5 60%, #F8FFFC 100%)'
+                                    : viewTab === 'cancelled'
+                                        ? 'linear-gradient(160deg, #FFF5F5 0%, #FEF2F2 100%)'
+                                        : 'var(--surface)',
+                                borderRadius: '20px',
+                                boxShadow: viewTab === 'completed'
+                                    ? '0 6px 24px rgba(16, 185, 129, 0.12), 0 2px 8px rgba(16, 185, 129, 0.06)'
+                                    : viewTab === 'cancelled'
+                                        ? '0 6px 24px rgba(220, 38, 38, 0.08)'
+                                        : '0 4px 16px rgba(0,0,0,0.08)',
                                 overflow: 'hidden',
-                                border: `2px solid ${sc.color}20`,
+                                border: viewTab === 'completed'
+                                    ? '2px solid rgba(16, 185, 129, 0.3)'
+                                    : viewTab === 'cancelled'
+                                        ? '2px solid rgba(220, 38, 38, 0.2)'
+                                        : `2px solid ${sc.color}20`,
                                 display: 'flex',
                                 flexDirection: 'column',
                                 transition: 'all 0.3s ease',
@@ -1494,7 +1506,11 @@ export default function KitchenPage() {
                             }}>
                                 {/* Status Bar */}
                                 <div style={{
-                                    background: `linear-gradient(135deg, ${sc.color} 0%, ${sc.color}dd 100%)`,
+                                    background: viewTab === 'completed'
+                                        ? 'linear-gradient(135deg, #065F46 0%, #059669 100%)'
+                                        : viewTab === 'cancelled'
+                                            ? 'linear-gradient(135deg, #991B1B 0%, #DC2626 100%)'
+                                            : `linear-gradient(135deg, ${sc.color} 0%, ${sc.color}dd 100%)`,
                                     padding: '12px 20px',
                                     display: 'flex',
                                     justifyContent: 'space-between',
@@ -1583,7 +1599,7 @@ export default function KitchenPage() {
                                 )}
 
                                 {/* Header Info */}
-                                <div style={{ padding: '20px 20px 16px', borderBottom: '2px solid #f0f0f0', minHeight: '140px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                                <div style={{ padding: '20px 20px 16px', borderBottom: viewTab === 'completed' ? '2px solid #A7F3D0' : viewTab === 'cancelled' ? '2px solid #FECACA' : '2px solid #f0f0f0', minHeight: '140px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                             <h3 style={{ margin: '0 0 10px 0', fontSize: '1.75rem', fontWeight: 900, color: 'var(--text)', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1619,10 +1635,10 @@ export default function KitchenPage() {
                                             <p style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--primary)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Order Items</p>
                                         </div>
                                         <div style={{
-                                            background: '#FAFAF9',
+                                            background: viewTab === 'completed' ? '#ECFDF5' : viewTab === 'cancelled' ? '#FEF2F2' : '#FAFAF9',
                                             borderRadius: '12px',
                                             padding: '16px',
-                                            border: '1px solid #E7E5E4',
+                                            border: viewTab === 'completed' ? '1px solid #A7F3D0' : viewTab === 'cancelled' ? '1px solid #FECACA' : '1px solid #E7E5E4',
                                             flex: '1 1 auto',
                                             minHeight: 0,
                                             maxHeight: '280px',
