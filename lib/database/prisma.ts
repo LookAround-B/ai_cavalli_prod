@@ -9,10 +9,12 @@ const globalForPrisma = globalThis as unknown as {
 function createPrismaClient() {
   const pool = new pg.Pool({
     connectionString: process.env.DATABASE_URL,
-    max: 10,
-    min: 2,
-    idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 5_000,
+    max: 5,               // remote DB — keep pool small
+    min: 0,               // don't pre-open connections (avoids HMR exhaustion)
+    idleTimeoutMillis: 120_000,      // keep connections alive 2 min
+    connectionTimeoutMillis: 15_000, // 15s for remote host
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10_000,
   })
 
   pool.on('error', (err) => {

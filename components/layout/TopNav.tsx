@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/lib/auth/context'
 import { LogOut, ChevronDown, Search, Bell } from 'lucide-react'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 
 interface NavLink {
     label: string
@@ -27,6 +27,18 @@ export function TopNav({ title, links, accentColor = '#1A1A1A', accentText = '#F
     const { user, logout } = useAuth()
     const pathname = usePathname()
     const [menuOpen, setMenuOpen] = useState(false)
+
+    // Find the most specific link that matches the current path (longest href wins)
+    // so parent links don't light up when a child link is active
+    const activeHref = useMemo(() => {
+        let best = ''
+        for (const link of links) {
+            const exact = pathname === link.href
+            const prefix = link.href !== '/' && pathname.startsWith(link.href + '/')
+            if ((exact || prefix) && link.href.length > best.length) best = link.href
+        }
+        return best
+    }, [pathname, links])
     const [loggingOut, setLoggingOut] = useState(false)
     const menuRef = useRef<HTMLDivElement>(null)
 
@@ -110,7 +122,9 @@ export function TopNav({ title, links, accentColor = '#1A1A1A', accentText = '#F
                     }
                 `}</style>
                 {links.map((link) => {
-                    const isActive = pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href))
+                    // Find the most specific matching route
+                    // An exact match, or the longest matching prefix route
+                    const isActive = link.href === activeHref
                     return (
                         <Link
                             key={link.href}
@@ -141,7 +155,7 @@ export function TopNav({ title, links, accentColor = '#1A1A1A', accentText = '#F
                         {/* Divider */}
                         <div style={{ width: '1px', height: '24px', background: `${accentText}20`, margin: '0 0.5rem' }} />
                         <Link
-                            href={isKitchen ? '/admin' : '/kitchen'}
+                            href={isKitchen ? '/ops' : '/kitchen'}
                             style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -181,7 +195,7 @@ export function TopNav({ title, links, accentColor = '#1A1A1A', accentText = '#F
                                     boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
                                 }} />
                             </span>
-                            {isKitchen ? 'Admin' : 'Kitchen'}
+                            {isKitchen ? 'Administrator' : 'Kitchen'}
                         </Link>
                     </>
                 )}

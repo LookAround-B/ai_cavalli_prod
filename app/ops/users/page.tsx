@@ -92,7 +92,7 @@ export default function UserControlPage() {
   async function fetchUsers() {
     setLoading(true);
     try {
-      const response = await fetch("/api/admin/users", {
+      const response = await fetch("/api/ops/users", {
         method: "GET",
         headers: getAuthHeaders(),
         credentials: "include",
@@ -158,7 +158,7 @@ export default function UserControlPage() {
     }
 
     try {
-      const response = await fetch("/api/admin/users", {
+      const response = await fetch("/api/ops/users", {
         method: "POST",
         headers: getAuthHeaders(),
         credentials: "include",
@@ -215,7 +215,7 @@ export default function UserControlPage() {
     }
 
     try {
-      const response = await fetch("/api/admin/users", {
+      const response = await fetch("/api/ops/users", {
         method: "POST",
         headers: getAuthHeaders(),
         credentials: "include",
@@ -253,7 +253,7 @@ export default function UserControlPage() {
     if (!confirmed) return;
 
     try {
-      const response = await fetch("/api/admin/users", {
+      const response = await fetch("/api/ops/users", {
         method: "POST",
         headers: getAuthHeaders(),
         credentials: "include",
@@ -348,7 +348,7 @@ export default function UserControlPage() {
               title="User Control"
               subtitle="Manage staff, riders, and administrative access"
               icon={Users}
-              backHref="/admin"
+              backHref="/ops"
             />
 
             <button

@@ -29,7 +29,8 @@ export function BottomNav() {
         <nav className={styles.nav} role="navigation" aria-label="Main navigation">
             {visibleTabs.map((tab) => {
                 const Icon = tab.icon
-                const isActive = pathname.startsWith(tab.href)
+                // Check for exact match or sub-route with slash separator
+                const isActive = pathname === tab.href || (pathname.startsWith(tab.href + '/') && tab.href !== '/')
                 return (
                     <Link
                         key={tab.name}

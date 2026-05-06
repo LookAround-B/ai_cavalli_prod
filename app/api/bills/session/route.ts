@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/database/prisma'
-import { Prisma } from '@prisma/client'
 import { sanitizeId } from '@/lib/validation/sanitize'
+import { nextSerialBillNumber } from '@/lib/utils/bill-number'
 
 /**
  * Generate Session Bill API
@@ -178,19 +178,8 @@ export async function POST(request: NextRequest) {
         const gstAmount = Math.round((afterDiscount * 0.05) * 100) / 100
         const finalTotal = afterDiscount + gstAmount
 
-        // 4. Generate bill number
-        let billNumber: string
-        try {
-            const result = await prisma.$queryRaw<[{ generate_bill_number: string }]>(
-                Prisma.sql`SELECT generate_bill_number()`
-            )
-            billNumber = result[0].generate_bill_number
-        } catch {
-            const fallback = await prisma.$queryRaw<[{ next_num: string }]>(
-                Prisma.sql`SELECT (COALESCE(MAX(CASE WHEN bill_number ~ '^[0-9]+$' THEN bill_number::integer ELSE 0 END), 0) + 1)::text AS next_num FROM bills`
-            )
-            billNumber = fallback[0].next_num
-        }
+        // 4. Generate bill number in serial format (A001, A002 ... A999, B001 ...)
+        const billNumber = await nextSerialBillNumber(prisma)
 
         // 5. Create bill + items in transaction
         const bill = await prisma.$transaction(async (tx) => {
@@ -270,7 +259,7 @@ export async function POST(request: NextRequest) {
     } catch (error: unknown) {
         console.error('Session bill generation error:', error)
         let message = 'Internal server error'
-        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        if ((error as any)?.code === 'P2002') {
             message = 'A bill already exists for one of the orders in this session'
         } else if (error instanceof Error) {
             message = error.message

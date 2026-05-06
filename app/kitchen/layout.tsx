@@ -48,7 +48,7 @@ export default function KitchenLayout({
                     accentColor="#FFFFFF"
                     accentText="#1A1A1A"
                     roleLabel={getRoleLabel()}
-                    viewToggle={user.role === 'ADMIN' ? { currentView: 'kitchen' } : undefined}
+                    viewToggle={(user.role === 'ADMIN' || user.role === 'KITCHEN') ? { currentView: 'kitchen' } : undefined}
                 />
                 <main style={{ padding: 'clamp(1rem, 3vw, 2rem)', background: '#f5f5f5', minHeight: 'calc(100dvh - 60px)' }}>
                     {children}

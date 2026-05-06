@@ -270,7 +270,7 @@ export default function AdminMenuPage() {
             }} />
 
             <div style={{ maxWidth: '1400px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
-                <AdminPageHeader title="Menu Management" subtitle="Configure and manage your restaurant menu items" icon={Utensils} backHref="/admin" />
+                <AdminPageHeader title="Menu Management" subtitle="Configure and manage your restaurant menu items" icon={Utensils} backHref="/ops" />
 
                 {/* Stats Banner */}
                 <div style={{

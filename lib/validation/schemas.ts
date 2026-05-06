@@ -182,6 +182,9 @@ export const bulkPriceIncreaseSchema = z.object({
     percentage: z.number().min(0.01, 'Percentage must be at least 0.01').max(100, 'Percentage cannot exceed 100'),
     userId: idOptionalSchema,
     reason: safeStringOptional.pipe(z.string().max(500)),
+    targetType: z.enum(['all', 'category', 'products']).optional().default('all'),
+    categoryId: idOptionalSchema,
+    itemIds: z.array(z.string().transform(v => v.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64))).optional().default([]),
 })
 
 // ============================================================

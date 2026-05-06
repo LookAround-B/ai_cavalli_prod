@@ -63,7 +63,7 @@ async function authenticateAdmin(request: NextRequest) {
 }
 
 /**
- * GET /api/admin/users — Fetch all users
+ * GET /api/ops/users — Fetch all users
  */
 export async function GET(request: NextRequest) {
     try {
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * POST /api/admin/users — Create, update, or delete users
+ * POST /api/ops/users — Create, update, or delete users
  */
 export async function POST(request: NextRequest) {
     try {

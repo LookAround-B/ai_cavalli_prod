@@ -31,9 +31,30 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // ── Auth guard: single DB query ──────────────────────────────────────
+    // ── Auth guard ───────────────────────────────────────────────────────
     const authHeader = request.headers.get('Authorization')
     const token      = authHeader?.replace('Bearer ', '') ?? ''
+
+    // Check if the request comes from a KITCHEN/ADMIN user creating on behalf of another user
+    let isStaffCreating = false
+    if (token && token !== 'null' && token !== 'undefined') {
+      const requester = await prisma.user.findFirst({
+        where: { sessionToken: token },
+        select: { id: true, role: true, sessionExpiresAt: true },
+      })
+      if (requester) {
+        const requesterRole = (requester.role || '').toUpperCase()
+        if ((requesterRole === 'KITCHEN' || requesterRole === 'ADMIN') &&
+            requester.sessionExpiresAt && requester.sessionExpiresAt > new Date()) {
+          isStaffCreating = true
+          // Extend the kitchen/admin session
+          prisma.user.update({
+            where: { id: requester.id },
+            data: { sessionExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) },
+          }).catch(() => {})
+        }
+      }
+    }
 
     const userRecord = await prisma.user.findUnique({
       where: { id: userId },
@@ -68,7 +89,7 @@ export async function POST(request: NextRequest) {
 
     // Also allow if sessionId was passed and belongs to this user
     let sessionBelongsToUser = false
-    if (!tokenValid && !hasActiveSession && sessionId) {
+    if (!tokenValid && !hasActiveSession && !isStaffCreating && sessionId) {
       const sess = await prisma.guestSession.findFirst({
         where: { id: sessionId, userId, status: 'active' },
         select: { id: true },
@@ -76,7 +97,7 @@ export async function POST(request: NextRequest) {
       sessionBelongsToUser = !!sess
     }
 
-    if (!tokenValid && !hasActiveSession && !sessionBelongsToUser) {
+    if (!isStaffCreating && !tokenValid && !hasActiveSession && !sessionBelongsToUser) {
       console.warn(`[CREATE ORDER] Unauthorized attempt for userId=${userId}`)
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
@@ -84,8 +105,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Sliding-window session extension
-    if (tokenValid) {
+    // Sliding-window session extension for direct user token
+    if (tokenValid && !isStaffCreating) {
       prisma.user
         .update({
           where: { id: userId },

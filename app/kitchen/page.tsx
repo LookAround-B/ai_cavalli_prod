@@ -153,6 +153,10 @@ export default function KitchenPage() {
     const [newOrderItems, setNewOrderItems] = useState<{ menuItemId: string, quantity: number }[]>([])
     const [creatingOrder, setCreatingOrder] = useState(false)
     const [showNewOrderMenu, setShowNewOrderMenu] = useState(false)
+    // Rider selection for kitchen orders
+    const [riders, setRiders] = useState<{ id: string, name: string, phone: string, position?: string }[]>([])
+    const [selectedRiderId, setSelectedRiderId] = useState('')
+    const [riderSearch, setRiderSearch] = useState('')
     const [refreshing, setRefreshing] = useState(false)
     // Payment method per order (orderId -> selected method)
     const [orderPaymentMethods, setOrderPaymentMethods] = useState<Record<string, string>>({})
@@ -419,6 +423,15 @@ export default function KitchenPage() {
         fetchBillRequests()
     }, [])
 
+    // Fetch rider profiles for order creation
+    useEffect(() => {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('session_token') || '' : ''
+        fetch('/api/kitchen/riders', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+            .then(r => r.json())
+            .then(json => { if (json.success) setRiders(json.data || []) })
+            .catch(() => {})
+    }, [])
+
     // Manual refresh handler for kitchen board
     const handleRefreshAll = useCallback(async () => {
         setRefreshing(true)
@@ -614,14 +627,6 @@ export default function KitchenPage() {
 
     // Create order from kitchen portal
     async function handleCreateKitchenOrder() {
-        if (!newOrderName.trim()) {
-            showError('Missing Info', 'Please enter the customer name.')
-            return
-        }
-        if (!newOrderPhone.trim()) {
-            showError('Missing Info', 'Please enter the phone number.')
-            return
-        }
         if (!newOrderTable.trim()) {
             showError('Missing Info', 'Please enter a table name.')
             return
@@ -630,6 +635,17 @@ export default function KitchenPage() {
             showError('Missing Items', 'Please add at least one item to the order.')
             return
         }
+
+        const selectedRider = riders.find(r => r.id === selectedRiderId)
+
+        // If a rider is selected, create the order on their behalf
+        // Otherwise use the kitchen manager's userId for walk-in orders
+        const orderUserId = selectedRider ? selectedRider.id : user?.id
+        const guestName = selectedRider ? selectedRider.name : (newOrderName.trim() || 'Walk-in')
+        const guestPhone = selectedRider ? selectedRider.phone : newOrderPhone.trim()
+        const orderNotes = selectedRider
+            ? `KITCHEN_ORDER | ${selectedRider.name} | ${selectedRider.phone}`
+            : `KITCHEN_ORDER | ${guestName} | ${guestPhone}`
 
         setCreatingOrder(true)
         try {
@@ -641,25 +657,26 @@ export default function KitchenPage() {
                     'Authorization': `Bearer ${sessionToken}`
                 },
                 body: JSON.stringify({
-                    userId: user?.id,
-                    phone: newOrderPhone,
+                    userId: orderUserId,
+                    phone: guestPhone,
                     items: newOrderItems.map(item => ({ itemId: item.menuItemId, quantity: item.quantity })),
                     tableName: newOrderTable,
                     numGuests: newOrderGuests,
                     locationType: newOrderLocation,
-                    notes: `KITCHEN_ORDER | ${newOrderName} | ${newOrderPhone}`,
+                    notes: orderNotes,
                 })
             })
             const data = await response.json()
             if (data.success) {
                 showSuccess('Order Created', `Order #${data.orderId?.slice(0, 8).toUpperCase()} created successfully!`)
-                // Reset form
                 setNewOrderName('')
                 setNewOrderPhone('')
                 setNewOrderTable('')
                 setNewOrderGuests(1)
                 setNewOrderLocation('indoor')
                 setNewOrderItems([])
+                setSelectedRiderId('')
+                setRiderSearch('')
                 setCreateOrderStep(1)
                 setShowCreateOrder(false)
                 await fetchOrders()
@@ -2517,7 +2534,7 @@ export default function KitchenPage() {
                     padding: '68px 16px 16px',
                     animation: 'fadeIn 0.2s ease-out',
                 }}
-                    onClick={(e) => { if (e.target === e.currentTarget) { setShowCreateOrder(false); setShowNewOrderMenu(false); setCreateOrderStep(1) } }}
+                    onClick={(e) => { if (e.target === e.currentTarget) { setShowCreateOrder(false); setShowNewOrderMenu(false); setCreateOrderStep(1); setSelectedRiderId(''); setRiderSearch('') } }}
                 >
                     <div style={{
                         background: 'white',
@@ -2555,7 +2572,7 @@ export default function KitchenPage() {
                                 </p>
                             </div>
                             <button
-                                onClick={() => { setShowCreateOrder(false); setShowNewOrderMenu(false); setCreateOrderStep(1) }}
+                                onClick={() => { setShowCreateOrder(false); setShowNewOrderMenu(false); setCreateOrderStep(1); setSelectedRiderId(''); setRiderSearch('') }}
                                 style={{
                                     width: 'clamp(36px, 10vw, 44px)',
                                     height: 'clamp(36px, 10vw, 44px)',
@@ -2777,29 +2794,79 @@ export default function KitchenPage() {
                                         </div>
                                     </div>
 
-                                    {/* Customer info inputs */}
+                                    {/* Rider selection + Customer info inputs */}
                                     <div style={{ background: 'white', padding: '24px', borderRadius: '16px', border: '1px solid #E5E7EB', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
                                         <h3 style={{ margin: '0 0 16px', fontSize: '0.9rem', fontWeight: 800, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Customer Info</h3>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                            <Input
-                                                label="Customer Name *"
-                                                type="text"
-                                                value={newOrderName}
-                                                onChange={(e) => setNewOrderName(e.target.value.replace(/[^a-zA-Z\s]/g, ''))}
-                                                placeholder="Enter customer name"
-                                                maxLength={50}
-                                            />
-                                            <Input
-                                                label="Phone Number *"
-                                                type="tel"
-                                                value={newOrderPhone}
-                                                onChange={(e) => {
-                                                    const val = e.target.value.replace(/\D/g, '');
-                                                    if (val.length <= 10) setNewOrderPhone(val);
-                                                }}
-                                                placeholder="10-digit phone number"
-                                                maxLength={10}
-                                            />
+                                            {/* Rider selector */}
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#6B7280', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                    Assign to Rider (Optional)
+                                                </label>
+                                                <div style={{ position: 'relative', marginBottom: '6px' }}>
+                                                    <input
+                                                        type="text"
+                                                        value={riderSearch}
+                                                        onChange={e => setRiderSearch(e.target.value)}
+                                                        placeholder="Search rider by name..."
+                                                        style={{ width: '100%', height: '44px', padding: '0 14px', fontSize: '0.9rem', border: '1.5px solid #E5E7EB', borderRadius: '10px', outline: 'none', boxSizing: 'border-box' }}
+                                                        onFocus={e => (e.currentTarget.style.borderColor = 'var(--primary)')}
+                                                        onBlur={e => (e.currentTarget.style.borderColor = '#E5E7EB')}
+                                                    />
+                                                </div>
+                                                {selectedRiderId && (
+                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'rgba(169,30,34,0.06)', borderRadius: '10px', border: '1.5px solid rgba(169,30,34,0.2)', marginBottom: '6px' }}>
+                                                        <div>
+                                                            <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text)' }}>{riders.find(r => r.id === selectedRiderId)?.name}</div>
+                                                            <div style={{ fontSize: '0.75rem', color: '#6B7280' }}>{riders.find(r => r.id === selectedRiderId)?.phone}</div>
+                                                        </div>
+                                                        <button onClick={() => { setSelectedRiderId(''); setRiderSearch('') }} style={{ padding: '4px 10px', borderRadius: '8px', border: 'none', background: '#FEE2E2', color: '#EF4444', fontWeight: 700, cursor: 'pointer', fontSize: '0.8rem' }}>Remove</button>
+                                                    </div>
+                                                )}
+                                                {riderSearch && !selectedRiderId && (
+                                                    <div style={{ border: '1.5px solid #E5E7EB', borderRadius: '10px', overflow: 'hidden', maxHeight: '160px', overflowY: 'auto' }}>
+                                                        {riders.filter(r => r.name.toLowerCase().includes(riderSearch.toLowerCase()) || r.phone.includes(riderSearch)).length === 0 ? (
+                                                            <div style={{ padding: '12px', textAlign: 'center', color: '#9CA3AF', fontSize: '0.85rem' }}>No riders found</div>
+                                                        ) : riders.filter(r => r.name.toLowerCase().includes(riderSearch.toLowerCase()) || r.phone.includes(riderSearch)).map(rider => (
+                                                            <button
+                                                                key={rider.id}
+                                                                onClick={() => { setSelectedRiderId(rider.id); setRiderSearch('') }}
+                                                                style={{ width: '100%', padding: '12px 14px', textAlign: 'left', border: 'none', borderBottom: '1px solid #F3F4F6', background: 'white', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                                                                onMouseEnter={e => (e.currentTarget.style.background = '#F9FAFB')}
+                                                                onMouseLeave={e => (e.currentTarget.style.background = 'white')}
+                                                            >
+                                                                <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text)' }}>{rider.name}</span>
+                                                                <span style={{ fontSize: '0.78rem', color: '#6B7280' }}>{rider.phone}</span>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Name and phone only shown when no rider selected */}
+                                            {!selectedRiderId && (
+                                                <>
+                                                    <Input
+                                                        label="Customer Name (Optional)"
+                                                        type="text"
+                                                        value={newOrderName}
+                                                        onChange={(e) => setNewOrderName(e.target.value.replace(/[^a-zA-Z\s]/g, ''))}
+                                                        placeholder="Enter customer name"
+                                                        maxLength={50}
+                                                    />
+                                                    <Input
+                                                        label="Phone Number (Optional)"
+                                                        type="tel"
+                                                        value={newOrderPhone}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value.replace(/\D/g, '');
+                                                            if (val.length <= 10) setNewOrderPhone(val);
+                                                        }}
+                                                        placeholder="10-digit phone number"
+                                                        maxLength={10}
+                                                    />
+                                                </>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -2818,7 +2885,7 @@ export default function KitchenPage() {
                             {createOrderStep === 1 ? (
                                 <>
                                     <Button
-                                        onClick={() => { setShowCreateOrder(false); setShowNewOrderMenu(false); setCreateOrderStep(1) }}
+                                        onClick={() => { setShowCreateOrder(false); setShowNewOrderMenu(false); setCreateOrderStep(1); setSelectedRiderId(''); setRiderSearch('') }}
                                         variant="outline"
                                         style={{ flex: 1, height: 'clamp(44px, 6vw, 52px)', fontWeight: 700, borderRadius: '12px' }}
                                     >

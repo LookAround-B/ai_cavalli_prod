@@ -62,7 +62,7 @@ async function authenticateAdmin(request: NextRequest) {
 }
 
 /**
- * POST /api/admin/menu/bulk-price-increase
+ * POST /api/ops/menu/bulk-price-increase
  * Actions: preview | apply
  *
  * Preview: Calculate new prices for all menu items
@@ -83,14 +83,24 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: false, error: auth.error }, { status })
         }
 
-        const { action, percentage, userId, reason } = parsed.data
+        const { action, percentage, userId, reason, targetType, categoryId, itemIds } = parsed.data
 
-        // Fetch all menu items
+        // Build filter based on target type
+        const where: Record<string, any> = {}
+        if (targetType === 'category' && categoryId) {
+            where.categoryId = categoryId
+        } else if (targetType === 'products' && itemIds && itemIds.length > 0) {
+            where.id = { in: itemIds }
+        }
+
+        // Fetch targeted menu items
         const menuItems = await prisma.menuItem.findMany({
+            where,
             select: {
                 id: true,
                 name: true,
                 price: true,
+                category: { select: { name: true } },
             },
             orderBy: { name: 'asc' }
         })
@@ -111,6 +121,7 @@ export async function POST(request: NextRequest) {
             return {
                 id: item.id,
                 name: item.name,
+                category: (item as any).category?.name || '',
                 oldPrice: oldPrice,
                 newPrice: newPrice,
                 increase: Number(increase.toFixed(2))
@@ -136,25 +147,26 @@ export async function POST(request: NextRequest) {
         // If action is apply, update prices and create history records
         if (action === 'apply') {
             const adminUserId = userId || auth.requester?.id
+            const changeTypeLabel = targetType === 'category' ? 'category_increase'
+                : targetType === 'products' ? 'product_increase'
+                : 'bulk_increase'
 
             await prisma.$transaction(async (tx) => {
-                // Update all menu item prices
                 for (const item of preview) {
                     await tx.menuItem.update({
                         where: { id: item.id },
                         data: { price: item.newPrice.toFixed(2) }
                     })
 
-                    // Create price history record
                     await tx.priceHistory.create({
                         data: {
                             menuItemId: item.id,
                             oldPrice: item.oldPrice.toFixed(2),
                             newPrice: item.newPrice.toFixed(2),
-                            changeType: 'bulk_increase',
+                            changeType: changeTypeLabel,
                             percentage: percentage.toFixed(2),
                             changedBy: adminUserId,
-                            reason: reason || `Bulk price increase of ${percentage}%`
+                            reason: reason || `Price increase of ${percentage}%`
                         }
                     })
                 }

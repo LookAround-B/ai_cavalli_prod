@@ -97,7 +97,7 @@ export const RBAC = {
         ]
     },
     KITCHEN: {
-        name: 'Kitchen Staff',
+        name: 'Kitchen Manager',
         permissions: [
             'view_all_orders',
             'update_order_status',
@@ -105,7 +105,12 @@ export const RBAC = {
             'view_all_sessions',
             'manage_specials',
             'view_analytics',
-            'view_all_users'
+            'view_all_users',
+            'manage_menu',
+            'manage_announcements',
+            'view_menu',
+            'create_order',
+            'view_riders',
         ]
     },
     ADMIN: {
@@ -151,21 +156,22 @@ export const routeAccess: Record<string, UserRole[]> = {
     '/kitchen/specials': ['KITCHEN', 'ADMIN'],
     '/kitchen/analytics': ['KITCHEN', 'ADMIN'],
 
-    // Admin routes
-    '/admin': ['ADMIN'],
-    '/admin/users': ['ADMIN'],
-    '/admin/menu': ['ADMIN'],
-    '/admin/cms': ['ADMIN'],
-    '/admin/analytics': ['ADMIN'],
-    '/admin/audit': ['ADMIN'],
+    // Admin routes (KITCHEN has full access except bill delete)
+    '/ops': ['KITCHEN', 'ADMIN'],
+    '/ops/users': ['KITCHEN', 'ADMIN'],
+    '/ops/menu': ['KITCHEN', 'ADMIN'],
+    '/ops/menu/price-increase': ['KITCHEN', 'ADMIN'],
+    '/ops/cms': ['KITCHEN', 'ADMIN'],
+    '/ops/analytics': ['KITCHEN', 'ADMIN'],
+    '/ops/audit': ['KITCHEN', 'ADMIN'],
 
     // API routes
     '/api/auth/login': [],
     '/api/auth/logout': ['RIDER', 'STAFF', 'OUTSIDER', 'KITCHEN', 'ADMIN'],
     '/api/auth/refresh': ['RIDER', 'STAFF', 'OUTSIDER', 'KITCHEN', 'ADMIN'],
-    '/api/orders/create': ['RIDER', 'STAFF', 'OUTSIDER'],
+    '/api/orders/create': ['RIDER', 'STAFF', 'OUTSIDER', 'KITCHEN', 'ADMIN'],
     '/api/orders/list': ['RIDER', 'STAFF', 'OUTSIDER', 'KITCHEN', 'ADMIN'],
-    '/api/admin/users': ['ADMIN'],
+    '/api/ops/users': ['ADMIN', 'KITCHEN'],
     '/api/users/profile': ['RIDER', 'STAFF', 'OUTSIDER', 'KITCHEN', 'ADMIN']
 }
 

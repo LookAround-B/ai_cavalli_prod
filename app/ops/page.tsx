@@ -573,9 +573,9 @@ export default function AdminDashboard() {
                             <h3 style={{ margin: 0, fontWeight: '800', color: '#1f2937', fontSize: '1.1rem' }}>Quick Actions</h3>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            <ActionButton icon={<MenuIcon size={16} />} label="Menu Management" href="/admin/menu" />
-                            <ActionButton icon={<FileText size={16} />} label="Announcements" href="/admin/cms" />
-                            <ActionButton icon={<Users size={16} />} label="User Control" href="/admin/users" />
+                            <ActionButton icon={<MenuIcon size={16} />} label="Menu Management" href="/ops/menu" />
+                            <ActionButton icon={<FileText size={16} />} label="Announcements" href="/ops/cms" />
+                            <ActionButton icon={<Users size={16} />} label="User Control" href="/ops/users" />
                             <ActionButton icon={<ChefHat size={16} />} label="Kitchen Display" href="/kitchen" />
                             <ActionButton
                                 icon={<LogOut size={16} />}
