@@ -193,7 +193,7 @@ export default function KitchenPage() {
         fetchOrdersAbort.current = new AbortController()
         try {
             const res = await fetchWithRetry(
-                '/api/orders?status=pending,preparing,ready&all=true',
+                '/api/v1/v1/orders?status=pending,preparing,ready&all=true',
                 { signal: fetchOrdersAbort.current.signal, cache: 'no-store' },
             )
             const json = await res.json()
@@ -236,7 +236,7 @@ export default function KitchenPage() {
         fetchCompletedAbort.current = new AbortController()
         try {
             const res = await fetchWithRetry(
-                '/api/orders?status=completed&all=true&limit=30',
+                '/api/v1/v1/orders?status=completed&all=true&limit=30',
                 { signal: fetchCompletedAbort.current.signal, cache: 'no-store' },
             )
             const json = await res.json()
@@ -258,7 +258,7 @@ export default function KitchenPage() {
 
     const fetchCancelledOrders = async () => {
         try {
-            const res = await fetch('/api/orders?status=cancelled&all=true&limit=30', { cache: 'no-store' })
+            const res = await fetch('/api/v1/v1/orders?status=cancelled&all=true&limit=30', { cache: 'no-store' })
             const json = await res.json()
             if (json.success && json.data) setCancelledOrders(json.data)
         } catch (e) { console.error('fetchCancelledOrders error:', e) }
@@ -266,7 +266,7 @@ export default function KitchenPage() {
 
     const fetchSingleOrder = async (orderId: string) => {
         try {
-            const res = await fetch(`/api/orders?orderId=${orderId}`, { cache: 'no-store' })
+            const res = await fetch(`/api/v1/orders?orderId=${orderId}`, { cache: 'no-store' })
             const json = await res.json()
             return json.success && json.data?.[0] ? json.data[0] : null
         } catch (e) {
@@ -369,7 +369,7 @@ export default function KitchenPage() {
             if (!isPageVisible.current) return
             fetchOrders()
             fetchCompletedOrders()
-            fetch('/api/kitchen/bill-requests', { cache: 'no-store' })
+            fetch('/api/v1/v1/kitchen/bill-requests', { cache: 'no-store' })
                 .then(r => r.json())
                 .then(json => { if (json.success) setBillRequests(json.data || []) })
                 .catch(() => {})
@@ -386,7 +386,7 @@ export default function KitchenPage() {
     useEffect(() => {
         async function fetchMenuData() {
             try {
-                const res = await fetch('/api/menu', { cache: 'no-store' })
+                const res = await fetch('/api/v1/v1/menu', { cache: 'no-store' })
                 const json = await res.json()
                 if (json.success) {
                     const fetchedItems = json.data?.menuItems || []
@@ -414,7 +414,7 @@ export default function KitchenPage() {
     useEffect(() => {
         async function fetchBillRequests() {
             try {
-                const res = await fetch('/api/kitchen/bill-requests', { cache: 'no-store' })
+                const res = await fetch('/api/v1/kitchen/bill-requests', { cache: 'no-store' })
                 const json = await res.json()
                 if (json.success) setBillRequests(json.data || [])
             } catch (e) { console.error('fetchBillRequests error:', e) }
@@ -426,7 +426,7 @@ export default function KitchenPage() {
     // Fetch rider profiles for order creation
     useEffect(() => {
         const token = typeof window !== 'undefined' ? localStorage.getItem('session_token') || '' : ''
-        fetch('/api/kitchen/riders', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+        fetch('/api/v1/v1/kitchen/riders', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
             .then(r => r.json())
             .then(json => { if (json.success) setRiders(json.data || []) })
             .catch(() => {})
@@ -440,7 +440,7 @@ export default function KitchenPage() {
                 fetchOrders(),
                 fetchCompletedOrders(),
                 (async () => {
-                    const res = await fetch('/api/kitchen/bill-requests', { cache: 'no-store' })
+                    const res = await fetch('/api/v1/v1/kitchen/bill-requests', { cache: 'no-store' })
                     const json = await res.json()
                     if (json.success) setBillRequests(json.data || [])
                 })()
@@ -605,7 +605,7 @@ export default function KitchenPage() {
         setOrders(prev => prev.filter(o => o.id !== orderId))
         stopCookingTimer(orderId)
         try {
-            const res = await fetch('/api/orders/status', {
+            const res = await fetch('/api/v1/orders/status', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ orderId, status: 'cancelled' })
@@ -650,7 +650,7 @@ export default function KitchenPage() {
         setCreatingOrder(true)
         try {
             const sessionToken = localStorage.getItem('session_token') || ''
-            const response = await fetch('/api/orders/create', {
+            const response = await fetch('/api/v1/v1/orders/create', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -695,7 +695,7 @@ export default function KitchenPage() {
         setGeneratingBill(sessionId)
         try {
             const selectedPayment = orderPaymentMethods[sessionId] || 'cash'
-            const response = await fetch('/api/bills/session', {
+            const response = await fetch('/api/v1/v1/bills/session', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ sessionId, paymentMethod: selectedPayment })
@@ -809,7 +809,7 @@ export default function KitchenPage() {
         // ─────────────────────────────────────────────────────────────────
 
         try {
-            const res = await fetch('/api/orders/status', {
+            const res = await fetch('/api/v1/orders/status', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ orderId, status: newStatus })
@@ -845,7 +845,7 @@ export default function KitchenPage() {
             pendingDiscountUpdates.current.add(orderId)
 
             try {
-                const res = await fetch('/api/orders/discount', {
+                const res = await fetch('/api/v1/v1/orders/discount', {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ orderId, discountAmount: amount })
@@ -888,7 +888,7 @@ export default function KitchenPage() {
             pendingQuantityUpdates.current.add(orderItemId)
 
             try {
-                const res = await fetch('/api/orders/items', {
+                const res = await fetch('/api/v1/v1/orders/items', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ orderItemId, quantity: newQuantity })
@@ -925,7 +925,7 @@ export default function KitchenPage() {
         setGeneratingBill(orderId)
         try {
             const sessionToken = localStorage.getItem('session_token') || ''
-            const response = await fetch('/api/bills/generate', {
+            const response = await fetch('/api/v1/bills/generate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -971,7 +971,7 @@ export default function KitchenPage() {
         setPrintingBill(billId)
         try {
             const sessionToken = localStorage.getItem('session_token') || ''
-            const response = await fetch('/api/bills/print', {
+            const response = await fetch('/api/v1/v1/bills/print', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1005,7 +1005,7 @@ export default function KitchenPage() {
             const paymentMethod = orderPaymentMethods[orderId] || 'cash'
             
             const sessionToken = localStorage.getItem('session_token') || ''
-            const response = await fetch('/api/bills/generate', {
+            const response = await fetch('/api/v1/bills/generate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1059,7 +1059,7 @@ export default function KitchenPage() {
             return updateItemQuantity(existingItem.id, orderId, existingItem.quantity + 1)
         }
         try {
-            const res = await fetch('/api/orders/items', {
+            const res = await fetch('/api/v1/orders/items', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ orderId, menuItemId, quantity: 1, price: menuItem.price })

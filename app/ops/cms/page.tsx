@@ -74,7 +74,7 @@ export default function CMSPage() {
     async function fetchNews() {
         setDataLoading(true)
         try {
-            const response = await fetch('/api/ops/announcements', {
+            const response = await fetch('/api/v1/ops/announcements', {
                 method: 'GET',
                 headers: getAuthHeaders(),
                 credentials: 'include'
@@ -94,7 +94,7 @@ export default function CMSPage() {
         setLoading(true)
 
         try {
-            const response = await fetch('/api/ops/announcements', {
+            const response = await fetch('/api/v1/ops/announcements', {
                 method: 'POST',
                 headers: getAuthHeaders(),
                 credentials: 'include',
@@ -129,7 +129,7 @@ export default function CMSPage() {
         const confirmed = await showConfirm('Are you sure you want to delete this announcement?', "This action cannot be undone.")
         if (!confirmed) return
         try {
-            const response = await fetch('/api/ops/announcements', {
+            const response = await fetch('/api/v1/ops/announcements', {
                 method: 'POST',
                 headers: getAuthHeaders(),
                 credentials: 'include',

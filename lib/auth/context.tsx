@@ -83,7 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const login = useCallback(
         async (credentials: LoginCredentials): Promise<AuthResponse> => {
             try {
-                const response = await fetch('/api/auth/login', {
+                const response = await fetch('/api/v1/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -117,7 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const guestLogin = useCallback(
         async (credentials: GuestLoginCredentials): Promise<AuthResponse> => {
             try {
-                const response = await fetch('/api/auth/login', {
+                const response = await fetch('/api/v1/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -156,7 +156,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const storedUser = localStorage.getItem('auth_user')
             const userData = storedUser ? JSON.parse(storedUser) : null
             if (userData?.id) {
-                await fetch('/api/auth/logout', {
+                await fetch('/api/v1/v1/auth/logout', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ userId: userData.id })
@@ -194,7 +194,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 return false
             }
 
-            const response = await fetch('/api/auth/refresh', {
+            const response = await fetch('/api/v1/v1/auth/refresh', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

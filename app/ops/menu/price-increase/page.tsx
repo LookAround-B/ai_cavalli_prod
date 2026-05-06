@@ -65,7 +65,7 @@ export default function PriceIncreasePage() {
     const [itemsPerPage, setItemsPerPage] = useState(10)
 
     useEffect(() => {
-        fetch('/api/menu')
+        fetch('/api/v1/menu')
             .then(r => r.json())
             .then(json => {
                 if (json.success) {
@@ -115,7 +115,7 @@ export default function PriceIncreasePage() {
         if (err) { showError('Validation Error', err); return }
         setLoading(true)
         try {
-            const res = await fetch('/api/ops/menu/bulk-price-increase', {
+            const res = await fetch('/api/v1/ops/menu/bulk-price-increase', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(buildRequestBody('preview')),
@@ -147,7 +147,7 @@ export default function PriceIncreasePage() {
         if (!confirmed) return
         setLoading(true)
         try {
-            const res = await fetch('/api/ops/menu/bulk-price-increase', {
+            const res = await fetch('/api/v1/ops/menu/bulk-price-increase', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(buildRequestBody('apply')),

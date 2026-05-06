@@ -85,7 +85,7 @@ export default function OrdersPage() {
 
         async function fetchOrders() {
             try {
-                let url = '/api/orders?'
+                let url = '/api/v1/v1/orders?'
                 if (user) url += `userId=${user.id}`
                 else if (orderIdParam) url += `orderId=${orderIdParam}`
                 const res = await fetch(url)
@@ -163,7 +163,7 @@ export default function OrdersPage() {
     const handleRefresh = async () => {
         setRefreshing(true)
         try {
-            let url = '/api/orders?'
+            let url = '/api/v1/orders?'
             if (user) url += `userId=${user.id}`
             else if (orderIdParam) url += `orderId=${orderIdParam}`
             const res = await fetch(url)
@@ -417,7 +417,7 @@ export default function OrdersPage() {
                     const params = new URLSearchParams()
                     if (user.phone) params.set('phone', user.phone)
                     params.set('userId', user.id)
-                    const sRes = await fetch(`/api/sessions/active?${params.toString()}`)
+                    const sRes = await fetch(`/api/v1/sessions/active?${params.toString()}`)
                     const sData = await sRes.json()
                     if (sData.success && sData.session?.status === 'ended' && !autoLogoutTriggered) {
                         setAutoLogoutTriggered(true)
@@ -612,7 +612,7 @@ export default function OrdersPage() {
 
             // Use session-based flow for OUTSIDER with a real guest_session
             if (activeSession && !activeSession._virtual && activeSession.id) {
-                const response = await fetch('/api/bills/session', {
+                const response = await fetch('/api/v1/v1/bills/session', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -623,7 +623,7 @@ export default function OrdersPage() {
                 data = await response.json()
             } else {
                 // User-based flow for RIDER/STAFF or OUTSIDER without session
-                const response = await fetch('/api/bills/user', {
+                const response = await fetch('/api/v1/v1/bills/user', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

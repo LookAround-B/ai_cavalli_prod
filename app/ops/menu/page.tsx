@@ -80,7 +80,7 @@ export default function AdminMenuPage() {
     async function fetchData() {
         setDataLoading(true)
         try {
-            const res = await fetch('/api/menu/items')
+            const res = await fetch('/api/v1/menu/items')
             const json = await res.json()
             if (json.success) {
                 const cats = json.categories || json.data?.categories || []
@@ -179,7 +179,7 @@ export default function AdminMenuPage() {
         try {
             if (editingId) {
                 payload.id = editingId
-                const res = await fetch('/api/menu/items', {
+                const res = await fetch('/api/v1/menu/items', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -187,7 +187,7 @@ export default function AdminMenuPage() {
                 const json = await res.json()
                 if (!json.success) error = json.error
             } else {
-                const res = await fetch('/api/menu/items', {
+                const res = await fetch('/api/v1/menu/items', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -219,7 +219,7 @@ export default function AdminMenuPage() {
 
     async function handleToggleAvailable(id: string, available: boolean) {
         try {
-            const res = await fetch('/api/menu/items', {
+            const res = await fetch('/api/v1/menu/items', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id, available })

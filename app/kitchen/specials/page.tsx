@@ -60,7 +60,7 @@ export default function KitchenSpecialsPage() {
 
   async function fetchData() {
     try {
-      const res = await fetch('/api/menu');
+      const res = await fetch('/api/v1/menu');
       const json = await res.json();
       if (json.success) {
         const menuItems = json.data?.menuItems || [];
@@ -88,7 +88,7 @@ export default function KitchenSpecialsPage() {
     // 1. Create Menu Item via API
     let item: any;
     try {
-      const createRes = await fetch('/api/menu/items', {
+      const createRes = await fetch('/api/v1/menu/items', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -114,7 +114,7 @@ export default function KitchenSpecialsPage() {
     }
 
     // 2. Add as Special (via API to bypass RLS)
-    const specialRes = await fetch('/api/kitchen/specials', {
+    const specialRes = await fetch('/api/v1/kitchen/specials', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -159,7 +159,7 @@ export default function KitchenSpecialsPage() {
 
     setLoading(true);
     try {
-      const res = await fetch('/api/kitchen/specials', {
+      const res = await fetch('/api/v1/kitchen/specials', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

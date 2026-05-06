@@ -166,13 +166,13 @@ export const routeAccess: Record<string, UserRole[]> = {
     '/ops/audit': ['KITCHEN', 'ADMIN'],
 
     // API routes
-    '/api/auth/login': [],
-    '/api/auth/logout': ['RIDER', 'STAFF', 'OUTSIDER', 'KITCHEN', 'ADMIN'],
-    '/api/auth/refresh': ['RIDER', 'STAFF', 'OUTSIDER', 'KITCHEN', 'ADMIN'],
-    '/api/orders/create': ['RIDER', 'STAFF', 'OUTSIDER', 'KITCHEN', 'ADMIN'],
-    '/api/orders/list': ['RIDER', 'STAFF', 'OUTSIDER', 'KITCHEN', 'ADMIN'],
-    '/api/ops/users': ['ADMIN', 'KITCHEN'],
-    '/api/users/profile': ['RIDER', 'STAFF', 'OUTSIDER', 'KITCHEN', 'ADMIN']
+    '/api/v1/auth/login': [],
+    '/api/v1/auth/logout': ['RIDER', 'STAFF', 'OUTSIDER', 'KITCHEN', 'ADMIN'],
+    '/api/v1/auth/refresh': ['RIDER', 'STAFF', 'OUTSIDER', 'KITCHEN', 'ADMIN'],
+    '/api/v1/orders/create': ['RIDER', 'STAFF', 'OUTSIDER', 'KITCHEN', 'ADMIN'],
+    '/api/v1/orders/list': ['RIDER', 'STAFF', 'OUTSIDER', 'KITCHEN', 'ADMIN'],
+    '/api/v1/ops/users': ['ADMIN', 'KITCHEN'],
+    '/api/v1/users/profile': ['RIDER', 'STAFF', 'OUTSIDER', 'KITCHEN', 'ADMIN']
 }
 
 /**

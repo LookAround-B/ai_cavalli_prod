@@ -26,7 +26,7 @@ export function useOrderStream(
 
     function connect() {
       if (unmounted) return
-      es = new EventSource('/api/orders/stream')
+      es = new EventSource('/api/v1/v1/orders/stream')
 
       es.addEventListener('order_created', (e: MessageEvent) => {
         try { onEventRef.current({ ...JSON.parse(e.data), type: 'order_created' }) } catch {}

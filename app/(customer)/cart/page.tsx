@@ -56,7 +56,7 @@ export default function CartPage() {
     useEffect(() => {
         async function fetchSpecials() {
             try {
-                const res = await fetch('/api/menu')
+                const res = await fetch('/api/v1/v1/menu')
                 const json = await res.json()
                 if (json.success) {
                     setDailySpecials(json.data?.specials || [])
@@ -146,7 +146,7 @@ export default function CartPage() {
 
             if (editingOrderId) {
                 // UPDATE existing order
-                const orderResponse = await fetch('/api/orders/update', {
+                const orderResponse = await fetch('/api/v1/v1/orders/update', {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -164,7 +164,7 @@ export default function CartPage() {
                 orderData = await orderResponse.json()
             } else {
                 // CREATE new order
-                const orderResponse = await fetch('/api/orders/create', {
+                const orderResponse = await fetch('/api/v1/v1/orders/create', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

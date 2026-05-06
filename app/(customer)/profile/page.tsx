@@ -63,7 +63,7 @@ export default function ProfilePage() {
         async function fetchUserDetails() {
             try {
                 const sessionToken = localStorage.getItem('session_token') || ''
-                const res = await fetch('/api/users/me', {
+                const res = await fetch('/api/v1/v1/users/me', {
                     headers: { 'Authorization': `Bearer ${sessionToken}` }
                 })
                 const json = await res.json()
@@ -148,7 +148,7 @@ export default function ProfilePage() {
         try {
             // OUTSIDER with real session: use session-based request
             if (activeSession && !activeSession._virtual && activeSession.id) {
-                const response = await fetch('/api/bills/request', {
+                const response = await fetch('/api/v1/v1/bills/request', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -164,7 +164,7 @@ export default function ProfilePage() {
                 }
             } else {
                 // RIDER/STAFF: generate bill directly
-                const response = await fetch('/api/bills/user', {
+                const response = await fetch('/api/v1/v1/bills/user', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

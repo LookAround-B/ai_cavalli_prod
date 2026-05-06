@@ -18,7 +18,7 @@ export default function StudentHome() {
     useEffect(() => {
         async function fetchNews() {
             try {
-                const res = await fetch('/api/announcements')
+                const res = await fetch('/api/v1/v1/announcements')
                 const json = await res.json()
                 if (json.success && json.data) setAnnouncements(json.data)
             } catch (e) { console.error('fetchNews error:', e) }

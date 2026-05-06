@@ -37,7 +37,7 @@ export default function MenuPage() {
         async function fetchData() {
             setLoading(true)
             try {
-                const res = await fetch('/api/menu')
+                const res = await fetch('/api/v1/v1/menu')
                 const json = await res.json()
                 if (json.success) {
                     if (json.data?.categories) setCategories(json.data.categories)
